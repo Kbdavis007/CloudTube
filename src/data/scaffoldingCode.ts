@@ -572,6 +572,9 @@ CREATE TABLE IF NOT EXISTS videos (
   source_flags_json TEXT, -- Serialized JSON array: ["YouTubeSearch", "Reddit", "LinkedIn", etc.]
   indexed_at TEXT DEFAULT (datetime('now')),
   last_updated_at TEXT DEFAULT (datetime('now')),
+  -- AI Summary metadata
+  ai_summary TEXT,
+  ai_summary_generated_at TEXT,
   -- Personal curation denormalized for lightning-fast queries
   index_score INTEGER DEFAULT 50, -- 1 = best, 100 = worst
   user_rating INTEGER DEFAULT 0,  -- 0 to 100

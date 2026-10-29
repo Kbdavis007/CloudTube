@@ -131,6 +131,8 @@ export class IndexedDBService {
         sourceFlags: ['YouTubeSearch', 'ChannelUploads', 'Google'],
         indexedAt: new Date(Date.now() - 3600000 * 4).toISOString(),
         lastUpdatedAt: new Date().toISOString(),
+        aiSummary: `### Overview\nThis video delivers an end-to-end masterclass on building full-stack applications directly at Cloudflare's edge using D1 serverless SQLite for relational persistence, Workers KV for low-latency caching, and R2 object storage for media with zero egress fees.\n\n### Key Takeaways\n• **D1 Prepared Statements:** How to batch queries effectively to maximize throughput within free-tier row quotas.\n• **Cache-Aside Pattern:** Leveraging Workers KV to serve sub-millisecond responses and prevent redundant database scans.\n• **Zero Egress Architecture:** Using Cloudflare R2 as an S3 replacement to eliminate unexpected cloud transfer bills.`,
+        aiSummaryGeneratedAt: new Date(Date.now() - 3600000 * 3).toISOString(),
         personal: {
           videoId: 'kJQP7kiw5Fk',
           indexScore: 4, // 1 to 100, 1=best
@@ -385,6 +387,18 @@ export class IndexedDBService {
       ...existingPersonal,
       ...personal,
     };
+    video.lastUpdatedAt = new Date().toISOString();
+
+    await this.saveVideo(video);
+    return video;
+  }
+
+  async updateVideoAiSummary(youtubeId: string, aiSummary: string): Promise<VideoMetadata | null> {
+    const video = await this.getVideo(youtubeId);
+    if (!video) return null;
+
+    video.aiSummary = aiSummary;
+    video.aiSummaryGeneratedAt = new Date().toISOString();
     video.lastUpdatedAt = new Date().toISOString();
 
     await this.saveVideo(video);

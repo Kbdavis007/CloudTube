@@ -30,6 +30,9 @@ export interface VideoMetadata {
   sourceFlags: SourceFlag[];
   indexedAt: string;
   lastUpdatedAt: string;
+  // AI Summary persisted in metadata database
+  aiSummary?: string;
+  aiSummaryGeneratedAt?: string;
   // Personal Metadata (joined or embedded)
   personal?: PersonalMetadata;
 }

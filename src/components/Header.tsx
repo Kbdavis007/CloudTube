@@ -1,15 +1,31 @@
 import React from 'react';
 import { Cloud, Wifi, ShieldCheck, Sparkles, Youtube } from 'lucide-react';
+import { User } from 'firebase/auth';
 import { PWAInstallButton } from './PWAInstallButton';
+import { GoogleAuthButton } from './GoogleAuthButton';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 
 interface HeaderProps {
   onOpenWizard: () => void;
   onOpenSearch: () => void;
   videoCount: number;
+  user: User | null;
+  onAuthSuccess: (user: User, token: string) => void;
+  onLogout: () => void;
+  onImportMyChannel?: () => void;
+  isImporting?: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onOpenWizard, onOpenSearch, videoCount }) => {
+export const Header: React.FC<HeaderProps> = ({
+  onOpenWizard,
+  onOpenSearch,
+  videoCount,
+  user,
+  onAuthSuccess,
+  onLogout,
+  onImportMyChannel,
+  isImporting,
+}) => {
   const isOnline = useOnlineStatus();
 
   return (
@@ -56,14 +72,23 @@ export const Header: React.FC<HeaderProps> = ({ onOpenWizard, onOpenSearch, vide
             <span>{videoCount} Indexed Videos</span>
           </div>
 
+          {/* Google Auth & YouTube OAuth Button */}
+          <GoogleAuthButton
+            user={user}
+            onAuthSuccess={onAuthSuccess}
+            onLogout={onLogout}
+            onImportMyChannel={onImportMyChannel}
+            isImporting={isImporting}
+          />
+
           {/* Quick Setup Wizard Button */}
           <button
             onClick={onOpenWizard}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white text-xs font-semibold shadow-sm transition active:scale-95"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white text-xs font-semibold shadow-sm transition active:scale-95"
             title="Launch 5-Minute Automated Setup Wizard"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">5-Min</span> Setup Wizard
+            <span>5-Min Wizard</span>
           </button>
 
           {/* PWA Install Button */}

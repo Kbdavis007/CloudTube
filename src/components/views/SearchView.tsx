@@ -16,13 +16,17 @@ import {
   SlidersHorizontal,
   Loader2,
   Sparkles,
+  Zap,
 } from 'lucide-react';
+import { YouTubeApiClient } from '../../services/youtubeApi';
 
 interface SearchViewProps {
   onIndexVideo: (video: VideoMetadata) => void;
   onExpandChannel: (channelId: string, channelTitle: string) => void;
   onPlayVideo: (youtubeId: string) => void;
   indexedVideoIds: Set<string>;
+  accessToken?: string | null;
+  userEmail?: string | null;
 }
 
 export const SearchView: React.FC<SearchViewProps> = ({
@@ -30,9 +34,12 @@ export const SearchView: React.FC<SearchViewProps> = ({
   onExpandChannel,
   onPlayVideo,
   indexedVideoIds,
+  accessToken,
+  userEmail,
 }) => {
   const [searchTerm, setSearchTerm] = useState('Cloudflare Workers & D1');
   const [isSearching, setIsSearching] = useState(false);
+  const [isLiveSearchActive, setIsLiveSearchActive] = useState(false);
   const [selectedSourceFilter, setSelectedSourceFilter] = useState<SourceFlag | 'ALL'>('ALL');
   const [results, setResults] = useState<VideoMetadata[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
@@ -56,12 +63,28 @@ export const SearchView: React.FC<SearchViewProps> = ({
     Playlist: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
   };
 
-  const handleSearch = (query = searchTerm) => {
+  const handleSearch = async (query = searchTerm) => {
     if (!query.trim()) return;
     setIsSearching(true);
     setHasSearched(true);
 
-    // Simulate high-fidelity edge crawler / YouTube API v3 search
+    // 1. If user is signed in with Google, query live YouTube Data API
+    if (accessToken) {
+      try {
+        const liveResults = await YouTubeApiClient.searchVideos(accessToken, query);
+        if (liveResults && liveResults.length > 0) {
+          setResults(liveResults);
+          setIsLiveSearchActive(true);
+          setIsSearching(false);
+          return;
+        }
+      } catch (err) {
+        console.warn('Live YouTube search failed, falling back to edge crawler simulator:', err);
+      }
+    }
+
+    setIsLiveSearchActive(false);
+    // 2. High-fidelity edge crawler simulator fallback
     setTimeout(() => {
       const mockResults: VideoMetadata[] = [
         {
@@ -236,15 +259,29 @@ export const SearchView: React.FC<SearchViewProps> = ({
     <div className="space-y-6 pb-12">
       {/* Header and Search Form */}
       <div className="space-y-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-white flex items-center gap-2">
-            <Search className="w-5 h-5 text-orange-500" />
-            Search & Multi-Source Harvester
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-400">
-            Search YouTube Data API, discover channels, and harvest metadata enriched with source flags
-            (YouTube Search, Reddit, X, LinkedIn, Google, Playlists).
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-white flex items-center gap-2">
+              <Search className="w-5 h-5 text-orange-500" />
+              Search & Multi-Source Harvester
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-400">
+              Search YouTube Data API, discover channels, and harvest metadata enriched with source flags
+              (YouTube Search, Reddit, X, LinkedIn, Google, Playlists).
+            </p>
+          </div>
+
+          {accessToken ? (
+            <div className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
+              <Zap className="w-3.5 h-3.5" />
+              <span>Live YouTube API Active</span>
+            </div>
+          ) : (
+            <div className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/15 border border-orange-500/30 text-orange-400 text-xs font-semibold">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Edge Crawler Simulator</span>
+            </div>
+          )}
         </div>
 
         {/* Search Bar */}

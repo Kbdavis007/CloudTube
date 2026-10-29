@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { User } from 'firebase/auth';
 import { VideoMetadata, ChannelMetadata, VideoComment, CrawlJob, PersonalMetadata } from './types';
 import { idbService } from './services/indexedDB';
 import { Header } from './components/Header';
@@ -19,6 +20,8 @@ import { SetupWizardView } from './components/views/SetupWizardView';
 import { ScaffoldingExplorerView } from './components/views/ScaffoldingExplorerView';
 import { SettingsView } from './components/views/SettingsView';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
+import { initAuth, setCachedAccessToken } from './services/googleAuth';
+import { YouTubeApiClient } from './services/youtubeApi';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<PageTab>('dashboard');
@@ -29,6 +32,26 @@ export default function App() {
   const [selectedVideoId, setSelectedVideoId] = useState<string>('kJQP7kiw5Fk');
   const [isLoading, setIsLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'info' } | null>(null);
+
+  // Google OAuth & YouTube user state
+  const [user, setUser] = useState<User | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [isImportingChannel, setIsImportingChannel] = useState(false);
+
+  // Initialize Auth State Listener
+  useEffect(() => {
+    const unsubscribe = initAuth(
+      (currentUser, token) => {
+        setUser(currentUser);
+        if (token) setAccessToken(token);
+      },
+      () => {
+        setUser(null);
+        setAccessToken(null);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
 
   // Register Service Worker for PWA compliance
   useEffect(() => {
@@ -192,6 +215,61 @@ export default function App() {
     setCurrentTab('player');
   };
 
+  // 6. Update AI Summary in database metadata
+  const handleUpdateAiSummary = async (youtubeId: string, aiSummary: string) => {
+    await idbService.updateVideoAiSummary(youtubeId, aiSummary);
+    await refreshLibraryData();
+    showToast('AI Summary persisted to database video metadata.');
+  };
+
+  // Google Auth Handlers
+  const handleAuthSuccess = (authUser: User, token: string) => {
+    setUser(authUser);
+    setAccessToken(token);
+    setCachedAccessToken(token);
+    showToast(`Welcome, ${authUser.displayName || authUser.email}! YouTube & Google AI active.`);
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    setAccessToken(null);
+    setCachedAccessToken(null);
+    showToast('Signed out from Google account.');
+  };
+
+  const handleImportMyChannel = async () => {
+    if (!accessToken) {
+      showToast('Please sign in with Google to import your YouTube channel.');
+      return;
+    }
+
+    setIsImportingChannel(true);
+    try {
+      const channel = await YouTubeApiClient.getMyChannel(accessToken);
+      if (channel) {
+        await idbService.saveChannel(channel);
+
+        // Fetch video search for the user's channel title
+        const userVideos = await YouTubeApiClient.searchVideos(accessToken, channel.title).catch(() => []);
+        for (const v of userVideos) {
+          v.sourceFlags = ['ChannelUploads', 'YouTubeSearch'];
+          await idbService.saveVideo(v);
+        }
+
+        await refreshLibraryData();
+        setCurrentTab('channels');
+        showToast(`Imported your channel "${channel.title}" and ${userVideos.length} videos!`);
+      } else {
+        showToast('No YouTube channel found associated with this Google account.');
+      }
+    } catch (err: any) {
+      console.error('Failed to import user YouTube channel:', err);
+      showToast(`Channel import error: ${err.message}`);
+    } finally {
+      setIsImportingChannel(false);
+    }
+  };
+
   const currentVideo = videos.find((v) => v.youtubeId === selectedVideoId) || videos[0] || null;
   const currentVideoComments = comments.filter((c) => c.videoId === selectedVideoId);
   const indexedVideoIds = new Set(videos.map((v) => v.youtubeId));
@@ -203,6 +281,11 @@ export default function App() {
         onOpenWizard={() => setCurrentTab('wizard')}
         onOpenSearch={() => setCurrentTab('search')}
         videoCount={videos.length}
+        user={user}
+        onAuthSuccess={handleAuthSuccess}
+        onLogout={handleLogout}
+        onImportMyChannel={handleImportMyChannel}
+        isImporting={isImportingChannel}
       />
 
       {/* Main Layout: Sidebar + Content Area */}
@@ -242,6 +325,8 @@ export default function App() {
                   onExpandChannel={handleExpandChannel}
                   onPlayVideo={handleSelectVideo}
                   indexedVideoIds={indexedVideoIds}
+                  accessToken={accessToken}
+                  userEmail={user?.email}
                 />
               )}
 
@@ -253,6 +338,7 @@ export default function App() {
                   onSelectVideo={handleSelectVideo}
                   onUpdatePersonal={handleUpdatePersonal}
                   onHarvestComments={handleHarvestComments}
+                  onUpdateAiSummary={handleUpdateAiSummary}
                 />
               )}
 
