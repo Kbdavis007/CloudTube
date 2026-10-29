@@ -19,6 +19,7 @@ import { RatingsNotesView } from './components/views/RatingsNotesView';
 import { SetupWizardView } from './components/views/SetupWizardView';
 import { ScaffoldingExplorerView } from './components/views/ScaffoldingExplorerView';
 import { SettingsView } from './components/views/SettingsView';
+import { LandingSplashView } from './components/views/LandingSplashView';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { initAuth, setCachedAccessToken } from './services/googleAuth';
 import { YouTubeApiClient } from './services/youtubeApi';
@@ -37,6 +38,9 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isImportingChannel, setIsImportingChannel] = useState(false);
+  const [isGuest, setIsGuest] = useState(false);
+
+  const isLoggedIn = !!user || isGuest;
 
   // Initialize Auth State Listener
   useEffect(() => {
@@ -227,6 +231,8 @@ export default function App() {
     setUser(authUser);
     setAccessToken(token);
     setCachedAccessToken(token);
+    setIsGuest(false);
+    setCurrentTab('dashboard');
     showToast(`Welcome, ${authUser.displayName || authUser.email}! YouTube & Google AI active.`);
   };
 
@@ -234,6 +240,8 @@ export default function App() {
     setUser(null);
     setAccessToken(null);
     setCachedAccessToken(null);
+    setIsGuest(false);
+    setCurrentTab('dashboard');
     showToast('Signed out from Google account.');
   };
 
@@ -296,6 +304,7 @@ export default function App() {
           videoCount={videos.length}
           channelCount={channels.length}
           commentCount={comments.length}
+          isLoggedIn={isLoggedIn}
         />
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
@@ -306,6 +315,15 @@ export default function App() {
                 <p className="text-xs font-mono text-slate-400">Loading CloudTube Edge Library...</p>
               </div>
             </div>
+          ) : !isLoggedIn ? (
+            <LandingSplashView
+              onAuthSuccess={handleAuthSuccess}
+              onContinueAsGuest={() => {
+                setIsGuest(true);
+                setCurrentTab('dashboard');
+                showToast('Guest preview active with offline cached library.');
+              }}
+            />
           ) : (
             <>
               {currentTab === 'dashboard' && (
