@@ -1,0 +1,6 @@
+{
+  "name": "CloudTube Studio - Cloudflare YouTube Library & Scaffolding",
+  "description": "Complete system architecture, code scaffolding, automated setup wizard, and offline PWA for a full-stack YouTube library and player running 100% on Cloudflare free tier.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
