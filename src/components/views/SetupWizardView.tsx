@@ -33,6 +33,8 @@ import {
   buildTokenTemplateUrl,
 } from '../../services/cloudflareApi';
 import { buildGuide, CF_LINKS } from '../../services/provisioningGuide';
+import { GEMINI_AI_SETUP_URL } from '../../services/geminiAi';
+import { APP_CHECK_SETUP_URL, RECAPTCHA_KEYS_URL } from '../../services/firebaseApp';
 import { encryptAndSaveCredentials } from '../../services/crypto';
 
 interface SetupWizardViewProps {
@@ -1236,6 +1238,50 @@ ${durableObjects}
             <pre className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-[11px] font-mono text-slate-300 overflow-x-auto leading-relaxed max-h-52">
               {getCustomizedWranglerSnippet()}
             </pre>
+          </div>
+
+          {/* Optional one-time AI setup. The Gemini key stays on Firebase's
+              backend, so users only ever sign in — nobody configures a key. */}
+          <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-orange-400" />
+              <h3 className="text-xs font-bold text-white">AI Video Summaries (optional, one-time)</h3>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              Summaries run through Firebase AI Logic, so the Gemini API key stays on the server and no
+              user ever enters one. Enable it once for this project and every signed-in user gets AI
+              summaries automatically. AI Logic also enforces App Check, which uses the reCAPTCHA
+              Enterprise key already configured for this app.
+            </p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1.5 pt-0.5">
+              <a
+                href={GEMINI_AI_SETUP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-orange-400 hover:text-orange-300 underline underline-offset-2"
+              >
+                <ExternalLink className="w-3 h-3" />
+                <span>Enable Firebase AI Logic</span>
+              </a>
+              <a
+                href={APP_CHECK_SETUP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-orange-400 hover:text-orange-300 underline underline-offset-2"
+              >
+                <ExternalLink className="w-3 h-3" />
+                <span>Register App Check provider</span>
+              </a>
+              <a
+                href={RECAPTCHA_KEYS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-orange-400 hover:text-orange-300 underline underline-offset-2"
+              >
+                <ExternalLink className="w-3 h-3" />
+                <span>Add domains &amp; monitor reCAPTCHA scores</span>
+              </a>
+            </div>
           </div>
 
           <div className="flex justify-center pt-2">

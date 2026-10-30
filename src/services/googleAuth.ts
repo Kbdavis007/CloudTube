@@ -4,7 +4,6 @@
  * and in-memory access token caching as required by security guidelines.
  */
 
-import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
   getAuth,
   signInWithPopup,
@@ -14,11 +13,9 @@ import {
   signOut,
   User,
 } from 'firebase/auth';
-import firebaseConfig from '../../firebase-applet-config.json';
+import { firebaseApp } from './firebaseApp';
 
-// Ensure single Firebase App initialization
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+export const auth = getAuth(firebaseApp);
 
 // Configure Google OAuth Provider with full YouTube & user profile scopes
 export const googleProvider = new GoogleAuthProvider();
