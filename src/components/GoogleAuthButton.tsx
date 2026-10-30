@@ -21,6 +21,8 @@ interface GoogleAuthButtonProps {
   onLogout: () => void;
   onImportMyChannel?: () => void;
   isImporting?: boolean;
+  onReconnect?: () => void;
+  isTokenConnected?: boolean;
 }
 
 export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
@@ -29,6 +31,8 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
   onLogout,
   onImportMyChannel,
   isImporting = false,
+  onReconnect,
+  isTokenConnected = true,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -84,10 +88,28 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
             <div className="px-2 py-1.5 border-b border-slate-800">
               <div className="text-xs font-bold text-white truncate">{user.displayName || 'Google User'}</div>
               <div className="text-[11px] text-slate-400 truncate">{user.email}</div>
-              <div className="mt-1 flex items-center gap-1 text-[10px] text-emerald-400 font-medium">
-                <CheckCircle2 className="w-3 h-3" /> YouTube & Google AI Active
+              <div
+                className={`mt-1 flex items-center gap-1 text-[10px] font-medium ${
+                  isTokenConnected ? 'text-emerald-400' : 'text-amber-400'
+                }`}
+              >
+                <CheckCircle2 className="w-3 h-3" />
+                {isTokenConnected ? 'YouTube & Google AI Active' : 'YouTube access expired'}
               </div>
             </div>
+
+            {!isTokenConnected && onReconnect && (
+              <button
+                onClick={() => {
+                  setShowDropdown(false);
+                  onReconnect();
+                }}
+                className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl bg-amber-600/15 hover:bg-amber-600/25 border border-amber-500/30 text-amber-300 text-xs font-semibold transition text-left"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>Reconnect YouTube access</span>
+              </button>
+            )}
 
             {onImportMyChannel && (
               <button

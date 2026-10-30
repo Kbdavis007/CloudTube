@@ -21,7 +21,7 @@ import { ScaffoldingExplorerView } from './components/views/ScaffoldingExplorerV
 import { SettingsView } from './components/views/SettingsView';
 import { LandingSplashView } from './components/views/LandingSplashView';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
-import { initAuth, setCachedAccessToken } from './services/googleAuth';
+import { initAuth, setCachedAccessToken, refreshGoogleAccessToken } from './services/googleAuth';
 import { YouTubeApiClient } from './services/youtubeApi';
 
 export default function App() {
@@ -234,6 +234,19 @@ export default function App() {
     showToast(`Welcome, ${authUser.displayName || authUser.email}! YouTube & Google AI active.`);
   };
 
+  // Re-acquire a YouTube OAuth token without a full sign-out (e.g. after a reload)
+  const handleReconnect = async () => {
+    try {
+      const token = await refreshGoogleAccessToken();
+      setAccessToken(token);
+      setCachedAccessToken(token);
+      showToast('YouTube access reconnected. Live data enabled.');
+    } catch (err: any) {
+      console.error('Reconnect failed:', err);
+      showToast(`Reconnect failed: ${err?.message || 'Google did not return a token.'}`, 'info');
+    }
+  };
+
   const handleLogout = () => {
     setUser(null);
     setAccessToken(null);
@@ -290,6 +303,8 @@ export default function App() {
         onAuthSuccess={handleAuthSuccess}
         onLogout={handleLogout}
         onImportMyChannel={handleImportMyChannel}
+        onReconnect={handleReconnect}
+        isTokenConnected={!!accessToken}
         isImporting={isImportingChannel}
       />
 

@@ -9,7 +9,6 @@ import {
   ShieldCheck,
   CheckCircle2,
   HardDrive,
-  Key,
   Server,
 } from 'lucide-react';
 import { isVaultConfigured, clearCredentialsVault } from '../../services/crypto';
@@ -21,18 +20,8 @@ interface SettingsViewProps {
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshData, videoCount }) => {
-  const [youtubeApiKey, setYoutubeApiKey] = useState(
-    localStorage.getItem('cloudtube_yt_api_key') || ''
-  );
-  const [isApiKeySaved, setIsApiKeySaved] = useState(false);
   const [vaultStatus, setVaultStatus] = useState<boolean>(isVaultConfigured());
   const [importStatus, setImportStatus] = useState<string | null>(null);
-
-  const handleSaveApiKey = () => {
-    localStorage.setItem('cloudtube_yt_api_key', youtubeApiKey);
-    setIsApiKeySaved(true);
-    setTimeout(() => setIsApiKeySaved(false), 2000);
-  };
 
   const handleClearVault = () => {
     if (confirm('Clear encrypted Cloudflare credentials from this device?')) {
@@ -134,32 +123,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshData, video
         )}
       </div>
 
-      {/* YouTube Data API Key (Optional) */}
-      <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-4">
+      {/* YouTube access */}
+      <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-3">
         <div className="flex items-center gap-2">
-          <Key className="w-4 h-4 text-orange-500" />
-          <h2 className="text-sm font-bold text-white">YouTube Data API v3 Key (Optional)</h2>
+          <ShieldCheck className="w-4 h-4 text-orange-500" />
+          <h2 className="text-sm font-bold text-white">YouTube Data API Access</h2>
         </div>
         <p className="text-xs text-slate-300 leading-relaxed">
-          CloudTube queries the live YouTube Data API v3. Sign in with Google to grant access, or
-          enter a Google Cloud YouTube Data API v3 key below to query YouTube endpoints directly.
+          CloudTube queries the live YouTube Data API v3 using the OAuth access token granted when you
+          sign in with Google. Signing in requests the YouTube, YouTube readonly, YouTube force-SSL,
+          profile, and email scopes. No separate API key is required.
         </p>
-
-        <div className="flex flex-col sm:flex-row gap-2">
-          <input
-            type="password"
-            value={youtubeApiKey}
-            onChange={(e) => setYoutubeApiKey(e.target.value)}
-            placeholder="AIzaSy..."
-            className="flex-1 px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-white focus:outline-hidden focus:border-orange-500"
-          />
-          <button
-            onClick={handleSaveApiKey}
-            className="px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition shadow-sm active:scale-95"
-          >
-            {isApiKeySaved ? 'Saved!' : 'Save Key'}
-          </button>
-        </div>
       </div>
 
       {/* IndexedDB Database Backup & Restore */}

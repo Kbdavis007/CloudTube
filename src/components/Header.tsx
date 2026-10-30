@@ -14,6 +14,8 @@ interface HeaderProps {
   onLogout: () => void;
   onImportMyChannel?: () => void;
   isImporting?: boolean;
+  onReconnect?: () => void;
+  isTokenConnected?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -25,6 +27,8 @@ export const Header: React.FC<HeaderProps> = ({
   onLogout,
   onImportMyChannel,
   isImporting,
+  onReconnect,
+  isTokenConnected,
 }) => {
   const isOnline = useOnlineStatus();
 
@@ -78,6 +82,8 @@ export const Header: React.FC<HeaderProps> = ({
             onAuthSuccess={onAuthSuccess}
             onLogout={onLogout}
             onImportMyChannel={onImportMyChannel}
+            onReconnect={onReconnect}
+            isTokenConnected={isTokenConnected}
             isImporting={isImporting}
           />
 

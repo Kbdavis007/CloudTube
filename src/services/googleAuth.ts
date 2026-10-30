@@ -8,6 +8,7 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
   getAuth,
   signInWithPopup,
+  reauthenticateWithPopup,
   GoogleAuthProvider,
   onAuthStateChanged,
   signOut,
@@ -82,6 +83,26 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
 };
 
 export const getAccessToken = async (): Promise<string | null> => {
+  return cachedAccessToken;
+};
+
+export const hasCachedAccessToken = (): boolean => Boolean(cachedAccessToken);
+
+// Re-run the Google popup to obtain a fresh YouTube OAuth access token.
+// Needed after a page reload (the token is memory-only) or once it expires.
+export const refreshGoogleAccessToken = async (): Promise<string> => {
+  const current = auth.currentUser;
+  if (!current) {
+    throw new Error('Not signed in with Google.');
+  }
+
+  const result = await reauthenticateWithPopup(current, googleProvider);
+  const credential = GoogleAuthProvider.credentialFromResult(result);
+  if (!credential?.accessToken) {
+    throw new Error('Google did not return an access token. Please sign in again.');
+  }
+
+  cachedAccessToken = credential.accessToken;
   return cachedAccessToken;
 };
 
