@@ -417,11 +417,14 @@ bindings = [
                 type="password"
                 value={wizardState.apiToken}
                 onChange={(e) => setWizardState({ ...wizardState, apiToken: e.target.value })}
-                placeholder="Cloudflare User API Token with D1, R2, KV & Queues edit permissions"
+                placeholder="Cloudflare API Token with D1, R2, KV & Queues edit permissions"
                 className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-white focus:outline-hidden focus:border-orange-500"
               />
               <p className="text-[11px] text-slate-500">
                 Requires standard Free-Tier permissions: D1 (Edit), R2 (Edit), KV (Edit), Queues (Edit), Workers (Edit).
+              </p>
+              <p className="text-[11px] text-amber-500/80">
+                Must be an <span className="font-semibold">API Token</span> (~40 chars) created at dash.cloudflare.com/profile/api-tokens — not a Global API Key. Paste it as-is; surrounding quotes or a "Bearer " prefix are stripped automatically.
               </p>
             </div>
 

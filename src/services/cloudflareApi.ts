@@ -26,6 +26,23 @@ export interface CloudflareLogEntry {
 
 export type LogListener = (entry: CloudflareLogEntry) => void;
 
+/**
+ * Normalizes a pasted Cloudflare API token. Copy-paste frequently carries
+ * wrapping quotes, a "Bearer " prefix, or stray whitespace/newlines, any of
+ * which makes Cloudflare reject the header with error 1000 "Invalid API Token".
+ */
+export const sanitizeToken = (raw: string): string => {
+  let token = (raw || '').trim();
+  if (
+    (token.startsWith('"') && token.endsWith('"')) ||
+    (token.startsWith("'") && token.endsWith("'"))
+  ) {
+    token = token.slice(1, -1).trim();
+  }
+  token = token.replace(/^Bearer\s+/i, '').replace(/\s+/g, '');
+  return token;
+};
+
 export class CloudflareAdminClient {
   private apiToken: string;
   private accountId: string;
@@ -38,12 +55,12 @@ export class CloudflareAdminClient {
   }
 
   setCredentials(accountId: string, apiToken: string) {
-    this.accountId = accountId;
-    this.apiToken = apiToken;
+    this.accountId = (accountId || '').trim();
+    this.apiToken = sanitizeToken(apiToken);
     this.emitLog(
       'info',
       'CONFIG',
-      `Credentials updated: Account ID: ${accountId ? `${accountId.slice(0, 6)}...${accountId.slice(-4)}` : 'none'} | Mode: Live Cloudflare API (Free Tier)`
+      `Credentials updated: Account ID: ${this.accountId ? `${this.accountId.slice(0, 6)}...${this.accountId.slice(-4)}` : 'none'} | Mode: Live Cloudflare API (Free Tier)`
     );
   }
 
@@ -214,9 +231,12 @@ export class CloudflareAdminClient {
       const errMsg = firstError?.message || `Cloudflare API returned HTTP ${responseStatus}`;
       
       let recommendation = '';
-      if (responseStatus === 401 || firstError?.code === 10000) {
+      if (firstError?.code === 1000) {
         recommendation =
-          ' -> Token Error: Cloudflare rejected the token as invalid or missing. Check that your API Token is active at dash.cloudflare.com/profile/api-tokens with D1, R2, KV & Queues edit permissions.';
+          ' -> Token Error: Cloudflare did not recognise this token. Common causes: (1) it is a Global API Key, not an API Token — this app needs an API Token from dash.cloudflare.com/profile/api-tokens; (2) the token was deleted, rolled, or expired; (3) the whole token was not copied (they are ~40 chars); (4) a token is still being propagated — retry in ~30s. Verify the exact token with: curl -H "Authorization: Bearer <TOKEN>" https://api.cloudflare.com/client/v4/user/tokens/verify';
+      } else if (responseStatus === 401) {
+        recommendation =
+          ' -> Auth Error: Cloudflare rejected the Authorization header. Check the token has no surrounding quotes or "Bearer " prefix, then retry.';
       } else if (responseStatus === 403 || firstError?.code === 9109) {
         recommendation =
           ' -> Permission Error: Cloudflare accepted the token but rejected this operation. The token is missing the required scope for this resource. Edit the token at dash.cloudflare.com/profile/api-tokens and add the matching "Edit" permission (R2 -> Workers R2 Storage: Edit, plus D1, KV, Queues, Workers as needed), then re-run. A token that passes /user/tokens/verify can still 403 here because verify does not check resource scopes.';
