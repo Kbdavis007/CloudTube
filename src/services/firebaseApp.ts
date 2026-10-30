@@ -47,7 +47,10 @@ export const initAppCheck = (): AppCheck | null => {
     return null;
   }
 
-  if (import.meta.env.DEV) {
+  // Optional chaining: `import.meta.env` only exists under Vite's bundler, and
+  // reading it directly crashes any non-Vite import of this module (plain tsx,
+  // node, a test harness).
+  if (import.meta.env?.DEV) {
     // Lets the Firebase console debug token pass during local development.
     (self as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN?: boolean | string })
       .FIREBASE_APPCHECK_DEBUG_TOKEN = true;
