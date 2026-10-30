@@ -19,8 +19,9 @@
   sandbox is recycled (idle timeout / PID 1 restart). Only `/workspace` persists.
 - `~/.copilot/lever.yml` (lever dials) is NOT persisted. Restore with
   `bash .openhands-setup/restore.sh`.
-- `.openhands/` is gitignored, so this file and project memory live in the repo tree but
-  are not committed; `/workspace` keeps them across resets.
+- `.openhands-setup/` IS committed so teammates and future sessions can read it; `.openhands/`
+  (the live agent dir) is gitignored. This file lives in the repo tree, so `/workspace` keeps it
+  across resets and `git` keeps it across clones.
 
 ## OpenHands runtime (Agent Canvas / local sandbox)
 - Skills auto-load from `~/.agents/skills/`; plugins (skills + MCP) from `~/.agents/plugins/`
@@ -43,3 +44,29 @@
   `https://mcp.cloudflare.com/mcp` (OAuth; 401 without token).
 - cf CLI (beta): `sudo npm install -g cf` -> `/usr/local/bin/cf`; `cf auth login`.
   Use the cf CLI unless the project has a Wrangler config.
+
+## AI summaries (migrated 2026-10-30)
+- Was `@google/genai` + `GEMINI_API_KEY` (key in client -> impossible for users to
+  provide; no OAuth scope grants a Gemini key). Now uses **Firebase AI Logic**
+  (`firebase/ai`: `getAI(app,{backend:new GoogleAIBackend()})` + `getGenerativeModel`),
+  which keeps the Gemini key on Google's backend -> no key in the client at all.
+- `src/services/firebaseApp.ts` = single shared app (Auth + AI share it).
+  `src/services/geminiAi.ts` exports `GEMINI_AI_SETUP_URL` (deep link to
+  `console.firebase.google.com/project/<id>/ailogic`), linked from Setup Wizard Step 5.
+- Owner must enable AI Logic once in the Firebase console (choose Gemini Developer API =
+  free tier; Vertex/Agent Platform needs billing). Enforces App Check; local dev needs a
+  registered App Check debug token. See `docs/AI_SUMMARIES.md`.
+- Env note: `npm install` fails (ERESOLVE esbuild/vite); I used
+  `npm install --legacy-peer-deps` to typecheck, but `bun install --frozen-lockfile` is correct.
+- App Check: AI Logic enforces it -> `initAppCheck()` in `src/services/firebaseApp.ts` uses
+  `ReCaptchaEnterpriseProvider(recaptchaSiteKey)`; called at startup in `src/main.tsx` and
+  again (idempotent) in `geminiAi.getModel`. Site key (public, in firebase-applet-config.json):
+  6LcFKAcuAAAAAI3D12TPK6MHsW5Il-IOr655WM4r. Sets FIREBASE_APPCHECK_DEBUG_TOKEN=true only in
+  Vite dev builds. Wizard Step 5 also links `APP_CHECK_SETUP_URL`.
+- Setup wizard progress: `src/services/wizardProgress.ts` persists a `WizardProgress`
+  record (completed flags, details, lastStep, aiConfigured) to localStorage key
+  `cloudtube_wizard_progress`. Credentials stay in the AES-GCM vault. Steps are now
+  6: auth/provision/encryption/health/**ai**/complete — step 5 is the AI setup step
+  (was previously bundled into the final "complete" screen). `loadWizardProgress`
+  returns null when nothing meaningful is stored, so a fresh visit never shows a
+  false "resumed" banner. The wizard persists only after `hydrated` is set.
