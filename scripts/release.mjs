@@ -173,6 +173,13 @@ writeFileSync(changelogPath, changelog, 'utf8');
 // --- Commit, tag, push -------------------------------------------------------
 sh(`git add package.json src/generated/version.ts CHANGELOG.md`);
 sh(`git commit -m "chore(release): v${next}" -m "Release v${next} (${commits.length} commit(s))."`);
+
+// Regenerate now that the tree is clean so DIRTY is false, then fold the
+// corrected stamp into the release commit before tagging.
+sh(`node scripts/version.mjs`);
+sh(`git add src/generated/version.ts`);
+sh(`git commit --amend --no-edit`);
+
 sh(`git tag -a v${next} -m "Release v${next}"`);
 
 if (push) {
