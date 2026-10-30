@@ -54,6 +54,30 @@ export const sanitizeToken = (raw: string): string => {
 export const looksLikeGlobalApiKey = (value: string): boolean =>
   /^[0-9a-f]{37}$/i.test(sanitizeToken(value));
 
+/**
+ * Builds a Cloudflare dashboard URL that pre-fills the token creation form with
+ * exactly the permissions the provisioning pipeline needs. Template URLs only
+ * pre-fill the form: the user still confirms creation in the dashboard, so this
+ * cannot mint a credential on the user's behalf.
+ */
+export const buildTokenTemplateUrl = (name = 'CloudTube Provisioning'): string => {
+  const permissions = [
+    { key: 'workers_r2', type: 'edit' },
+    { key: 'd1', type: 'edit' },
+    { key: 'workers_kv_storage', type: 'edit' },
+    { key: 'queues', type: 'edit' },
+    { key: 'workers_scripts', type: 'edit' },
+  ];
+  const encoded = encodeURIComponent(JSON.stringify(permissions));
+  const params = new URLSearchParams({
+    permissionGroupKeys: encoded,
+    accountId: '*',
+    zoneId: 'all',
+    name,
+  });
+  return `https://dash.cloudflare.com/profile/api-tokens?${params.toString()}`;
+};
+
 export class CloudflareAdminClient {
   private apiToken: string;
   private accountId: string;

@@ -30,6 +30,7 @@ import {
   CloudflareLogEntry,
   sanitizeToken,
   looksLikeGlobalApiKey,
+  buildTokenTemplateUrl,
 } from '../../services/cloudflareApi';
 import { encryptAndSaveCredentials } from '../../services/crypto';
 
@@ -472,6 +473,18 @@ bindings = [
               />
               <p className="text-[11px] text-slate-500">
                 Requires standard Free-Tier permissions: D1 (Edit), R2 (Edit), KV (Edit), Queues (Edit), Workers (Edit).
+              </p>
+              <a
+                href={buildTokenTemplateUrl()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-orange-400 hover:text-orange-300 underline underline-offset-2"
+              >
+                <ExternalLink className="w-3 h-3" />
+                <span>Create a token with the correct scopes</span>
+              </a>
+              <p className="text-[11px] text-slate-500">
+                Opens the Cloudflare dashboard with these permissions pre-selected. You still review and create it there — CloudTube never creates credentials for you.
               </p>
               <p className="text-[11px] text-amber-500/80">
                 Must be an <span className="font-semibold">API Token</span> (~40 chars) created at dash.cloudflare.com/profile/api-tokens — not a Global API Key. Paste it as-is; surrounding quotes or a "Bearer " prefix are stripped automatically.
