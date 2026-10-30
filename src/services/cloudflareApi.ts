@@ -68,14 +68,15 @@ export const buildTokenTemplateUrl = (name = 'CloudTube Provisioning'): string =
     { key: 'queues', type: 'edit' },
     { key: 'workers_scripts', type: 'edit' },
   ];
+  // Encode once, and only once: URLSearchParams would re-encode the percent
+  // signs, leaving the dashboard with a literal "%5B%7B..." string instead of
+  // the JSON array it expects.
   const encoded = encodeURIComponent(JSON.stringify(permissions));
-  const params = new URLSearchParams({
-    permissionGroupKeys: encoded,
-    accountId: '*',
-    zoneId: 'all',
-    name,
-  });
-  return `https://dash.cloudflare.com/profile/api-tokens?${params.toString()}`;
+  return (
+    `https://dash.cloudflare.com/profile/api-tokens` +
+    `?permissionGroupKeys=${encoded}` +
+    `&accountId=*&zoneId=all&name=${encodeURIComponent(name)}`
+  );
 };
 
 export class CloudflareAdminClient {
