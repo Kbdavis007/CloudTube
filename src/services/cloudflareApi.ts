@@ -132,12 +132,32 @@ export class CloudflareAdminClient {
 
       durationMs = Date.now() - startTime;
       responseStatus = proxyRes.status;
-      const proxyJson = await proxyRes.json().catch(() => ({}));
+
+      // Read as text first so a non-JSON body (e.g. the SPA's HTML fallback)
+      // does not get mistaken for a Cloudflare API payload.
+      const proxyText = await proxyRes.text();
+      let proxyJson: any = {};
+      try {
+        proxyJson = JSON.parse(proxyText);
+      } catch {
+        proxyJson = {};
+      }
+
+      // The proxy returns { status, ok, durationMs, data }. If we did not get
+      // that shape, the route itself is not being served by this host (common on
+      // static hosting where POST /api/* returns 405 from the asset server).
+      const looksLikeProxyResponse =
+        typeof proxyJson.ok === 'boolean' && 'data' in proxyJson;
+      if (!looksLikeProxyResponse) {
+        throw new Error(
+          `Server proxy route unavailable (HTTP ${proxyRes.status}). The /api/cloudflare/proxy endpoint is not served by this deployment.`
+        );
+      }
 
       responseData = proxyJson.data || proxyJson;
       ok = proxyJson.ok ?? proxyRes.ok;
     } catch (proxyErr: any) {
-      // Fallback: If local proxy route was unreachable, attempt direct fetch with CORS diagnosis
+      // Fallback: If the proxy route was unreachable, attempt direct fetch with CORS diagnosis
       this.emitLog('warn', actionName, `Server proxy request failed (${proxyErr.message}). Attempting direct fetch...`);
 
       try {
@@ -159,7 +179,7 @@ export class CloudflareAdminClient {
         const isCors = directErr.name === 'TypeError' || directErr.message?.includes('Failed to fetch');
 
         const errorMsg = isCors
-          ? `Browser CORS Block: Cloudflare's API does not allow direct browser-to-Cloudflare requests without a proxy. Please verify the dev server proxy is active.`
+          ? `Cannot reach the Cloudflare API from the browser and the server proxy is not available. Cloudflare blocks direct browser requests (CORS), so the /api/cloudflare/proxy endpoint must be running on the same origin. Start the Node server (npm run start) or deploy it alongside the static build.`
           : `Network error reaching Cloudflare: ${directErr.message}`;
 
         this.emitLog('error', actionName, errorMsg, {
