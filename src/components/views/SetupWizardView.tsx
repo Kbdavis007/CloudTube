@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { WizardState } from '../../types';
 import {
   Sparkles,
@@ -32,6 +32,7 @@ import {
   looksLikeGlobalApiKey,
   buildTokenTemplateUrl,
 } from '../../services/cloudflareApi';
+import { buildGuide, CF_LINKS } from '../../services/provisioningGuide';
 import { encryptAndSaveCredentials } from '../../services/crypto';
 
 interface SetupWizardViewProps {
@@ -64,6 +65,20 @@ export const SetupWizardView: React.FC<SetupWizardViewProps> = ({ onComplete }) 
   const [isRunningProvision, setIsRunningProvision] = useState(false);
   const [isVerifyingToken, setIsVerifyingToken] = useState(false);
   const [verifyStatus, setVerifyStatus] = useState<{ ok: boolean; message: string } | null>(null);
+
+  // Derive targeted guidance from the structured Cloudflare error so the user is
+  // told exactly which dashboard page to open for the step that failed.
+  const errorGuide = useMemo(
+    () =>
+      wizardState.errorMsg
+        ? buildGuide(
+            wizardState.errorCode,
+            wizardState.errorEndpoint ?? '',
+            wizardState.errorStatus ?? 0
+          )
+        : null,
+    [wizardState.errorMsg, wizardState.errorCode, wizardState.errorEndpoint, wizardState.errorStatus]
+  );
   const [copiedSnippet, setCopiedSnippet] = useState(false);
   const [copiedLogs, setCopiedLogs] = useState(false);
 
@@ -296,6 +311,9 @@ export const SetupWizardView: React.FC<SetupWizardViewProps> = ({ onComplete }) 
           ...prev,
           status: nextStatus,
           errorMsg: err.message,
+          errorCode: err.cfCode,
+          errorStatus: err.cfStatus,
+          errorEndpoint: err.cfEndpoint,
         };
       });
     }
@@ -487,7 +505,7 @@ bindings = [
                 Opens the Cloudflare dashboard with these permissions pre-selected. You still review and create it there — CloudTube never creates credentials for you.
               </p>
               <a
-                href="https://dash.cloudflare.com/?to=/:account/r2/overview"
+                href={CF_LINKS.r2}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-orange-400 hover:text-orange-300 underline underline-offset-2"
@@ -642,53 +660,78 @@ bindings = [
             </div>
           </div>
 
-          {/* PROMINENT ERROR DIAGNOSTICS CARD IF HALTED */}
+          {/* GUIDED ERROR RESOLUTION CARD IF HALTED */}
           {wizardState.errorMsg && (
-            <div className="p-5 rounded-2xl bg-red-950/50 border border-red-800 text-left space-y-3 animate-fadeIn">
+            <div className="p-5 rounded-2xl bg-red-950/40 border border-red-800 text-left space-y-4 animate-fadeIn">
               <div className="flex items-start gap-3">
                 <div className="p-2 rounded-xl bg-red-900/60 text-red-300 shrink-0">
                   <XCircle className="w-5 h-5 text-red-400" />
                 </div>
                 <div className="space-y-1">
                   <div className="text-sm font-bold text-red-200">
-                    Provisioning Halted: Cloudflare API Error Encountered
+                    {errorGuide?.title ?? 'Provisioning Halted: Cloudflare API Error Encountered'}
                   </div>
-                  <div className="text-xs font-mono text-red-300 bg-red-950/80 p-2 rounded-lg border border-red-900/60 leading-relaxed">
-                    {wizardState.errorMsg}
-                  </div>
+                  {errorGuide ? (
+                    <p className="text-xs text-slate-300 leading-relaxed">{errorGuide.explanation}</p>
+                  ) : (
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      Cloudflare rejected the request. See the detail below and the full log for context.
+                    </p>
+                  )}
                 </div>
               </div>
 
-              <div className="text-xs text-red-300/80 space-y-1 pl-10">
-                <div className="font-semibold text-red-200">Common Causes & Resolution:</div>
-                <ul className="list-disc list-inside space-y-0.5 text-[11px] text-slate-300">
-                  <li>
-                    <strong>Missing Token Permission (HTTP 403):</strong> The token is valid but lacks the scope for
-                    this resource. Edit the token and add the matching <strong>Edit</strong> permission — for R2 that is{' '}
-                    <strong>Workers R2 Storage: Edit</strong> (R2 must also be enabled on the account). A token can pass
-                    "Test Token" and still 403 here, because token verification does not check resource scopes.
-                  </li>
-                  <li>
-                    <strong>Authentication Error (HTTP 401):</strong> Verify your Cloudflare User API Token has edit
-                    permissions for D1, R2, KV, and Queues.
-                  </li>
-                  <li>
-                    <strong>Browser CORS / Proxy:</strong> Requests are routed through the local server proxy. If it is
-                    unreachable, verify the dev server is running.
-                  </li>
-                  <li>
-                    <strong>Invalid Account ID:</strong> Check that your 32-character Account ID matches your dashboard.
-                  </li>
-                </ul>
-              </div>
+              {errorGuide && (
+                <ol className="space-y-2 pl-10 text-xs text-slate-200 list-decimal list-inside">
+                  {errorGuide.steps.map((stepText: string, i: number) => (
+                    <li key={i} className="leading-relaxed">
+                      {stepText}
+                    </li>
+                  ))}
+                </ol>
+              )}
 
-              <div className="flex flex-wrap items-center gap-3 pt-2 pl-10">
+              {errorGuide && errorGuide.actions.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 pl-10">
+                  {errorGuide.actions.map((action: { label: string; url: string }) => (
+                    <a
+                      key={action.url + action.label}
+                      href={action.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition shadow-md active:scale-95"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>{action.label}</span>
+                    </a>
+                  ))}
+                </div>
+              )}
+
+              <details className="pl-10">
+                <summary className="text-[11px] text-slate-400 cursor-pointer hover:text-slate-200">
+                  Technical detail
+                </summary>
+                <div className="mt-2 text-[11px] font-mono text-red-300 bg-red-950/80 p-2 rounded-lg border border-red-900/60 leading-relaxed break-words whitespace-pre-wrap">
+                  {wizardState.errorMsg}
+                </div>
+              </details>
+
+              <div className="flex flex-wrap items-center gap-3 pt-1 pl-10">
                 <button
                   onClick={startAutomatedProvisioning}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition shadow-md active:scale-95"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition active:scale-95"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
                   <span>Retry Provisioning</span>
+                </button>
+
+                <button
+                  onClick={() => setWizardState((prev) => ({ ...prev, step: 1 }))}
+                  className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200"
+                >
+                  <ArrowRight className="w-3.5 h-3.5 rotate-180" />
+                  <span>Back to credentials</span>
                 </button>
 
                 <button

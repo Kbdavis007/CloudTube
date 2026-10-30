@@ -333,7 +333,13 @@ export class CloudflareAdminClient {
         responseBody: responseData,
       });
 
-      throw new Error(fullError);
+      // Carry the structured fields so the UI can build targeted guidance
+      // instead of pattern-matching the message string.
+      const error: any = new Error(fullError);
+      error.cfCode = firstError?.code;
+      error.cfStatus = responseStatus;
+      error.cfEndpoint = endpoint;
+      throw error;
     }
 
     this.emitLog('success', actionName, `SUCCESS: Cloudflare validated & provisioned ${endpoint}`, {

@@ -130,6 +130,10 @@ export interface WizardState {
     workerHealth: boolean;
   };
   errorMsg?: string;
+  /** Structured Cloudflare failure, used to build targeted guidance. */
+  errorCode?: number;
+  errorStatus?: number;
+  errorEndpoint?: string;
 }
 
 export interface ScaffoldFile {
