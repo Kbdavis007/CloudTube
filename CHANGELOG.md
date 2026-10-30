@@ -8,10 +8,9 @@ The version shown in the app header comes from the most recent git tag. When the
 working tree has uncommitted changes the badge turns amber and shows the
 `-dirty` suffix, so what you see running always matches a real commit.
 
-
 ## [0.1.0] - 2026-10-30
 
-**Commit:** `6947b56` · **Branch:** `main` · **Deployed:** pending
+**Tag:** `v0.1.0` · **Branch:** `main` · **Deployed:** 2026-10-30 02:08 UTC (production)
 
 ### Features
 - add semver release + deployment tracking (148a3e3)

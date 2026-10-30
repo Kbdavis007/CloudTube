@@ -11,4 +11,4 @@ npm run deploy:log -- --env production --url https://your-app.example --notes "w
 
 | Deployed (UTC) | Version | Commit | Environment | URL | Actor | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| 2026-10-30 01:54 | `v0.1.0` | `f1f7a6b` | local | — | local | Versioning + release tracking introduced |
+| 2026-10-30 02:08 UTC | `v0.1.0` | `c3c5eea` | production | https://work-1-rqotlvzedjcalkcx.prod-runtime.all-hands.dev | local | Semver + deployment tracking; CF 405 proxy fix |

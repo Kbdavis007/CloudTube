@@ -111,7 +111,6 @@ sh(`node scripts/version.mjs`);
 
 // --- Write the changelog entry ----------------------------------------------
 const date = new Date().toISOString().slice(0, 10);
-const shortHash = gitOut('rev-parse --short HEAD', 'unknown');
 
 const sections = { feat: [], fix: [], perf: [], refactor: [], docs: [], chore: [], other: [] };
 for (const c of commits) {
@@ -139,7 +138,7 @@ const body = Object.entries(sections)
 
 const entry = `## [${next}] - ${date}
 
-**Commit:** \`${shortHash}\` · **Branch:** \`${branch}\` · **Deployed:** pending
+**Tag:** \`v${next}\` · **Branch:** \`${branch}\` · **Deployed:** pending
 
 ${body}
 
