@@ -25,7 +25,7 @@ import {
   Trash2,
   Play,
 } from 'lucide-react';
-import { cfClient, CloudflareLogEntry } from '../../services/cloudflareApi';
+import { cfClient, CloudflareLogEntry, sanitizeToken } from '../../services/cloudflareApi';
 import { encryptAndSaveCredentials } from '../../services/crypto';
 
 interface SetupWizardViewProps {
@@ -118,6 +118,27 @@ export const SetupWizardView: React.FC<SetupWizardViewProps> = ({ onComplete }) 
     setIsVerifyingToken(true);
     setVerifyStatus(null);
     cfClient.setCredentials(wizardState.accountId, wizardState.apiToken);
+
+    // Cheap client-side sanity checks so an obvious typo is reported instantly
+    // instead of surfacing as a vague Cloudflare error 1000.
+    const accountId = wizardState.accountId.trim();
+    const token = sanitizeToken(wizardState.apiToken);
+    if (accountId && !/^[0-9a-f]{32}$/i.test(accountId)) {
+      setVerifyStatus({
+        ok: false,
+        message: `Account ID looks wrong: expected 32 hex characters, got ${accountId.length}. Copy it from your Cloudflare dashboard sidebar.`,
+      });
+      setIsVerifyingToken(false);
+      return;
+    }
+    if (token && token.length < 30) {
+      setVerifyStatus({
+        ok: false,
+        message: `API Token looks truncated: got ${token.length} characters, Cloudflare tokens are about 40. Re-copy the whole token.`,
+      });
+      setIsVerifyingToken(false);
+      return;
+    }
 
     try {
       const res = await cfClient.verifyToken();
@@ -445,12 +466,16 @@ bindings = [
 
               {verifyStatus && (
                 <div
-                  className={`text-xs flex items-center gap-1.5 ${
+                  className={`text-xs flex items-start gap-1.5 ${
                     verifyStatus.ok ? 'text-emerald-400' : 'text-red-400'
                   }`}
                 >
-                  {verifyStatus.ok ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-                  <span>{verifyStatus.message}</span>
+                  {verifyStatus.ok ? (
+                    <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  )}
+                  <span className="break-words whitespace-pre-wrap">{verifyStatus.message}</span>
                 </div>
               )}
             </div>

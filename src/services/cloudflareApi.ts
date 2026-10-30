@@ -57,10 +57,16 @@ export class CloudflareAdminClient {
   setCredentials(accountId: string, apiToken: string) {
     this.accountId = (accountId || '').trim();
     this.apiToken = sanitizeToken(apiToken);
+    // Showing the token length makes a truncated paste obvious: Cloudflare API
+    // tokens are ~40 chars, so a short value explains an otherwise confusing
+    // error 1000 "Invalid API Token".
+    const tokenInfo = this.apiToken
+      ? `${this.apiToken.slice(0, 6)}…${this.apiToken.slice(-4)} (${this.apiToken.length} chars)`
+      : 'none';
     this.emitLog(
       'info',
       'CONFIG',
-      `Credentials updated: Account ID: ${this.accountId ? `${this.accountId.slice(0, 6)}...${this.accountId.slice(-4)}` : 'none'} | Mode: Live Cloudflare API (Free Tier)`
+      `Credentials updated: Account ID: ${this.accountId ? `${this.accountId.slice(0, 6)}...${this.accountId.slice(-4)}` : 'none'} | Token: ${tokenInfo} | Mode: Live Cloudflare API (Free Tier)`
     );
   }
 
