@@ -30,7 +30,9 @@ export default defineConfig(() => {
       // Allow the runtime proxy domains (e.g. *.prod-runtime.all-hands.dev) and
       // localhost to reach the dev server; Vite otherwise blocks unknown Host
       // headers, which surfaces as "Blocked request" in the browser.
-      allowedHosts: true,
+      // `as const` keeps the literal `true` type; Vite's types reject a widened
+      // boolean here.
+      allowedHosts: true as const,
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modify—file watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',

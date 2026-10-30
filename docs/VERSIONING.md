@@ -88,3 +88,36 @@ can record the ledger row with the CI-provided commit:
 - run: npm run build          # regenerates src/generated/version.ts from git
 - run: npm run deploy:log -- --env production --url "$DEPLOY_URL" --notes "$GITHUB_SHA"
 ```
+
+## Edge deployment (Cloudflare Worker)
+
+Production runs as a **Worker** named `cloudtube` (Workers Builds, git-connected:
+any push to `main` triggers a deploy). Pages Functions are **not** used — they do
+not execute on a Worker project, which is why an earlier `functions/` attempt
+never ran and `POST /api/cloudflare/proxy` kept returning 405.
+
+`worker/index.ts` serves the SPA from the `ASSETS` binding and implements:
+
+| Route | Purpose |
+| --- | --- |
+| `GET /api/health` | version / commit / branch provenance |
+| `POST /api/cloudflare/proxy` | server-side relay to the Cloudflare API |
+
+`wrangler.toml` sets `run_worker_first = ["/api/*"]` so API calls reach the
+Worker before the asset layer (otherwise the asset handler answers POST with 405).
+
+Build settings for Workers Builds:
+
+- Build command: `npm run build`
+- Deploy command: `npx wrangler deploy`
+
+Manual deploy (requires `CLOUDFLARE_API_TOKEN` with *Workers Scripts: Edit*):
+
+```bash
+npm run deploy          # build + wrangler deploy
+npm run deploy:dry      # build + bundle only, no upload
+```
+
+The Worker runs `scripts/version.mjs` during the build; when the CI checkout has
+no tags it fetches them once so the version label stays `vX.Y.Z` instead of a bare
+commit hash.

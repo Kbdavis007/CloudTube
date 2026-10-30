@@ -1,0 +1,18 @@
+# CloudTube Worker configuration.
+#
+# The production deployment is a Worker named "cloudtube" (not a Pages project),
+# so the SPA and its same-origin API are served by worker/index.ts. Static files
+# from the Vite build are exposed through the ASSETS binding and unknown paths
+# fall back to index.html for client-side routing.
+name = "cloudtube"
+main = "worker/index.ts"
+compatibility_date = "2026-10-01"
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+# Send API calls to the Worker before the asset layer. Without this, /api/* can
+# be answered by the static asset handler (which returns 405 for POST), which is
+# exactly the failure this Worker exists to fix.
+run_worker_first = ["/api/*"]

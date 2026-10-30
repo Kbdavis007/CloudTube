@@ -16,7 +16,9 @@
     "release:major": "node scripts/release.mjs major",
     "deploy:log": "node scripts/deploy.mjs",
     "deploy:prod": "node scripts/deploy.mjs --env production",
-    "deploy:preview": "node scripts/deploy.mjs --env preview"
+    "deploy:preview": "node scripts/deploy.mjs --env preview",
+    "deploy": "npm run build && npx --yes wrangler deploy",
+    "deploy:dry": "npm run build && npx --yes wrangler deploy --dry-run"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

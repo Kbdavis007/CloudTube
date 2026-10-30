@@ -30,13 +30,24 @@ const git = (args, fallback = '') => {
 
 const pkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'));
 
+// CI checkouts (Cloudflare Workers Builds, GitHub Actions) are often shallow
+// clones with no tags, which would silently degrade the version to a bare commit
+// hash. Pull the tags once so the release label stays meaningful. Opt out with
+// GIT_FETCH_TAGS=0 (e.g. offline builds).
+if (process.env.GIT_FETCH_TAGS !== '0' && git('tag -l') === '') {
+  git('fetch --tags --force --quiet');
+}
+
 const latestTag = git('describe --tags --abbrev=0'); // e.g. v0.1.0
 const describe = git('describe --tags --always --dirty'); // e.g. v0.1.0-2-g1a2b3c4-dirty
 const commit = git('rev-parse --short HEAD', 'unknown');
 const commitFull = git('rev-parse HEAD', 'unknown');
 const commitDate = git('log -1 --format=%cI', '');
 const branch = git('rev-parse --abbrev-ref HEAD', 'unknown');
-const dirty = git('status --porcelain').length > 0;
+// Only tracked modifications count as dirty. Build-time artifacts that are
+  // not committed (e.g. package-lock.json created by `npm install`, or the
+  // generated version file itself) must not flip the badge to "-dirty".
+  const dirty = git('status --porcelain --untracked-files=no').length > 0;
 
 const version = (latestTag || `v${pkg.version}`).replace(/^v/, '');
 const tag = `v${version}`;
@@ -64,7 +75,7 @@ export const COMMITS_SINCE_TAG = ${commitsSinceTag};
 export const DESCRIBE = ${JSON.stringify(describe)};
 
 /** Short label for badges, e.g. "v0.1.0" or "v0.1.0+2". */
-export const VERSION_LABEL = DESCRIBE;
+export const VERSION_LABEL = DESCRIBE.startsWith("v") ? DESCRIBE : TAG;
 /** Full provenance string, e.g. "v0.1.0 (1a2b3c4) on main". */
 export const VERSION_FULL = \`\${TAG} (\${COMMIT})\${DIRTY ? ' dirty' : ''} on \${BRANCH}\`;
 `;

@@ -179,7 +179,7 @@ export class CloudflareAdminClient {
         const isCors = directErr.name === 'TypeError' || directErr.message?.includes('Failed to fetch');
 
         const errorMsg = isCors
-          ? `Cannot reach the Cloudflare API from the browser and the server proxy is not available. Cloudflare blocks direct browser requests (CORS), so the /api/cloudflare/proxy endpoint must be running on the same origin. Start the Node server (npm run start) or deploy it alongside the static build.`
+          ? `Cannot reach the Cloudflare API from the browser and the server proxy is not available. Cloudflare blocks direct browser requests (CORS), so /api/cloudflare/proxy must be served on this origin. Run the local Node server (npm run dev) or deploy the Worker (npx wrangler deploy).`
           : `Network error reaching Cloudflare: ${directErr.message}`;
 
         this.emitLog('error', actionName, errorMsg, {
