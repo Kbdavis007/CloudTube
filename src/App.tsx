@@ -526,7 +526,11 @@ export default function App() {
               {currentTab === 'scaffolding' && <ScaffoldingExplorerView />}
 
               {currentTab === 'settings' && (
-                <SettingsView onRefreshData={refreshLibraryData} videoCount={videos.length} />
+                <SettingsView
+                  onRefreshData={refreshLibraryData}
+                  videoCount={videos.length}
+                  onNavigate={setCurrentTab}
+                />
               )}
             </>
           )}

@@ -12,7 +12,7 @@ git tag (vX.Y.Z)  ──►  scripts/version.mjs  ──►  src/generated/versi
                        ┌─────────────────────────────┼─────────────────────────────┐
                        ▼                             ▼                             ▼
                   UI header badge            index.html <meta>          GET /api/health
-                  Sidebar footer              (view-source / curl)       (deploy probes)
+                  Settings > Administration  (view-source / curl)       (deploy probes)
 ```
 
 `src/generated/version.ts` is **auto-generated and not committed** (it is in
@@ -24,7 +24,7 @@ one revision stale. Instead it is regenerated from git on every `dev`, `build`,
 Where the version appears:
 
 - **Header badge** next to the brand — `vX.Y.Z`, amber when the tree is dirty.
-- **Sidebar footer** — version label, commit hash, commit date, and branch.
+- **Settings → Administration** — version label, commit hash, commit date, and branch.
 - **`index.html`** — `<meta name="app-version">` and `<meta name="app-commit">`,
   so you can confirm a deployment with `curl -s https://your-app | grep app-version`.
 - **`GET /api/health`** — returns `version`, `tag`, `commit`, `commitDate`,

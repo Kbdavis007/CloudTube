@@ -1,5 +1,4 @@
 import React from 'react';
-import { VERSION_LABEL, COMMIT, BRANCH, COMMIT_DATE } from '../generated/version';
 import {
   LayoutDashboard,
   Search,
@@ -7,10 +6,7 @@ import {
   Tv,
   MessageSquare,
   Star,
-  Sparkles,
-  Layers,
   Settings,
-  HardDrive,
   Lock,
   Trash2,
   ShieldAlert,
@@ -98,21 +94,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       badge: removalCount > 0 ? String(removalCount) : null,
     },
     {
-      id: 'wizard' as PageTab,
-      label: 'Setup Wizard',
-      icon: Sparkles,
-      badge: '5 Min',
-      highlight: true,
-    },
-    {
-      id: 'scaffolding' as PageTab,
-      label: 'Architecture & Code',
-      icon: Layers,
-      badge: '100% Free',
-    },
-    {
       id: 'settings' as PageTab,
-      label: 'Settings & Quotas',
+      label: 'Settings & Admin',
       icon: Settings,
       badge: null,
     },
@@ -165,9 +148,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {item.badge && (
                   <span
                     className={`text-[10px] font-bold px-1.5 py-0.2 rounded-md ${
-                      item.highlight
-                        ? 'bg-orange-500 text-white'
-                        : isActive
+                      isActive
                         ? 'bg-orange-500/20 text-orange-300'
                         : 'bg-slate-800 text-slate-400'
                     }`}
@@ -179,46 +160,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             );
           })
         )}
-      </div>
-
-      {/* Release / deployment stamp */}
-      <div className="hidden md:block mt-3 px-3 py-2 rounded-2xl bg-slate-950/60 border border-slate-800/60">
-        <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
-          <span title={`Commit ${COMMIT} on ${BRANCH}`}>CloudTube {VERSION_LABEL}</span>
-          <span>{COMMIT}</span>
-        </div>
-        <div className="text-[9px] text-slate-500 font-mono truncate">
-          {COMMIT_DATE || 'local build'} · {BRANCH}
-        </div>
-      </div>
-
-      {/* Cloudflare Free Tier Mini Gauge in Sidebar Footer */}
-      <div className="hidden md:block mt-6 p-3 rounded-2xl bg-gradient-to-br from-slate-900/90 to-slate-950 border border-slate-800/80">
-        <div className="flex items-center justify-between text-xs mb-2">
-          <div className="flex items-center gap-1.5 font-bold text-slate-200">
-            <HardDrive className="w-3.5 h-3.5 text-orange-400" />
-            <span>Cloudflare Free Tier</span>
-          </div>
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono font-semibold">
-            0.1% USED
-          </span>
-        </div>
-        <div className="space-y-1.5 text-[11px] text-slate-400">
-          <div className="flex justify-between">
-            <span>Workers API:</span>
-            <span className="font-mono text-slate-300">124 / 100k /day</span>
-          </div>
-          <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden">
-            <div className="h-full bg-emerald-500 w-[1%]" />
-          </div>
-          <div className="flex justify-between">
-            <span>D1 SQLite Reads:</span>
-            <span className="font-mono text-slate-300">1.8k / 5M /day</span>
-          </div>
-          <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden">
-            <div className="h-full bg-orange-500 w-[2%]" />
-          </div>
-        </div>
       </div>
     </aside>
   );

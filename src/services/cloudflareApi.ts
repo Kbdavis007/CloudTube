@@ -29,6 +29,37 @@ export type LogListener = (entry: CloudflareLogEntry) => void;
 export type CloudflareAuthMode = 'token' | 'global';
 
 /**
+ * Published free-tier allowances, in one place so the usage gauges and the
+ * reference tables cannot drift apart. These are Cloudflare's documented limits,
+ * not measured values — measured usage comes from the GraphQL Analytics API.
+ */
+export const CLOUDFLARE_FREE_TIER_LIMITS = {
+  workersRequestsPerDay: 100_000,
+  d1RowsReadPerDay: 5_000_000,
+  d1RowsWrittenPerDay: 100_000,
+  kvReadsPerDay: 100_000,
+  kvWritesPerDay: 1_000,
+  r2StorageGb: 10,
+} as const;
+
+export interface CloudflareUsageMetric {
+  key: string;
+  label: string;
+  used: number;
+  limit: number;
+  unit: string;
+}
+
+export interface CloudflareUsageSnapshot {
+  /** When the numbers were read, so a stale gauge is obvious. */
+  fetchedAt: string;
+  /** Account-wide usage for the current UTC day. */
+  metrics: CloudflareUsageMetric[];
+  /** Per-dataset failures; usage can be partially available. */
+  errors: string[];
+}
+
+/**
  * Normalizes a pasted Cloudflare API token. Copy-paste frequently carries
  * wrapping quotes, a "Bearer " prefix, or stray whitespace/newlines, any of
  * which makes Cloudflare reject the header with error 1000 "Invalid API Token".
@@ -515,6 +546,143 @@ export class CloudflareAdminClient {
     );
 
     return { d1Health, kvHealth, r2Health, queueHealth, workerHealth };
+  }
+
+  /**
+   * Reads account-wide free-tier consumption from the GraphQL Analytics API.
+   *
+   * The dashboard charts come from this same API, so these are real measured
+   * numbers rather than an estimate. Datasets are independent: a token that can
+   * read Workers analytics but not R2 storage still returns partial data, so a
+   * missing dataset is reported in `errors` instead of failing the whole call.
+   */
+  async fetchUsageSnapshot(): Promise<CloudflareUsageSnapshot> {
+    if (!this.accountId) {
+      throw new Error('Account ID is required to read Cloudflare usage analytics.');
+    }
+
+    const now = new Date();
+    const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const dateOnly = dayStart.toISOString().slice(0, 10);
+
+    const query = `query CloudTubeUsage($accountTag: string!, $day: Date, $dayStart: Time, $dayEnd: Time) {
+      viewer {
+        accounts(filter: { accountTag: $accountTag }) {
+          workersInvocationsAdaptive(limit: 1000, filter: { datetime_geq: $dayStart, datetime_leq: $dayEnd }) {
+            sum { requests }
+          }
+          d1AnalyticsAdaptiveGroups(limit: 1000, filter: { date_geq: $day, date_leq: $day }) {
+            sum { rowsRead rowsWritten }
+          }
+          kvOperationsAdaptiveGroups(limit: 1000, filter: { date_geq: $day, date_leq: $day }) {
+            sum { requests }
+            dimensions { actionType }
+          }
+          r2StorageAdaptiveGroups(limit: 1000) {
+            max { payloadSize metadataSize }
+          }
+        }
+      }
+    }`;
+
+    const data = await this.cfFetch('/graphql', {
+      method: 'POST',
+      body: {
+        query,
+        variables: {
+          accountTag: this.accountId,
+          day: dateOnly,
+          dayStart: dayStart.toISOString(),
+          dayEnd: now.toISOString(),
+        },
+      },
+      actionName: 'USAGE_ANALYTICS',
+    });
+
+    const errors: string[] = [];
+    for (const e of data?.errors ?? []) {
+      if (e?.message) errors.push(e.message);
+    }
+
+    const account = data?.data?.viewer?.accounts?.[0];
+    if (!account) {
+      throw new Error(
+        errors[0] ||
+          'Cloudflare returned no analytics for this account. The token needs Account Analytics: Read.'
+      );
+    }
+
+    const sum = (rows: any[] | undefined, pick: (row: any) => number) =>
+      (rows ?? []).reduce((acc, row) => acc + (pick(row) || 0), 0);
+
+    const workerRequests = sum(account.workersInvocationsAdaptive, (r) => r?.sum?.requests);
+    const d1RowsRead = sum(account.d1AnalyticsAdaptiveGroups, (r) => r?.sum?.rowsRead);
+    const d1RowsWritten = sum(account.d1AnalyticsAdaptiveGroups, (r) => r?.sum?.rowsWritten);
+
+    const kvRows = account.kvOperationsAdaptiveGroups ?? [];
+    const kvReads = sum(
+      kvRows.filter((r: any) => r?.dimensions?.actionType === 'read'),
+      (r) => r?.sum?.requests
+    );
+    const kvWrites = sum(
+      kvRows.filter((r: any) => r?.dimensions?.actionType === 'write'),
+      (r) => r?.sum?.requests
+    );
+
+    const r2Bytes = (account.r2StorageAdaptiveGroups ?? []).reduce(
+      (acc: number, row: any) => acc + (row?.max?.payloadSize || 0) + (row?.max?.metadataSize || 0),
+      0
+    );
+    const r2Gb = r2Bytes / 1024 ** 3;
+
+    const limits = CLOUDFLARE_FREE_TIER_LIMITS;
+    const metrics: CloudflareUsageMetric[] = [
+      {
+        key: 'workers',
+        label: 'Workers Requests',
+        used: workerRequests,
+        limit: limits.workersRequestsPerDay,
+        unit: 'req / day',
+      },
+      {
+        key: 'd1Reads',
+        label: 'D1 Rows Read',
+        used: d1RowsRead,
+        limit: limits.d1RowsReadPerDay,
+        unit: 'rows / day',
+      },
+      {
+        key: 'd1Writes',
+        label: 'D1 Rows Written',
+        used: d1RowsWritten,
+        limit: limits.d1RowsWrittenPerDay,
+        unit: 'rows / day',
+      },
+      {
+        key: 'kvReads',
+        label: 'KV Reads',
+        used: kvReads,
+        limit: limits.kvReadsPerDay,
+        unit: 'reads / day',
+      },
+      {
+        key: 'kvWrites',
+        label: 'KV Writes',
+        used: kvWrites,
+        limit: limits.kvWritesPerDay,
+        unit: 'writes / day',
+      },
+      {
+        key: 'r2Storage',
+        label: 'R2 Storage',
+        used: Number(r2Gb.toFixed(3)),
+        limit: limits.r2StorageGb,
+        unit: 'GB',
+      },
+    ];
+
+    this.emitLog('success', 'USAGE_ANALYTICS', `Read live free-tier usage for ${dateOnly} UTC.`);
+    return { fetchedAt: new Date().toISOString(), metrics, errors };
   }
 }
 

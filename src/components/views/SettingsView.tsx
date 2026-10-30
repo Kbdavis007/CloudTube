@@ -8,18 +8,39 @@ import {
   RotateCcw,
   ShieldCheck,
   CheckCircle2,
-  HardDrive,
   Server,
+  Sparkles,
+  Layers,
+  Cloud,
+  ArrowUpRight,
+  GitBranch,
+  CalendarClock,
 } from 'lucide-react';
 import { isVaultConfigured, clearCredentialsVault } from '../../services/crypto';
 import { idbService } from '../../services/indexedDB';
+import { CloudflareStatsPanel } from '../CloudflareStatsPanel';
+import type { PageTab } from '../Sidebar';
+import {
+  VERSION_LABEL,
+  VERSION_FULL,
+  COMMIT,
+  COMMIT_DATE,
+  BRANCH,
+  DIRTY,
+} from '../../generated/version';
 
 interface SettingsViewProps {
   onRefreshData: () => Promise<void>;
   videoCount: number;
+  /** Opens another page (wizard, scaffolding) from the admin shortcuts. */
+  onNavigate?: (tab: PageTab) => void;
 }
 
-export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshData, videoCount }) => {
+export const SettingsView: React.FC<SettingsViewProps> = ({
+  onRefreshData,
+  videoCount,
+  onNavigate,
+}) => {
   const [vaultStatus, setVaultStatus] = useState<boolean>(isVaultConfigured());
   const [importStatus, setImportStatus] = useState<string | null>(null);
 
@@ -75,10 +96,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshData, video
       <div>
         <h1 className="text-xl sm:text-2xl font-extrabold text-white flex items-center gap-2">
           <Settings className="w-5 h-5 text-orange-500" />
-          Settings & Cloudflare Quotas
+          Settings & Administration
         </h1>
         <p className="text-xs sm:text-sm text-slate-400">
-          Manage API credentials, encrypted client vault, IndexedDB backups, and review Free Tier limits.
+          Live Cloudflare usage, API credentials, encrypted client vault, library backups, and
+          deployment controls — everything administrative lives here.
         </p>
       </div>
 
@@ -88,6 +110,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshData, video
           <span>{importStatus}</span>
         </div>
       )}
+
+      {/* Live Cloudflare Free Tier Usage (top of settings) */}
+      <CloudflareStatsPanel onOpenWizard={() => onNavigate?.('wizard')} />
 
       {/* Cloudflare Encrypted Storage Status */}
       <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-4">
@@ -225,6 +250,84 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshData, video
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Administration: build provenance + admin-only actions */}
+      <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-4">
+        <div className="flex items-center gap-2">
+          <Cloud className="w-4 h-4 text-orange-500" />
+          <h2 className="text-sm font-bold text-white">Administration</h2>
+        </div>
+        <p className="text-xs text-slate-300 leading-relaxed">
+          Infrastructure provisioning and architecture controls are administrative actions, so they
+          are launched from here rather than the main navigation.
+        </p>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => onNavigate?.('wizard')}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white text-xs font-bold transition shadow-sm active:scale-95"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Cloudflare Setup Wizard</span>
+          </button>
+
+          <button
+            onClick={() => onNavigate?.('scaffolding')}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition active:scale-95"
+          >
+            <Layers className="w-4 h-4 text-slate-400" />
+            <span>Architecture & Scaffolding</span>
+          </button>
+
+          <a
+            href="https://dash.cloudflare.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-semibold transition"
+          >
+            <ArrowUpRight className="w-4 h-4 text-orange-400" />
+            <span>Cloudflare Dashboard</span>
+          </a>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+          <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1">
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              <GitBranch className="w-3 h-3" /> Version
+            </div>
+            <div
+              className={`font-mono text-sm ${
+                DIRTY ? 'text-amber-300' : 'text-white'
+              }`}
+              title={VERSION_FULL}
+            >
+              {VERSION_LABEL}
+              {DIRTY ? ' dirty' : ''}
+            </div>
+            <p className="text-[10px] text-slate-500 font-mono">{VERSION_FULL}</p>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1">
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              <Cloud className="w-3 h-3" /> Commit
+            </div>
+            <div className="font-mono text-sm text-white">{COMMIT}</div>
+            <p className="text-[10px] text-slate-500 font-mono truncate">{BRANCH}</p>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1">
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              <CalendarClock className="w-3 h-3" /> Built
+            </div>
+            <div className="font-mono text-sm text-white">
+              {COMMIT_DATE ? new Date(COMMIT_DATE).toLocaleDateString() : 'local build'}
+            </div>
+            <p className="text-[10px] text-slate-500 font-mono truncate">
+              {COMMIT_DATE || 'uncommitted tree'}
+            </p>
+          </div>
         </div>
       </div>
     </div>
