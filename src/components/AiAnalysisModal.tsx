@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { VideoMetadata, PersonalMetadata } from '../types';
 import { GeminiAiService, VideoAiAnalysis } from '../services/geminiAi';
+import { ApiErrorCard } from './ApiErrorCard';
 import {
   Sparkles,
   CheckCircle2,
@@ -26,14 +27,19 @@ export const AiAnalysisModal: React.FC<AiAnalysisModalProps> = ({
   const [analysis, setAnalysis] = useState<VideoAiAnalysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isApplied, setIsApplied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const runAiAnalysis = async () => {
     setIsAnalyzing(true);
+    setError(null);
     try {
       const result = await GeminiAiService.analyzeVideo(video);
       setAnalysis(result);
     } catch (err) {
       console.error('AI analysis failed:', err);
+      // Without this the modal sat on the spinner forever: the failure was logged
+      // to the console only, so the user saw a hang rather than an error.
+      setError(err instanceof Error ? err.message : 'AI analysis failed.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -84,6 +90,16 @@ export const AiAnalysisModal: React.FC<AiAnalysisModalProps> = ({
             <Loader2 className="w-8 h-8 text-orange-500 animate-spin mx-auto" />
             <p className="text-sm font-semibold text-white">Synthesizing metadata with Google AI...</p>
             <p className="text-xs text-slate-400">Evaluating engagement metrics & extracting core takeaways</p>
+          </div>
+        ) : error ? (
+          <div className="space-y-3">
+            <ApiErrorCard message={error} title="Google AI request failed" />
+            <button
+              onClick={runAiAnalysis}
+              className="w-full py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition active:scale-95"
+            >
+              Retry Analysis
+            </button>
           </div>
         ) : analysis ? (
           <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">

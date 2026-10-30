@@ -29,6 +29,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { AiAnalysisModal } from '../AiAnalysisModal';
+import { ApiErrorCard } from '../ApiErrorCard';
 import { GeminiAiService } from '../../services/geminiAi';
 
 interface VideoPlayerViewProps {
@@ -409,11 +410,16 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
                         )}
                       </button>
 
-                      {summaryFeedback && (
-                        <div className="text-[11px] text-emerald-400 font-semibold pt-1">
-                          {summaryFeedback}
-                        </div>
-                      )}
+                      {summaryFeedback &&
+                        (summaryFeedback.startsWith('Error') ? (
+                          <div className="pt-1">
+                            <ApiErrorCard message={summaryFeedback} />
+                          </div>
+                        ) : (
+                          <div className="text-[11px] text-emerald-400 font-semibold pt-1">
+                            {summaryFeedback}
+                          </div>
+                        ))}
                     </div>
                   )}
                 </div>

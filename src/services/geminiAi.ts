@@ -52,16 +52,39 @@ export const GEMINI_AI_SETUP_URL = `https://console.firebase.google.com/project/
 /** Public docs page listing the model names AI Logic currently supports. */
 export const GEMINI_MODELS_URL = 'https://firebase.google.com/docs/ai-logic/models';
 
+/**
+ * How long to wait for a Gemini response before giving up.
+ *
+ * The SDK's own default is 180s. That is far too long for an interactive button:
+ * when a request cannot complete (App Check rejected the attestation, the network
+ * is blocked, AI Logic is not enabled) the call simply stays pending, so the UI
+ * spins with no error for three minutes. Fail in a minute instead, with a message
+ * that names the likely cause.
+ */
+const DEFAULT_TIMEOUT_MS = 60_000;
+
+const readTimeoutMs = (): number => {
+  const raw = Number(import.meta.env?.VITE_GEMINI_TIMEOUT_MS);
+  return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_TIMEOUT_MS;
+};
+
+export const GEMINI_TIMEOUT_MS = readTimeoutMs();
+
 export class GeminiAiService {
   private static getModel(responseMimeType?: string) {
     // Idempotent: main.tsx already calls this at startup; calling again is a
     // no-op that guarantees App Check is registered before the first request.
     initAppCheck();
     const ai = getAI(firebaseApp, { backend: new GoogleAIBackend() });
-    return getGenerativeModel(ai, {
-      model: GEMINI_MODEL_NAME,
-      ...(responseMimeType ? { generationConfig: { responseMimeType } } : {}),
-    });
+    return getGenerativeModel(
+      ai,
+      {
+        model: GEMINI_MODEL_NAME,
+        ...(responseMimeType ? { generationConfig: { responseMimeType } } : {}),
+      },
+      // Caps how long a stuck request can leave the UI spinning (SDK default: 180s).
+      { timeout: GEMINI_TIMEOUT_MS }
+    );
   }
 
   /**
@@ -72,6 +95,18 @@ export class GeminiAiService {
    */
   private static rethrow(err: unknown): never {
     const message = err instanceof Error ? err.message : String(err);
+    // The request hit our timeout, or was aborted. Without this the UI just spins:
+    // a pending request produces no error of its own. App Check is the usual cause,
+    // since AI Logic rejects any call whose attestation token is missing.
+    if (/abort|timed? ?out|timeout|deadline|network ?request ?failed/i.test(message)) {
+      throw new Error(
+        `The AI request did not complete within ${Math.round(GEMINI_TIMEOUT_MS / 1000)}s. ` +
+          `If App Check is enforced, this browser's domain must be registered on the reCAPTCHA ` +
+          `Enterprise key and the app's App Check provider, otherwise every Gemini call is ` +
+          `rejected. Check the browser console for an App Check error, confirm AI Logic is ` +
+          `enabled at ${GEMINI_AI_SETUP_URL}, then retry. (${message})`
+      );
+    }
     // A retired model name returns 404 with "no longer available to new users".
     // Say which model this build asked for and how to change it, instead of
     // showing the raw firebasevertexai.googleapis.com URL.

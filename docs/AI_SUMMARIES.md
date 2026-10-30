@@ -67,6 +67,19 @@ token (Firebase console -> Security -> App Check -> Apps -> Manage debug tokens)
 a Vite dev build, so a fresh debug token is printed to the browser console on first run;
 register that value once in the console. The flag is never set in production builds.
 
+## Request timeout
+
+AI requests are capped at 60s (`VITE_GEMINI_TIMEOUT_MS`, default `60000` in
+`src/services/geminiAi.ts`). The Firebase AI SDK's own default is 180s, which is far
+too long for a button: when a call cannot complete the request simply stays pending,
+so the UI spins with no error for three minutes.
+
+If you see "The AI request did not complete within 60s", the request was abandoned
+rather than rejected. The usual cause is **App Check**: when it is enforced, any call
+whose attestation token is missing or minted for an unregistered domain is refused,
+and the app's runtime domain must be on both the reCAPTCHA Enterprise key and the
+app's App Check provider. Confirm AI Logic is enabled, then retry.
+
 ## Where it lives in the code
 
 - `src/services/geminiAi.ts` - Gemini calls via `firebase/ai` (`getAI` +
