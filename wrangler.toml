@@ -16,3 +16,8 @@ not_found_handling = "single-page-application"
 # be answered by the static asset handler (which returns 405 for POST), which is
 # exactly the failure this Worker exists to fix.
 run_worker_first = ["/api/*"]
+
+# Required by `npx wrangler preview` (branch Previews). The block must exist even
+# when a Preview needs no settings of its own: assets, compatibility_date and
+# placement stay at the top level and are not inherited from here.
+[previews]
