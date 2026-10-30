@@ -35,9 +35,8 @@ interface SetupWizardViewProps {
 export const SetupWizardView: React.FC<SetupWizardViewProps> = ({ onComplete }) => {
   const [wizardState, setWizardState] = useState<WizardState>({
     step: 1,
-    accountId: 'cf_acc_demo_free_tier_81a',
-    apiToken: 'cf_pat_demo_secret_token_live',
-    useSimulation: true,
+    accountId: '',
+    apiToken: '',
     status: {
       r2Bucket: 'idle',
       d1Database: 'idle',
@@ -76,6 +75,13 @@ export const SetupWizardView: React.FC<SetupWizardViewProps> = ({ onComplete }) 
   const logsContainerRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<any>(null);
 
+  // Mirror of wizardState so async handlers always read the latest credentials/mode,
+  // even when they run from a callback created before a setWizardState re-render.
+  const wizardStateRef = useRef(wizardState);
+  useEffect(() => {
+    wizardStateRef.current = wizardState;
+  }, [wizardState]);
+
   // Subscribe to live Cloudflare logs
   useEffect(() => {
     setLogs(cfClient.getLogs());
@@ -107,23 +113,11 @@ export const SetupWizardView: React.FC<SetupWizardViewProps> = ({ onComplete }) 
     };
   }, [isRunningProvision]);
 
-  // 1-Click Demo / Test Profile
-  const loadDemoProfile = () => {
-    setWizardState((prev) => ({
-      ...prev,
-      accountId: 'cf_free_user_89104b92d',
-      apiToken: 'cf_tok_free_tier_demo_ready',
-      useSimulation: true,
-      errorMsg: undefined,
-    }));
-    cfClient.emitLog('info', 'DEMO_PROFILE', 'Loaded 1-Click Instant Demo Profile with High-Fidelity Simulator.');
-  };
-
   // Step 1: Pre-Validate Token
   const handleVerifyToken = async () => {
     setIsVerifyingToken(true);
     setVerifyStatus(null);
-    cfClient.setCredentials(wizardState.accountId, wizardState.apiToken, wizardState.useSimulation);
+    cfClient.setCredentials(wizardState.accountId, wizardState.apiToken);
 
     try {
       const res = await cfClient.verifyToken();
@@ -143,6 +137,11 @@ export const SetupWizardView: React.FC<SetupWizardViewProps> = ({ onComplete }) 
 
   // Step 2: Auto-Provision Cloudflare Infrastructure
   const startAutomatedProvisioning = async () => {
+    // Read the latest credentials: this may be invoked from a stale closure where
+    // `wizardState` has not re-rendered yet.
+    const { accountId, apiToken } = wizardStateRef.current;
+    cfClient.setCredentials(accountId, apiToken);
+
     setIsRunningProvision(true);
     setCurrentStepIndex(0);
     setWizardState((prev) => ({
@@ -158,13 +157,10 @@ export const SetupWizardView: React.FC<SetupWizardViewProps> = ({ onComplete }) 
       },
     }));
 
-    cfClient.setCredentials(wizardState.accountId, wizardState.apiToken, wizardState.useSimulation);
     cfClient.emitLog(
       'info',
       'PIPELINE_START',
-      `Starting 6-step automated Cloudflare provisioning pipeline (${
-        wizardState.useSimulation ? 'Simulator Mode' : 'Live Cloudflare API via Server Proxy'
-      })...`
+      `Starting 6-step automated Cloudflare provisioning pipeline (Live Cloudflare API via Server Proxy)...`
     );
 
     try {
@@ -261,23 +257,6 @@ export const SetupWizardView: React.FC<SetupWizardViewProps> = ({ onComplete }) 
         };
       });
     }
-  };
-
-  // Switch to simulator mode when stuck
-  const handleSwitchToSimulatorAndRetry = () => {
-    setWizardState((prev) => ({
-      ...prev,
-      useSimulation: true,
-      errorMsg: undefined,
-    }));
-    cfClient.emitLog(
-      'info',
-      'SIMULATOR_OVERRIDE',
-      'Switched to High-Fidelity Simulator Mode. Retrying automated provisioning...'
-    );
-    setTimeout(() => {
-      startAutomatedProvisioning();
-    }, 200);
   };
 
   // Step 3: Encrypted Storage
@@ -412,16 +391,9 @@ bindings = [
                 Step 1: Authenticate with Cloudflare
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Provide your Cloudflare Account ID & API Token, or click Instant Demo.
+                Provide your Cloudflare Account ID & API Token. All operations run against the live Cloudflare API.
               </p>
             </div>
-
-            <button
-              onClick={loadDemoProfile}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-500/20 hover:bg-orange-500/30 border border-orange-500/30 text-orange-300 text-xs font-semibold self-start sm:self-auto transition"
-            >
-              <Sparkles className="w-3.5 h-3.5" /> 1-Click Instant Demo Profile
-            </button>
           </div>
 
           <div className="space-y-4">
@@ -479,27 +451,6 @@ bindings = [
                 </div>
               )}
             </div>
-
-            {/* Simulation Mode Toggle */}
-            <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-950 border border-slate-800/80">
-              <div>
-                <div className="text-xs font-bold text-white flex items-center gap-2">
-                  <span>Enable High-Fidelity Simulator Mode</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 font-semibold">
-                    RECOMMENDED FOR TESTING
-                  </span>
-                </div>
-                <div className="text-[11px] text-slate-400 mt-0.5">
-                  Simulates all Cloudflare Admin API endpoints and response payloads without making live network requests.
-                </div>
-              </div>
-              <input
-                type="checkbox"
-                checked={wizardState.useSimulation}
-                onChange={(e) => setWizardState({ ...wizardState, useSimulation: e.target.checked })}
-                className="w-4 h-4 accent-orange-500 cursor-pointer"
-              />
-            </div>
           </div>
 
           <div className="flex justify-end pt-4">
@@ -529,14 +480,8 @@ bindings = [
             </div>
 
             <div className="flex items-center gap-2">
-              <span
-                className={`text-[11px] font-mono px-2.5 py-1 rounded-full border ${
-                  wizardState.useSimulation
-                    ? 'bg-blue-950/40 border-blue-800 text-blue-300'
-                    : 'bg-emerald-950/40 border-emerald-800 text-emerald-300'
-                }`}
-              >
-                {wizardState.useSimulation ? 'Mode: Simulator' : 'Mode: Live Cloudflare API'}
+              <span className="text-[11px] font-mono px-2.5 py-1 rounded-full border bg-emerald-950/40 border-emerald-800 text-emerald-300">
+                Mode: Live Cloudflare API
               </span>
             </div>
           </div>
@@ -613,12 +558,18 @@ bindings = [
                 <div className="font-semibold text-red-200">Common Causes & Resolution:</div>
                 <ul className="list-disc list-inside space-y-0.5 text-[11px] text-slate-300">
                   <li>
-                    <strong>Authentication Error:</strong> Verify your Cloudflare User API Token has edit permissions for
-                    D1, R2, KV, and Queues.
+                    <strong>Missing Token Permission (HTTP 403):</strong> The token is valid but lacks the scope for
+                    this resource. Edit the token and add the matching <strong>Edit</strong> permission — for R2 that is{' '}
+                    <strong>Workers R2 Storage: Edit</strong> (R2 must also be enabled on the account). A token can pass
+                    "Test Token" and still 403 here, because token verification does not check resource scopes.
                   </li>
                   <li>
-                    <strong>Browser CORS / Proxy:</strong> If calling Cloudflare directly, browser security policies
-                    block requests. Use the high-fidelity simulator mode to complete setup in under 3 minutes.
+                    <strong>Authentication Error (HTTP 401):</strong> Verify your Cloudflare User API Token has edit
+                    permissions for D1, R2, KV, and Queues.
+                  </li>
+                  <li>
+                    <strong>Browser CORS / Proxy:</strong> Requests are routed through the local server proxy. If it is
+                    unreachable, verify the dev server is running.
                   </li>
                   <li>
                     <strong>Invalid Account ID:</strong> Check that your 32-character Account ID matches your dashboard.
@@ -628,16 +579,8 @@ bindings = [
 
               <div className="flex flex-wrap items-center gap-3 pt-2 pl-10">
                 <button
-                  onClick={handleSwitchToSimulatorAndRetry}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition shadow-md active:scale-95"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Switch to High-Fidelity Simulator & Continue</span>
-                </button>
-
-                <button
                   onClick={startAutomatedProvisioning}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition shadow-md active:scale-95"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
                   <span>Retry Provisioning</span>
@@ -1030,28 +973,28 @@ bindings = [
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
               {
-                name: 'D1 SQLite Connection',
-                desc: 'SELECT 1; table schema checks',
+                name: 'D1 SQLite Database',
+                desc: 'youtube_library_db present in account',
                 ok: wizardState.validationResults.d1Health,
               },
               {
-                name: 'KV Cache Read/Write',
-                desc: 'Sub-millisecond test ping',
+                name: 'KV Cache Namespace',
+                desc: 'YOUTUBE_CACHE_KV present in account',
                 ok: wizardState.validationResults.kvHealth,
               },
               {
                 name: 'R2 Object Storage Vault',
-                desc: 'S3-compatible bucket ready',
+                desc: 'youtube-library-media-vault present in account',
                 ok: wizardState.validationResults.r2Health,
               },
               {
                 name: 'Cloudflare Queue Dispatcher',
-                desc: 'Crawler message bus operational',
+                desc: 'youtube-crawler-queue present in account',
                 ok: wizardState.validationResults.queueHealth,
               },
               {
                 name: 'Workers Edge Gateway',
-                desc: 'Zero Trust & CORS verified',
+                desc: 'At least one Worker script deployed',
                 ok: wizardState.validationResults.workerHealth,
               },
             ].map((check) => (
@@ -1063,9 +1006,15 @@ bindings = [
                   <div className="text-xs font-bold text-white">{check.name}</div>
                   <div className="text-[11px] text-slate-400">{check.desc}</div>
                 </div>
-                <div className="flex items-center gap-1 text-emerald-400 font-mono text-xs font-bold">
-                  <CheckCircle2 className="w-4 h-4" /> PASSED
-                </div>
+                {check.ok ? (
+                  <div className="flex items-center gap-1 text-emerald-400 font-mono text-xs font-bold">
+                    <CheckCircle2 className="w-4 h-4" /> PASSED
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 text-red-400 font-mono text-xs font-bold">
+                    <XCircle className="w-4 h-4" /> FAILED
+                  </div>
+                )}
               </div>
             ))}
           </div>

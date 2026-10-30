@@ -103,7 +103,6 @@ export interface WizardState {
   step: number; // 1: Welcome & Auth, 2: Auto-Provision, 3: Encrypted Storage, 4: Validate Health, 5: Complete
   accountId: string;
   apiToken: string;
-  useSimulation: boolean;
   status: {
     r2Bucket: 'idle' | 'in_progress' | 'success' | 'error';
     d1Database: 'idle' | 'in_progress' | 'success' | 'error';

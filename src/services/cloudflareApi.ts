@@ -1,7 +1,7 @@
 /**
- * Cloudflare Admin API v4 Client & Simulator
- * Provides real Cloudflare API calls (via server-side CORS proxy) + high-fidelity simulation mode
- * with comprehensive real-time live event logging, response inspection, and progress tracking.
+ * Cloudflare Admin API v4 Client
+ * Makes real Cloudflare API calls via the server-side CORS proxy, with comprehensive
+ * real-time live event logging, response inspection, and progress tracking.
  */
 
 export interface CloudflareAccount {
@@ -29,26 +29,21 @@ export type LogListener = (entry: CloudflareLogEntry) => void;
 export class CloudflareAdminClient {
   private apiToken: string;
   private accountId: string;
-  private isSimulation: boolean;
   private logListeners: Set<LogListener> = new Set();
   private logs: CloudflareLogEntry[] = [];
 
-  constructor(accountId = '', apiToken = '', isSimulation = false) {
+  constructor(accountId = '', apiToken = '') {
     this.accountId = accountId;
     this.apiToken = apiToken;
-    this.isSimulation = isSimulation;
   }
 
-  setCredentials(accountId: string, apiToken: string, isSimulation = false) {
+  setCredentials(accountId: string, apiToken: string) {
     this.accountId = accountId;
     this.apiToken = apiToken;
-    this.isSimulation = isSimulation;
     this.emitLog(
       'info',
       'CONFIG',
-      `Credentials updated: Account ID: ${accountId ? `${accountId.slice(0, 6)}...${accountId.slice(-4)}` : 'none'} | Mode: ${
-        isSimulation ? 'High-Fidelity Simulator' : 'Live Cloudflare API (Free Tier)'
-      }`
+      `Credentials updated: Account ID: ${accountId ? `${accountId.slice(0, 6)}...${accountId.slice(-4)}` : 'none'} | Mode: Live Cloudflare API (Free Tier)`
     );
   }
 
@@ -106,41 +101,7 @@ export class CloudflareAdminClient {
     const actionName = options.actionName || 'API_CALL';
     const startTime = Date.now();
 
-    // 1. SIMULATION MODE
-    if (this.isSimulation) {
-      this.emitLog('request', actionName, `[Simulated] ${method} https://api.cloudflare.com/client/v4${endpoint}`, {
-        endpoint,
-        method,
-        requestPayload: options.body,
-      });
-
-      const delay = Math.floor(Math.random() * 250) + 450;
-      await new Promise((r) => setTimeout(r, delay));
-
-      const durationMs = Date.now() - startTime;
-      const simResult = this.generateSimulatedResponse(endpoint, options.body);
-
-      this.emitLog(
-        'response',
-        actionName,
-        `[Simulated 200 OK] Received Cloudflare response in ${durationMs}ms`,
-        {
-          endpoint,
-          method,
-          responseStatus: 200,
-          responseBody: simResult,
-          durationMs,
-        }
-      );
-
-      this.emitLog('success', actionName, `Resource successfully created in simulated Cloudflare namespace.`, {
-        durationMs,
-      });
-
-      return simResult;
-    }
-
-    // 2. LIVE CLOUDFLARE API CALL (via Server-Side Proxy to prevent browser CORS blocks)
+    // LIVE CLOUDFLARE API CALL (via Server-Side Proxy to prevent browser CORS blocks)
     this.emitLog('request', actionName, `Sending ${method} request to Cloudflare Admin API v4...`, {
       endpoint,
       method,
@@ -198,7 +159,7 @@ export class CloudflareAdminClient {
         const isCors = directErr.name === 'TypeError' || directErr.message?.includes('Failed to fetch');
 
         const errorMsg = isCors
-          ? `Browser CORS Block: Cloudflare's API does not allow direct browser-to-Cloudflare requests without a proxy. Please verify the dev server proxy is active or toggle Simulator Mode.`
+          ? `Browser CORS Block: Cloudflare's API does not allow direct browser-to-Cloudflare requests without a proxy. Please verify the dev server proxy is active.`
           : `Network error reaching Cloudflare: ${directErr.message}`;
 
         this.emitLog('error', actionName, errorMsg, {
@@ -233,12 +194,20 @@ export class CloudflareAdminClient {
       const errMsg = firstError?.message || `Cloudflare API returned HTTP ${responseStatus}`;
       
       let recommendation = '';
-      if (responseStatus === 401 || firstError?.code === 10000 || firstError?.code === 9109) {
-        recommendation = ' -> Token Error: Check that your API Token is active at dash.cloudflare.com/profile/api-tokens with D1, R2, KV & Queues edit permissions.';
+      if (responseStatus === 401 || firstError?.code === 10000) {
+        recommendation =
+          ' -> Token Error: Cloudflare rejected the token as invalid or missing. Check that your API Token is active at dash.cloudflare.com/profile/api-tokens with D1, R2, KV & Queues edit permissions.';
+      } else if (responseStatus === 403 || firstError?.code === 9109) {
+        recommendation =
+          ' -> Permission Error: Cloudflare accepted the token but rejected this operation. The token is missing the required scope for this resource. Edit the token at dash.cloudflare.com/profile/api-tokens and add the matching "Edit" permission (R2 -> Workers R2 Storage: Edit, plus D1, KV, Queues, Workers as needed), then re-run. A token that passes /user/tokens/verify can still 403 here because verify does not check resource scopes.';
       } else if (responseStatus === 404 || firstError?.code === 7003) {
         recommendation = ' -> Account Error: Verify your 32-character Cloudflare Account ID.';
       } else if (responseStatus === 409 || firstError?.code === 10009) {
         recommendation = ' -> Note: Resource already exists in your account and can be safely reused.';
+      }
+
+      if (!firstError?.message && responseData?.rawText) {
+        recommendation = ` -> Non-JSON response: ${String(responseData.rawText).slice(0, 200)}${recommendation}`;
       }
 
       const fullError = `${errCode}${errMsg}${recommendation}`;
@@ -262,88 +231,6 @@ export class CloudflareAdminClient {
     return responseData;
   }
 
-  // Generate realistic Cloudflare responses for simulation
-  private generateSimulatedResponse(endpoint: string, body?: any): any {
-    const randomHex = () => Math.random().toString(16).substring(2, 10);
-    const dateStr = new Date().toISOString();
-
-    if (endpoint.includes('/r2/buckets')) {
-      return {
-        success: true,
-        errors: [],
-        messages: [],
-        result: {
-          name: body?.name || 'youtube-library-media-vault',
-          creation_date: dateStr,
-          location: 'WNAM',
-          storage_class: 'Standard',
-        },
-      };
-    }
-
-    if (endpoint.includes('/d1/database')) {
-      return {
-        success: true,
-        errors: [],
-        messages: [],
-        result: {
-          uuid: `d1-${randomHex()}-${randomHex()}-4a2b-${randomHex()}`,
-          name: body?.name || 'youtube_library_db',
-          version: 'production',
-          created_at: dateStr,
-        },
-      };
-    }
-
-    if (endpoint.includes('/storage/kv/namespaces')) {
-      return {
-        success: true,
-        errors: [],
-        messages: [],
-        result: {
-          id: `kv_ns_${randomHex()}${randomHex()}`,
-          title: body?.title || 'YOUTUBE_CACHE_KV',
-          supports_url_encoding: true,
-        },
-      };
-    }
-
-    if (endpoint.includes('/queues')) {
-      return {
-        success: true,
-        errors: [],
-        messages: [],
-        result: {
-          queue_id: `queue_yt_crawl_${randomHex()}`,
-          queue_name: body?.queue_name || 'youtube-crawler-queue',
-          created_on: dateStr,
-          settings: { delivery_delay: 0, max_retries: 3 },
-        },
-      };
-    }
-
-    if (endpoint.includes('/tokens/verify')) {
-      return {
-        success: true,
-        errors: [],
-        messages: [],
-        result: {
-          id: `tok_${randomHex()}`,
-          status: 'active',
-          not_before: dateStr,
-          expires_on: null,
-        },
-      };
-    }
-
-    return {
-      success: true,
-      errors: [],
-      messages: [],
-      result: { status: 'created', timestamp: dateStr },
-    };
-  }
-
   // 1. Verify API Token
   async verifyToken(): Promise<{ valid: boolean; status: string }> {
     this.emitLog('info', 'VERIFY_TOKEN', `Testing Cloudflare API Token status...`);
@@ -361,14 +248,6 @@ export class CloudflareAdminClient {
   // 2. Fetch Accounts
   async getAccounts(): Promise<CloudflareAccount[]> {
     this.emitLog('info', 'GET_ACCOUNTS', `Retrieving Cloudflare account memberships...`);
-    if (this.isSimulation) {
-      await new Promise((r) => setTimeout(r, 350));
-      return [
-        { id: 'cf_acc_demo_78a1bc490f', name: 'Personal (Free Tier Plan)' },
-        { id: 'cf_acc_org_109c9103e2', name: 'Team Workspace' },
-      ];
-    }
-
     const data = await this.cfFetch('/accounts', { actionName: 'GET_ACCOUNTS' });
     return (data.result || []).map((acc: any) => ({
       id: acc.id,
@@ -440,13 +319,6 @@ export class CloudflareAdminClient {
   // 7. Register Durable Object Namespace
   async createDurableObjectNamespace(scriptName = 'cloudtube-worker', className = 'QuotaManagerDO'): Promise<{ id: string }> {
     this.emitLog('info', 'BIND_DO', `Binding Cloudflare Durable Object class "${className}" to script "${scriptName}"...`);
-    if (this.isSimulation) {
-      await new Promise((r) => setTimeout(r, 450));
-      const id = `do_ns_${className.toLowerCase()}_active`;
-      this.emitLog('success', 'BIND_DO', `Durable Object namespace bound: ${id}`);
-      return { id };
-    }
-
     // In Cloudflare, DO namespaces are dynamically created when worker code binds them
     const id = `do_${className.toLowerCase()}_ready`;
     this.emitLog('success', 'BIND_DO', `Durable Object namespace binding confirmed: ${id}`);
@@ -456,14 +328,6 @@ export class CloudflareAdminClient {
   // 8. Generate Scoped Worker API Token
   async generateScopedToken(): Promise<{ tokenId: string; tokenPreview: string }> {
     this.emitLog('info', 'SCOPED_TOKEN', `Validating least-privilege token credentials...`);
-    if (this.isSimulation) {
-      await new Promise((r) => setTimeout(r, 400));
-      return {
-        tokenId: 'tok_cf_scoped_88f01b',
-        tokenPreview: 'cf_pat_ytlib_••••••••••••••••3a9d',
-      };
-    }
-
     return {
       tokenId: 'tok_active',
       tokenPreview: this.maskToken(this.apiToken),
@@ -478,31 +342,46 @@ export class CloudflareAdminClient {
     queueHealth: boolean;
     workerHealth: boolean;
   }> {
-    this.emitLog('info', 'HEALTH_CHECK', `Running end-to-end health verification across all provisioned bindings...`);
-    
-    // Test each service with real logging
-    this.emitLog('info', 'HEALTH_CHECK', `Pinging D1 SQLite: SELECT 1; OK (0.8ms)`);
-    await new Promise((r) => setTimeout(r, 200));
+    this.emitLog('info', 'HEALTH_CHECK', `Running live health verification against Cloudflare for each provisioned resource...`);
 
-    this.emitLog('info', 'HEALTH_CHECK', `Pinging KV Cache: GET /__health_ping; OK (0.4ms)`);
-    await new Promise((r) => setTimeout(r, 200));
-
-    this.emitLog('info', 'HEALTH_CHECK', `Checking R2 Storage: Bucket status ACTIVE ($0 egress)`);
-    await new Promise((r) => setTimeout(r, 200));
-
-    this.emitLog('info', 'HEALTH_CHECK', `Testing Queues dispatcher: Bus online (concurrency: 5)`);
-    await new Promise((r) => setTimeout(r, 200));
-
-    this.emitLog('success', 'HEALTH_CHECK', `All 5 Cloudflare edge services verified operational!`);
-
-    return {
-      d1Health: true,
-      kvHealth: true,
-      r2Health: true,
-      queueHealth: true,
-      workerHealth: true,
+    const check = async (actionName: string, endpoint: string, label: string, hasResource: (result: any) => boolean) => {
+      try {
+        const data = await this.cfFetch(endpoint, { actionName });
+        const ok = hasResource(data?.result);
+        this.emitLog(ok ? 'success' : 'warn', actionName, ok ? `${label}: verified present.` : `${label}: not found in account.`);
+        return ok;
+      } catch (e: any) {
+        this.emitLog('error', actionName, `${label}: verification failed (${e.message})`);
+        return false;
+      }
     };
+
+    const d1Health = await check('HEALTH_D1', `/accounts/${this.accountId}/d1/database`, 'D1 database', (r) =>
+      Array.isArray(r) ? r.some((db: any) => db.name === 'youtube_library_db') : false
+    );
+    const kvHealth = await check('HEALTH_KV', `/accounts/${this.accountId}/storage/kv/namespaces`, 'KV namespace', (r) =>
+      Array.isArray(r) ? r.some((ns: any) => ns.title === 'YOUTUBE_CACHE_KV') : false
+    );
+    const r2Health = await check('HEALTH_R2', `/accounts/${this.accountId}/r2/buckets`, 'R2 bucket', (r) => {
+      const buckets = r?.buckets ?? r;
+      return Array.isArray(buckets) ? buckets.some((b: any) => b.name === 'youtube-library-media-vault') : false;
+    });
+    const queueHealth = await check('HEALTH_QUEUE', `/accounts/${this.accountId}/queues`, 'Cloudflare Queue', (r) =>
+      Array.isArray(r) ? r.some((q: any) => q.queue_name === 'youtube-crawler-queue') : false
+    );
+    const workerHealth = await check('HEALTH_WORKER', `/accounts/${this.accountId}/workers/scripts`, 'Worker script', (r) =>
+      Array.isArray(r) && r.length > 0
+    );
+
+    const allOk = d1Health && kvHealth && r2Health && queueHealth && workerHealth;
+    this.emitLog(
+      allOk ? 'success' : 'warn',
+      'HEALTH_CHECK',
+      allOk ? `All 5 Cloudflare edge services verified operational!` : `Health check completed with failures — see individual results above.`
+    );
+
+    return { d1Health, kvHealth, r2Health, queueHealth, workerHealth };
   }
 }
 
-export const cfClient = new CloudflareAdminClient('', '', true);
+export const cfClient = new CloudflareAdminClient();
