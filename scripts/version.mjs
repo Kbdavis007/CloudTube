@@ -43,7 +43,13 @@ const describe = git('describe --tags --always --dirty'); // e.g. v0.1.0-2-g1a2b
 const commit = git('rev-parse --short HEAD', 'unknown');
 const commitFull = git('rev-parse HEAD', 'unknown');
 const commitDate = git('log -1 --format=%cI', '');
-const branch = git('rev-parse --abbrev-ref HEAD', 'unknown');
+// CI builds check out a detached HEAD, which reports the literal "HEAD"; fall
+  // back to the CI-provided branch name so the stamp stays meaningful.
+  const detectedBranch = git('rev-parse --abbrev-ref HEAD', 'unknown');
+  const branch =
+    detectedBranch === 'HEAD'
+      ? process.env.GITHUB_REF_NAME || process.env.WORKERS_CI_BRANCH || 'detached'
+      : detectedBranch;
 // Only tracked modifications count as dirty. Build-time artifacts that are
   // not committed (e.g. package-lock.json created by `npm install`, or the
   // generated version file itself) must not flip the badge to "-dirty".
