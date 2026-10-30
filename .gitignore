@@ -7,3 +7,6 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Generated at build time (see scripts/version.mjs)
+src/generated/version.ts

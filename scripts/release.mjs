@@ -171,15 +171,11 @@ if (changelog.includes(marker)) {
 writeFileSync(changelogPath, changelog, 'utf8');
 
 // --- Commit, tag, push -------------------------------------------------------
-sh(`git add package.json src/generated/version.ts CHANGELOG.md`);
+// src/generated/version.ts is intentionally NOT committed: it embeds the commit
+// hash, which cannot be known until after the commit exists. It is regenerated
+// from git at build/run time instead.
+sh(`git add package.json CHANGELOG.md`);
 sh(`git commit -m "chore(release): v${next}" -m "Release v${next} (${commits.length} commit(s))."`);
-
-// Regenerate now that the tree is clean so DIRTY is false, then fold the
-// corrected stamp into the release commit before tagging.
-sh(`node scripts/version.mjs`);
-sh(`git add src/generated/version.ts`);
-sh(`git commit --amend --no-edit`);
-
 sh(`git tag -a v${next} -m "Release v${next}"`);
 
 if (push) {
