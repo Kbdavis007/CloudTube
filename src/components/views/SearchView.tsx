@@ -19,6 +19,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { YouTubeApiClient } from '../../services/youtubeApi';
+import { ApiErrorCard } from '../ApiErrorCard';
 
 interface SearchViewProps {
   onIndexVideo: (video: VideoMetadata) => void;
@@ -333,10 +334,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
       )}
 
       {!isSearching && searchError && (
-        <div className="p-4 rounded-2xl bg-red-950/40 border border-red-800/60 space-y-1">
-          <p className="text-sm font-bold text-red-300">Search unavailable</p>
-          <p className="text-xs text-red-200/90">{searchError}</p>
-        </div>
+        <ApiErrorCard message={searchError} title="Search unavailable" />
       )}
 
       {!isSearching && hasSearched && !searchError && filteredResults.length === 0 && (

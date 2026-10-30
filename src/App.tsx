@@ -23,6 +23,7 @@ import { LandingSplashView } from './components/views/LandingSplashView';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { initAuth, setCachedAccessToken, refreshGoogleAccessToken } from './services/googleAuth';
 import { YouTubeApiClient } from './services/youtubeApi';
+import { splitLinks } from './services/googleApiErrors';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<PageTab>('dashboard');
@@ -424,7 +425,23 @@ export default function App() {
       {toastMessage && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-900 border border-orange-500/50 text-white text-xs font-semibold shadow-2xl backdrop-blur-md animate-fadeIn">
           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-          <span>{toastMessage.text}</span>
+          <span className="break-words">
+            {splitLinks(toastMessage.text).map((part, i) =>
+              part.url ? (
+                <a
+                  key={i}
+                  href={part.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-orange-400 hover:text-orange-300 underline underline-offset-2 break-all"
+                >
+                  {part.text}
+                </a>
+              ) : (
+                <React.Fragment key={i}>{part.text}</React.Fragment>
+              )
+            )}
+          </span>
         </div>
       )}
     </div>
