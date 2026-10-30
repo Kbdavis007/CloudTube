@@ -1,8 +1,18 @@
 # Project memory — CloudTube (Kbdavis007/CloudTube)
 
 ## What this is
-- CloudTube: a YouTube-like app backed by Cloudflare (Vite + React + TypeScript,
-  `server.ts`, Firebase auth, AI summary). Repo root: `/workspace/project`.
+- CloudTube: a YouTube-like app on Cloudflare (Vite + React + TS, Firebase auth, AI summary).
+  Repo root: `/workspace/project`.
+- Production is a Cloudflare **Worker** named "cloudtube" (NOT Pages): `wrangler.toml`
+  (`main = worker/index.ts`, `[assets]` binding ASSETS -> ./dist, SPA fallback,
+  `run_worker_first = ["/api/*"]`). Deploy/release scripts in `scripts/`.
+- Package manager is **bun** (`bun.lock`); use `bun install --frozen-lockfile` then
+  `bun run build` (= `vite build`). `npm install` FAILS here (ERESOLVE esbuild/vite peer
+  conflict) even on unmodified main — do not use npm.
+- CI: no GitHub Actions. The only check is a Cloudflare "Workers Builds: cloudtube"
+  check-run; its log lives in the Cloudflare dashboard (token has no access).
+- Repo has NO rulesets, NO branch protection, NO CODEOWNERS -> any push to main lands
+  freely; a PR is optional.
 
 ## Sandbox persistence (IMPORTANT)
 - `~` (and `/usr/local`, `/tmp`) live on the container overlay and are RESET whenever the
