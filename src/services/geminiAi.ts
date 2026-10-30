@@ -27,10 +27,30 @@ export interface CommentInsightsAi {
   communityThemes: string[];
 }
 
-const MODEL_NAME = 'gemini-2.5-flash';
+/**
+ * Current stable Gemini Flash model for Firebase AI Logic. Gemini 2.5 models are
+ * now limited to projects that used them before the cutoff, so a project that
+ * never called them gets a 404 "no longer available to new users" from
+ * `generateContent`. Gemini 3.8 Flash is the current stable Flash and, on the
+ * Gemini Developer API, needs no pay-as-you-go billing plan.
+ * Supported names: https://firebase.google.com/docs/ai-logic/models
+ */
+const DEFAULT_MODEL_NAME = 'gemini-3.8-flash';
+
+/**
+ * Google retires Gemini models on a schedule, so the name is overridable at
+ * build time (`VITE_GEMINI_MODEL`) instead of requiring an edit here. Firebase
+ * makes the same recommendation for Remote Config: a model swap should not need
+ * a code change.
+ */
+export const GEMINI_MODEL_NAME =
+  (import.meta.env?.VITE_GEMINI_MODEL as string | undefined)?.trim() || DEFAULT_MODEL_NAME;
 
 /** Deep link to the Firebase AI Logic page where the owner enables the feature once. */
 export const GEMINI_AI_SETUP_URL = `https://console.firebase.google.com/project/${firebaseApp.options.projectId}/ailogic`;
+
+/** Public docs page listing the model names AI Logic currently supports. */
+export const GEMINI_MODELS_URL = 'https://firebase.google.com/docs/ai-logic/models';
 
 export class GeminiAiService {
   private static getModel(responseMimeType?: string) {
@@ -39,18 +59,29 @@ export class GeminiAiService {
     initAppCheck();
     const ai = getAI(firebaseApp, { backend: new GoogleAIBackend() });
     return getGenerativeModel(ai, {
-      model: MODEL_NAME,
+      model: GEMINI_MODEL_NAME,
       ...(responseMimeType ? { generationConfig: { responseMimeType } } : {}),
     });
   }
 
   /**
-   * Firebase returns a generic permission error when AI Logic has not been
-   * enabled for the project yet. Turn that into a message that points at the
-   * one-time setup instead of a bare "permission denied".
+   * Firebase returns a generic error for the two failures users actually hit:
+   * a retired model name (404) and AI Logic not being enabled for the project
+   * (permission denied). Rewrite both into a message that names the fix, instead
+   * of exposing the raw firebasevertexai.googleapis.com URL.
    */
   private static rethrow(err: unknown): never {
     const message = err instanceof Error ? err.message : String(err);
+    // A retired model name returns 404 with "no longer available to new users".
+    // Say which model this build asked for and how to change it, instead of
+    // showing the raw firebasevertexai.googleapis.com URL.
+    if (/no longer available|not found|deprecated|retired|404/i.test(message)) {
+      throw new Error(
+        `The AI model "${GEMINI_MODEL_NAME}" is not available to this Firebase project. ` +
+          `Google retires Gemini models over time; set the VITE_GEMINI_MODEL build variable to a ` +
+          `model that is currently supported at ${GEMINI_MODELS_URL}. (${message})`
+      );
+    }
     if (/permission|not been used|not enabled|disabled|unauthorized|api_key|api key/i.test(message)) {
       throw new Error(
         `AI summaries are not enabled for this Firebase project yet. An administrator must enable ` +

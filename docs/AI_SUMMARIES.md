@@ -19,6 +19,26 @@ Do this once per Firebase project. The Setup Wizard (Step 5) links straight to i
 
 After this, any signed-in user can generate summaries. No user action, no key.
 
+## Model name
+
+Summaries use `gemini-3.8-flash`, the current stable Gemini Flash. Gemini 2.5 models
+are limited to projects that used them before their cutoff, so a project that never
+called them gets a 404 (`... no longer available to new users ...`) from
+`generateContent`.
+
+Google retires model names on a schedule, so the name is not hard-coded. Set the
+`VITE_GEMINI_MODEL` build variable to override it without editing code:
+
+```bash
+VITE_GEMINI_MODEL="gemini-3.5-flash" npm run build
+```
+
+The default lives in `src/services/geminiAi.ts`. When a name is retired the service
+rewrites the 404 into a message naming the model this build requested and the docs
+page listing supported names
+(`https://firebase.google.com/docs/ai-logic/models`), rather than showing the raw
+`firebasevertexai.googleapis.com` URL.
+
 ## App Check (reCAPTCHA Enterprise)
 
 AI Logic enforces App Check, so the client must present a valid attestation token.
@@ -50,8 +70,12 @@ register that value once in the console. The flag is never set in production bui
 ## Where it lives in the code
 
 - `src/services/geminiAi.ts` - Gemini calls via `firebase/ai` (`getAI` +
-  `getGenerativeModel`). Exposes `GEMINI_AI_SETUP_URL` used by the Setup Wizard.
+  `getGenerativeModel`). Exposes `GEMINI_AI_SETUP_URL` used by the Setup Wizard,
+  `GEMINI_MODEL_NAME` (default `gemini-3.8-flash`, overridable with
+  `VITE_GEMINI_MODEL`) and `GEMINI_MODELS_URL`.
 - `src/services/firebaseApp.ts` - the single Firebase app shared by Auth and AI Logic.
 
 If AI Logic has not been enabled, calls fail with a permission error; the service
-rewrites that into a message pointing at the setup link above.
+rewrites that into a message pointing at the setup link above. If the model name has
+been retired, calls fail with a 404; the service rewrites that into a message naming
+the requested model and the supported-names docs page.
