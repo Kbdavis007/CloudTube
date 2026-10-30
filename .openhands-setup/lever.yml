@@ -1,0 +1,16 @@
+# Template for ~/.copilot/lever.yml — lever dials.
+# restore.sh copies this to ~/.copilot/lever.yml when that file is missing.
+# Change dials live with /lever autonomy and /lever spend; then re-run
+# `restore.sh --save` to fold the change back into this template.
+autonomy:
+  default: L4               # L0 propose · L1 draft · L2 ready/human lands · L3 grant · L4 gated self-merge · L5 release
+
+spend:
+  tier: standard            # standard | high | max (see docs/spend.md)
+
+# brief.runner unset: /lever brief asks each time
+
+history:
+  - at: 2026-10-30
+    said: "first run: L4, standard"
+    set: { autonomy.default: L4, spend.tier: standard }
