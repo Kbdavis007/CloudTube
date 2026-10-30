@@ -25,7 +25,12 @@ import {
   Trash2,
   Play,
 } from 'lucide-react';
-import { cfClient, CloudflareLogEntry, sanitizeToken } from '../../services/cloudflareApi';
+import {
+  cfClient,
+  CloudflareLogEntry,
+  sanitizeToken,
+  looksLikeGlobalApiKey,
+} from '../../services/cloudflareApi';
 import { encryptAndSaveCredentials } from '../../services/crypto';
 
 interface SetupWizardViewProps {
@@ -117,12 +122,18 @@ export const SetupWizardView: React.FC<SetupWizardViewProps> = ({ onComplete }) 
   const handleVerifyToken = async () => {
     setIsVerifyingToken(true);
     setVerifyStatus(null);
-    cfClient.setCredentials(wizardState.accountId, wizardState.apiToken);
+    cfClient.setCredentials(
+      wizardState.accountId,
+      wizardState.apiToken,
+      wizardState.accountEmail,
+      wizardState.authMode
+    );
 
     // Cheap client-side sanity checks so an obvious typo is reported instantly
     // instead of surfacing as a vague Cloudflare error 1000.
     const accountId = wizardState.accountId.trim();
     const token = sanitizeToken(wizardState.apiToken);
+    const authMode = wizardState.authMode ?? 'token';
     if (accountId && !/^[0-9a-f]{32}$/i.test(accountId)) {
       setVerifyStatus({
         ok: false,
@@ -131,7 +142,16 @@ export const SetupWizardView: React.FC<SetupWizardViewProps> = ({ onComplete }) 
       setIsVerifyingToken(false);
       return;
     }
-    if (token && token.length < 30) {
+    if (authMode === 'global') {
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test((wizardState.accountEmail || '').trim())) {
+        setVerifyStatus({
+          ok: false,
+          message: 'A Global API Key must be sent with the account email it belongs to. Enter that email and retry.',
+        });
+        setIsVerifyingToken(false);
+        return;
+      }
+    } else if (token && token.length < 30) {
       setVerifyStatus({
         ok: false,
         message: `API Token looks truncated: got ${token.length} characters, Cloudflare tokens are about 40. Re-copy the whole token.`,
@@ -160,8 +180,8 @@ export const SetupWizardView: React.FC<SetupWizardViewProps> = ({ onComplete }) 
   const startAutomatedProvisioning = async () => {
     // Read the latest credentials: this may be invoked from a stale closure where
     // `wizardState` has not re-rendered yet.
-    const { accountId, apiToken } = wizardStateRef.current;
-    cfClient.setCredentials(accountId, apiToken);
+    const { accountId, apiToken, accountEmail, authMode } = wizardStateRef.current;
+    cfClient.setCredentials(accountId, apiToken, accountEmail, authMode);
 
     setIsRunningProvision(true);
     setCurrentStepIndex(0);
@@ -285,6 +305,8 @@ export const SetupWizardView: React.FC<SetupWizardViewProps> = ({ onComplete }) 
     await encryptAndSaveCredentials({
       accountId: wizardState.accountId,
       apiToken: wizardState.apiToken,
+      accountEmail: wizardState.accountEmail,
+      authMode: wizardState.authMode,
     });
     setWizardState((prev) => ({ ...prev, step: 4 }));
     runHealthValidation();
@@ -437,7 +459,14 @@ bindings = [
               <input
                 type="password"
                 value={wizardState.apiToken}
-                onChange={(e) => setWizardState({ ...wizardState, apiToken: e.target.value })}
+                onChange={(e) => {
+                  const apiToken = e.target.value;
+                  // A 37-char hex value is a Global API Key, which needs a
+                  // different auth scheme and the account email; detect it so the
+                  // user is not left guessing why the token is rejected.
+                  const authMode = looksLikeGlobalApiKey(apiToken) ? 'global' : 'token';
+                  setWizardState({ ...wizardState, apiToken, authMode });
+                }}
                 placeholder="Cloudflare API Token with D1, R2, KV & Queues edit permissions"
                 className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-white focus:outline-hidden focus:border-orange-500"
               />
@@ -447,7 +476,30 @@ bindings = [
               <p className="text-[11px] text-amber-500/80">
                 Must be an <span className="font-semibold">API Token</span> (~40 chars) created at dash.cloudflare.com/profile/api-tokens — not a Global API Key. Paste it as-is; surrounding quotes or a "Bearer " prefix are stripped automatically.
               </p>
+              {wizardState.authMode === 'global' && (
+                <p className="text-[11px] text-red-400">
+                  This looks like a Global API Key (37 hex chars). Prefer an API Token — create one at dash.cloudflare.com/profile/api-tokens with the scopes above. If you must use the Global key, enter the account email below.
+                </p>
+              )}
             </div>
+
+            {wizardState.authMode === 'global' && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-300">Cloudflare Account Email:</label>
+                <input
+                  type="email"
+                  value={wizardState.accountEmail || ''}
+                  onChange={(e) =>
+                    setWizardState({ ...wizardState, accountEmail: e.target.value })
+                  }
+                  placeholder="you@example.com"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-white focus:outline-hidden focus:border-orange-500"
+                />
+                <p className="text-[11px] text-slate-500">
+                  Required only for a Global API Key, which is sent as an email + key pair.
+                </p>
+              </div>
+            )}
 
             {/* Test Token Action */}
             <div className="flex items-center gap-3 pt-1">

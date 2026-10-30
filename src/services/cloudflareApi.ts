@@ -26,6 +26,8 @@ export interface CloudflareLogEntry {
 
 export type LogListener = (entry: CloudflareLogEntry) => void;
 
+export type CloudflareAuthMode = 'token' | 'global';
+
 /**
  * Normalizes a pasted Cloudflare API token. Copy-paste frequently carries
  * wrapping quotes, a "Bearer " prefix, or stray whitespace/newlines, any of
@@ -43,31 +45,64 @@ export const sanitizeToken = (raw: string): string => {
   return token;
 };
 
+/**
+ * A Global API Key is exactly 37 hex characters; an API Token is about 40 and
+ * contains dashes/underscores. The two use different auth schemes, so a Global
+ * key sent as a Bearer token always fails with error 1000. Detecting the shape
+ * lets us tell the user which one they pasted.
+ */
+export const looksLikeGlobalApiKey = (value: string): boolean =>
+  /^[0-9a-f]{37}$/i.test(sanitizeToken(value));
+
 export class CloudflareAdminClient {
   private apiToken: string;
   private accountId: string;
+  private email: string;
+  private authMode: CloudflareAuthMode;
   private logListeners: Set<LogListener> = new Set();
   private logs: CloudflareLogEntry[] = [];
 
-  constructor(accountId = '', apiToken = '') {
+  constructor(accountId = '', apiToken = '', email = '', authMode: CloudflareAuthMode = 'token') {
     this.accountId = accountId;
     this.apiToken = apiToken;
+    this.email = email;
+    this.authMode = authMode;
   }
 
-  setCredentials(accountId: string, apiToken: string) {
+  setCredentials(
+    accountId: string,
+    apiToken: string,
+    email = '',
+    authMode: CloudflareAuthMode = 'token'
+  ) {
     this.accountId = (accountId || '').trim();
     this.apiToken = sanitizeToken(apiToken);
+    this.email = (email || '').trim();
+    this.authMode = authMode;
     // Showing the token length makes a truncated paste obvious: Cloudflare API
     // tokens are ~40 chars, so a short value explains an otherwise confusing
     // error 1000 "Invalid API Token".
     const tokenInfo = this.apiToken
       ? `${this.apiToken.slice(0, 6)}…${this.apiToken.slice(-4)} (${this.apiToken.length} chars)`
       : 'none';
+    const mode = this.authMode === 'global' ? 'Global API Key' : 'API Token';
     this.emitLog(
       'info',
       'CONFIG',
-      `Credentials updated: Account ID: ${this.accountId ? `${this.accountId.slice(0, 6)}...${this.accountId.slice(-4)}` : 'none'} | Token: ${tokenInfo} | Mode: Live Cloudflare API (Free Tier)`
+      `Credentials updated: Account ID: ${this.accountId ? `${this.accountId.slice(0, 6)}...${this.accountId.slice(-4)}` : 'none'} | Auth: ${mode} | Token: ${tokenInfo} | Mode: Live Cloudflare API (Free Tier)`
     );
+  }
+
+  /**
+   * Cloudflare has two credential systems. An API Token is sent as a Bearer
+   * token. A Global API Key is sent alongside the account email using the
+   * X-Auth-Email / X-Auth-Key pair. Sending the wrong one yields error 1000.
+   */
+  private authHeaders(): Record<string, string> {
+    if (this.authMode === 'global') {
+      return { 'X-Auth-Email': this.email, 'X-Auth-Key': this.apiToken };
+    }
+    return { Authorization: `Bearer ${this.apiToken}` };
   }
 
   // --- Logging Subscription System ---
@@ -146,9 +181,7 @@ export class CloudflareAdminClient {
         body: JSON.stringify({
           endpoint,
           method,
-          headers: {
-            Authorization: `Bearer ${this.apiToken}`,
-          },
+          headers: this.authHeaders(),
           body: options.body,
         }),
       });
@@ -187,7 +220,7 @@ export class CloudflareAdminClient {
         const directRes = await fetch(`https://api.cloudflare.com/client/v4${endpoint}`, {
           method,
           headers: {
-            Authorization: `Bearer ${this.apiToken}`,
+            ...this.authHeaders(),
             'Content-Type': 'application/json',
           },
           body: options.body ? JSON.stringify(options.body) : undefined,
@@ -279,6 +312,19 @@ export class CloudflareAdminClient {
 
   // 1. Verify API Token
   async verifyToken(): Promise<{ valid: boolean; status: string }> {
+    // A Global API Key is not an API Token: /user/tokens/verify only accepts
+    // Bearer tokens and answers "1001 Missing Authorization header" otherwise.
+    // The equivalent check for a Global key is GET /user.
+    if (this.authMode === 'global') {
+      this.emitLog('info', 'VERIFY_TOKEN', 'Testing Global API Key against /user...');
+      try {
+        const data = await this.cfFetch('/user', { actionName: 'VERIFY_TOKEN' });
+        return { valid: true, status: data.result?.status || 'active' };
+      } catch (e: any) {
+        throw new Error(`Global API Key verification failed: ${e.message}`);
+      }
+    }
+
     this.emitLog('info', 'VERIFY_TOKEN', `Testing Cloudflare API Token status...`);
     try {
       const data = await this.cfFetch('/user/tokens/verify', {

@@ -103,6 +103,10 @@ export interface WizardState {
   step: number; // 1: Welcome & Auth, 2: Auto-Provision, 3: Encrypted Storage, 4: Validate Health, 5: Complete
   accountId: string;
   apiToken: string;
+  /** Account email; required only when using a Global API Key. */
+  accountEmail?: string;
+  /** Which Cloudflare credential system the token belongs to. */
+  authMode?: 'token' | 'global';
   status: {
     r2Bucket: 'idle' | 'in_progress' | 'success' | 'error';
     d1Database: 'idle' | 'in_progress' | 'success' | 'error';

@@ -43,7 +43,7 @@ function getOrCreateSalt(): Uint8Array {
 }
 
 export async function encryptAndSaveCredentials(
-  data: { accountId: string; apiToken: string; customSecret?: string },
+  data: { accountId: string; apiToken: string; accountEmail?: string; authMode?: 'token' | 'global'; customSecret?: string },
   passphrase = 'CloudTube-Device-Vault-Key-2026'
 ): Promise<string> {
   const salt = getOrCreateSalt();
