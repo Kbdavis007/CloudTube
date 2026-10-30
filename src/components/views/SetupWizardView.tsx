@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { WizardState } from '../../types';
+import { WizardState, WizardStepId } from '../../types';
 import {
   Sparkles,
   ShieldCheck,
@@ -35,15 +35,26 @@ import {
 import { buildGuide, CF_LINKS } from '../../services/provisioningGuide';
 import { GEMINI_AI_SETUP_URL } from '../../services/geminiAi';
 import { APP_CHECK_SETUP_URL, RECAPTCHA_KEYS_URL } from '../../services/firebaseApp';
-import { encryptAndSaveCredentials } from '../../services/crypto';
+import { encryptAndSaveCredentials, loadAndDecryptCredentials, isVaultConfigured } from '../../services/crypto';
+import {
+  loadWizardProgress,
+  saveWizardProgress,
+  deriveProgress,
+  clearWizardProgress,
+  isMeaningfulProgress,
+} from '../../services/wizardProgress';
 
 interface SetupWizardViewProps {
   onComplete: () => void;
 }
 
 export const SetupWizardView: React.FC<SetupWizardViewProps> = ({ onComplete }) => {
-  const [wizardState, setWizardState] = useState<WizardState>({
-    step: 1,
+  // Loaded once before the first render so a reload resumes where it left off.
+  // Provisioning creates real Cloudflare resources, so redoing it is costly.
+  const [restoredProgress] = useState(() => loadWizardProgress());
+
+  const [wizardState, setWizardState] = useState<WizardState>(() => ({
+    step: restoredProgress?.lastStep ?? 1,
     accountId: '',
     apiToken: '',
     status: {
@@ -54,7 +65,7 @@ export const SetupWizardView: React.FC<SetupWizardViewProps> = ({ onComplete }) 
       durableObject: 'idle',
       tokenScoped: 'idle',
     },
-    details: {},
+    details: restoredProgress?.details ?? {},
     validationResults: {
       d1Health: false,
       kvHealth: false,
@@ -62,7 +73,21 @@ export const SetupWizardView: React.FC<SetupWizardViewProps> = ({ onComplete }) 
       queueHealth: false,
       workerHealth: false,
     },
-  });
+  }));
+
+  const [aiConfigured, setAiConfigured] = useState<boolean>(
+    Boolean(restoredProgress?.aiConfigured)
+  );
+  const [isRestored, setIsRestored] = useState<boolean>(Boolean(restoredProgress));
+  // Set right after the last action so the "all done" banner only shows on the
+  // transition, not every time the completed step is revisited.
+  const [justCompleted, setJustCompleted] = useState(false);
+  // Which of the one-time console links have been opened, so the AI step can
+  // show progress instead of a bare wall of buttons.
+  const [openedAiLinks, setOpenedAiLinks] = useState<Record<string, boolean>>({});
+  // False until the saved progress has been applied, so the persist effect below
+  // never overwrites restored flags with the pre-hydration defaults.
+  const [hydrated, setHydrated] = useState(false);
 
   const [isRunningProvision, setIsRunningProvision] = useState(false);
   const [isVerifyingToken, setIsVerifyingToken] = useState(false);
@@ -104,6 +129,68 @@ export const SetupWizardView: React.FC<SetupWizardViewProps> = ({ onComplete }) 
   useEffect(() => {
     wizardStateRef.current = wizardState;
   }, [wizardState]);
+
+  // Restore saved provisioning results once on mount. Credentials come from the
+  // encrypted vault rather than progress storage, so they are loaded separately.
+  const didRestoreRef = useRef(false);
+  useEffect(() => {
+    if (didRestoreRef.current) return;
+    didRestoreRef.current = true;
+    const saved = restoredProgress;
+
+    if (saved) {
+      setWizardState((prev) => ({
+        ...prev,
+        details: { ...prev.details, ...saved.details },
+        // Only treat provisioning as done if it actually finished; otherwise leave
+        // the live statuses so the user can retry the failed step.
+        status: saved.completed.provision
+          ? {
+              r2Bucket: 'success',
+              d1Database: 'success',
+              kvNamespace: 'success',
+              queue: 'success',
+              durableObject: 'success',
+              tokenScoped: 'success',
+            }
+          : prev.status,
+        validationResults: saved.completed.health
+          ? {
+              d1Health: true,
+              kvHealth: true,
+              r2Health: true,
+              queueHealth: true,
+              workerHealth: true,
+            }
+          : prev.validationResults,
+      }));
+
+      loadAndDecryptCredentials().then((creds) => {
+        if (!creds) return;
+        setWizardState((prev) => ({
+          ...prev,
+          accountId: creds.accountId ?? prev.accountId,
+          apiToken: creds.apiToken ?? prev.apiToken,
+        }));
+        cfClient.setCredentials(creds.accountId, creds.apiToken, creds.accountEmail, creds.authMode);
+      });
+    }
+
+    setHydrated(true);
+  }, [restoredProgress]);
+
+  // Persist progress whenever a step is reached or a completion flag changes.
+  // Nothing is written until the user has actually progressed, so merely opening
+  // the wizard does not create a misleading "resumed" record.
+  useEffect(() => {
+    if (!hydrated) return;
+    const progress = deriveProgress(wizardState.step, wizardState, aiConfigured);
+    if (isMeaningfulProgress(progress)) {
+      saveWizardProgress(progress);
+    } else {
+      clearWizardProgress();
+    }
+  }, [wizardState, aiConfigured, hydrated]);
 
   // Subscribe to live Cloudflare logs
   useEffect(() => {
@@ -342,6 +429,74 @@ export const SetupWizardView: React.FC<SetupWizardViewProps> = ({ onComplete }) 
     }));
   };
 
+  // Step navigation. `goToStep` records the furthest step reached so a reload
+  // resumes there, and clears the one-shot completion banner.
+  const goToStep = (step: number) => {
+    setJustCompleted(false);
+    setWizardState((prev) => ({ ...prev, step }));
+  };
+
+  const aiSetupActions = [
+    {
+      key: 'ailogic' as const,
+      label: 'Enable Firebase AI Logic',
+      hint: 'Turn on the Gemini proxy and choose the Gemini Developer API provider (free tier).',
+      url: GEMINI_AI_SETUP_URL,
+    },
+    {
+      key: 'appcheck' as const,
+      label: 'Register App Check provider',
+      hint: 'Register this web app with the reCAPTCHA Enterprise provider so AI Logic accepts it.',
+      url: APP_CHECK_SETUP_URL,
+    },
+    {
+      key: 'recaptcha' as const,
+      label: 'Add domains & monitor reCAPTCHA scores',
+      hint: 'Add your production domains to the reCAPTCHA key, then watch scores on its Overview tab.',
+      url: RECAPTCHA_KEYS_URL,
+    },
+  ];
+
+  const markAiConfigured = () => {
+    setAiConfigured(true);
+    setJustCompleted(true);
+    setWizardState((prev) => ({ ...prev, step: 6 }));
+  };
+
+  const openAiLink = (key: string, url: string) => {
+    window.open(url, '_blank', 'noopener,noreferrer');
+    setOpenedAiLinks((prev) => ({ ...prev, [key]: true }));
+  };
+
+  const startOver = () => {
+    clearWizardProgress();
+    setAiConfigured(false);
+    setJustCompleted(false);
+    setIsRestored(false);
+    setOpenedAiLinks({});
+    setWizardState({
+      step: 1,
+      accountId: '',
+      apiToken: '',
+      status: {
+        r2Bucket: 'idle',
+        d1Database: 'idle',
+        kvNamespace: 'idle',
+        queue: 'idle',
+        durableObject: 'idle',
+        tokenScoped: 'idle',
+      },
+      details: {},
+      validationResults: {
+        d1Health: false,
+        kvHealth: false,
+        r2Health: false,
+        queueHealth: false,
+        workerHealth: false,
+      },
+    });
+  };
+
   const copyAllLogsToClipboard = () => {
     const logText = logs
       .map(
@@ -417,6 +572,22 @@ ${durableObjects}
   const progressPercent = Math.min(100, Math.round((completedSteps / totalSteps) * 100));
   const stepsRemaining = Math.max(0, totalSteps - completedSteps);
 
+  // Which wizard steps are finished, used to tick the indicator and to decide
+  // which steps the user is allowed to jump to.
+  const provisionDone = Object.values(wizardState.status).every((s) => s === 'success');
+  const healthDone = Object.values(wizardState.validationResults).every(Boolean);
+  const stepDone: Record<number, boolean> = {
+    1: Boolean(wizardState.accountId && wizardState.apiToken),
+    2: provisionDone,
+    3: isVaultConfigured(),
+    4: healthDone,
+    5: aiConfigured,
+    6: aiConfigured,
+  };
+  // A step is reachable once the previous one is done, or by going back.
+  const canOpenStep = (n: number): boolean =>
+    n === wizardState.step || n < wizardState.step || Boolean(stepDone[n - 1]);
+
   const filteredLogs = logs.filter((entry) => {
     if (logFilter === 'all') return true;
     if (logFilter === 'request') return entry.level === 'request';
@@ -440,29 +611,60 @@ ${durableObjects}
           Durable Object bindings on Cloudflare's 100% Free Tier with live real-time response inspection.
         </p>
 
+        {isRestored && (
+          <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-2xl bg-emerald-950/30 border border-emerald-800/60">
+            <div className="flex items-start gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+              <p className="text-[11px] text-emerald-200 leading-relaxed">
+                Resumed your previous setup. Finished steps are kept, so you only complete what is
+                left{aiConfigured ? '.' : ' — the AI summaries step is still outstanding.'}
+              </p>
+            </div>
+            <button
+              onClick={startOver}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold transition shrink-0"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Start Over</span>
+            </button>
+          </div>
+        )}
+
         {/* Step Indicator */}
-        <div className="grid grid-cols-5 gap-2 pt-6">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-6">
           {[
             { num: 1, label: 'Auth & Profile' },
             { num: 2, label: 'Auto-Provision' },
             { num: 3, label: 'AES Encryption' },
             { num: 4, label: 'Health Check' },
-            { num: 5, label: 'Ready to Run' },
-          ].map((st) => (
-            <div
-              key={st.num}
-              className={`p-2.5 rounded-xl border text-center transition ${
-                wizardState.step === st.num
-                  ? 'bg-orange-500/20 border-orange-500 text-orange-300 font-bold'
-                  : wizardState.step > st.num
-                  ? 'bg-emerald-950/30 border-emerald-800 text-emerald-400'
-                  : 'bg-slate-950/40 border-slate-800 text-slate-500'
-              }`}
-            >
-              <div className="text-[10px] font-mono">STEP {st.num}</div>
-              <div className="text-xs truncate">{st.label}</div>
-            </div>
-          ))}
+            { num: 5, label: 'AI Summaries' },
+            { num: 6, label: 'Ready to Run' },
+          ].map((st) => {
+            const done = Boolean(stepDone[st.num]);
+            const active = wizardState.step === st.num;
+            const reachable = canOpenStep(st.num);
+            return (
+              <button
+                key={st.num}
+                type="button"
+                disabled={!reachable}
+                onClick={() => reachable && goToStep(st.num)}
+                className={`p-2.5 rounded-xl border text-center transition ${
+                  active
+                    ? 'bg-orange-500/20 border-orange-500 text-orange-300 font-bold'
+                    : done
+                    ? 'bg-emerald-950/30 border-emerald-800 text-emerald-400 hover:border-emerald-600'
+                    : 'bg-slate-950/40 border-slate-800 text-slate-500'
+                } ${reachable ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
+              >
+                <div className="flex items-center justify-center gap-1 text-[10px] font-mono">
+                  {done && !active && <CheckCircle2 className="w-3 h-3" />}
+                  STEP {st.num}
+                </div>
+                <div className="text-xs truncate">{st.label}</div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -1192,28 +1394,154 @@ ${durableObjects}
 
           <div className="flex justify-end pt-4">
             <button
-              onClick={() => setWizardState({ ...wizardState, step: 5 })}
+              onClick={() => goToStep(5)}
               className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition shadow-lg shadow-orange-600/30 active:scale-95"
             >
-              <span>Finish & View Customized Bindings</span>
+              <span>Continue to AI Summaries</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>
       )}
 
-      {/* STEP 5: SETUP COMPLETE */}
+      {/* STEP 5: AI VIDEO SUMMARIES (one-time console setup) */}
       {wizardState.step === 5 && (
+        <div className="p-6 sm:p-8 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-6">
+          <div className="border-b border-slate-800 pb-4">
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-orange-400" />
+              Step 5: AI Video Summaries
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              The last remaining step. Cloudflare infrastructure is already provisioned; this enables
+              the Gemini-backed summaries.
+            </p>
+          </div>
+
+          <div className="flex items-start gap-3 p-4 rounded-2xl bg-slate-950 border border-slate-800">
+            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+            <p className="text-[11px] text-slate-300 leading-relaxed">
+              Summaries run through <strong>Firebase AI Logic</strong>, so the Gemini API key stays on
+              the server and no user ever enters one. There is no key to paste here and no Google
+              sign-in permission that grants one. Do these three things once for the project; after
+              that every signed-in user gets summaries automatically.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {aiSetupActions.map((action, i) => (
+              <div
+                key={action.key}
+                className={`p-4 rounded-2xl border transition ${
+                  openedAiLinks[action.key]
+                    ? 'bg-emerald-950/20 border-emerald-800/60'
+                    : 'bg-slate-950 border-slate-800'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div
+                    className={`w-6 h-6 rounded-lg flex items-center justify-center text-[11px] font-bold shrink-0 ${
+                      openedAiLinks[action.key]
+                        ? 'bg-emerald-500/20 text-emerald-400'
+                        : 'bg-slate-800 text-slate-400'
+                    }`}
+                  >
+                    {openedAiLinks[action.key] ? <Check className="w-3.5 h-3.5" /> : i + 1}
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <div className="text-xs font-bold text-white">{action.label}</div>
+                    <p className="text-[11px] text-slate-400 leading-relaxed">{action.hint}</p>
+                  </div>
+                  <button
+                    onClick={() => openAiLink(action.key, action.url)}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-[11px] font-bold transition shrink-0 active:scale-95"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Open</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-[11px] text-slate-500 leading-relaxed">
+            Already enabled AI Logic before? Just confirm below — this records the step as done and
+            stops the wizard from asking again.
+          </p>
+
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2 border-t border-slate-800">
+            <button
+              onClick={() => goToStep(4)}
+              className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 hover:text-slate-200 transition"
+            >
+              <ArrowRight className="w-3.5 h-3.5 rotate-180" />
+              <span>Back to Health Check</span>
+            </button>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={() => {
+                  setAiConfigured(false);
+                  goToStep(6);
+                }}
+                className="px-5 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition active:scale-95"
+              >
+                Skip for now
+              </button>
+              <button
+                onClick={markAiConfigured}
+                className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-lg shadow-emerald-600/30 active:scale-95"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>I've enabled AI summaries</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* STEP 6: SETUP COMPLETE */}
+      {wizardState.step === 6 && (
         <div className="p-6 sm:p-8 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-6">
           <div className="text-center space-y-2">
             <div className="w-14 h-14 rounded-3xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto border border-emerald-500/30">
               <CheckCircle2 className="w-8 h-8" />
             </div>
-            <h2 className="text-xl font-extrabold text-white">Setup Completed in Under 3 Minutes!</h2>
+            <h2 className="text-xl font-extrabold text-white">
+              {justCompleted ? 'Setup Complete!' : 'Setup Status'}
+            </h2>
             <p className="text-xs text-slate-300 max-w-md mx-auto">
               Your Cloudflare environment is fully prepared with D1, R2, KV, Queues, and Durable Objects
               running 100% on Cloudflare's free tier.
             </p>
+          </div>
+
+          {/* Checklist of what is done and what is still outstanding. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {[
+              { label: 'Cloudflare infrastructure', ok: provisionDone },
+              { label: 'Credentials encrypted at rest', ok: provisionDone },
+              { label: 'End-to-end health verification', ok: healthDone },
+              { label: 'AI video summaries', ok: aiConfigured },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between"
+              >
+                <span className="text-xs font-bold text-white">{item.label}</span>
+                {item.ok ? (
+                  <span className="flex items-center gap-1 text-emerald-400 font-mono text-[11px] font-bold">
+                    <CheckCircle2 className="w-4 h-4" /> DONE
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => goToStep(5)}
+                    className="flex items-center gap-1 text-orange-400 hover:text-orange-300 font-mono text-[11px] font-bold"
+                  >
+                    <XCircle className="w-4 h-4" /> REMAINING
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
 
           {/* Generated wrangler.toml */}
@@ -1238,50 +1566,6 @@ ${durableObjects}
             <pre className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-[11px] font-mono text-slate-300 overflow-x-auto leading-relaxed max-h-52">
               {getCustomizedWranglerSnippet()}
             </pre>
-          </div>
-
-          {/* Optional one-time AI setup. The Gemini key stays on Firebase's
-              backend, so users only ever sign in — nobody configures a key. */}
-          <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-orange-400" />
-              <h3 className="text-xs font-bold text-white">AI Video Summaries (optional, one-time)</h3>
-            </div>
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              Summaries run through Firebase AI Logic, so the Gemini API key stays on the server and no
-              user ever enters one. Enable it once for this project and every signed-in user gets AI
-              summaries automatically. AI Logic also enforces App Check, which uses the reCAPTCHA
-              Enterprise key already configured for this app.
-            </p>
-            <div className="flex flex-wrap gap-x-4 gap-y-1.5 pt-0.5">
-              <a
-                href={GEMINI_AI_SETUP_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-orange-400 hover:text-orange-300 underline underline-offset-2"
-              >
-                <ExternalLink className="w-3 h-3" />
-                <span>Enable Firebase AI Logic</span>
-              </a>
-              <a
-                href={APP_CHECK_SETUP_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-orange-400 hover:text-orange-300 underline underline-offset-2"
-              >
-                <ExternalLink className="w-3 h-3" />
-                <span>Register App Check provider</span>
-              </a>
-              <a
-                href={RECAPTCHA_KEYS_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-orange-400 hover:text-orange-300 underline underline-offset-2"
-              >
-                <ExternalLink className="w-3 h-3" />
-                <span>Add domains &amp; monitor reCAPTCHA scores</span>
-              </a>
-            </div>
           </div>
 
           <div className="flex justify-center pt-2">

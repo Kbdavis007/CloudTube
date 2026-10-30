@@ -100,7 +100,7 @@ export interface CloudflareQuotaStatus {
 }
 
 export interface WizardState {
-  step: number; // 1: Welcome & Auth, 2: Auto-Provision, 3: Encrypted Storage, 4: Validate Health, 5: Complete
+  step: number; // 1: Welcome & Auth, 2: Auto-Provision, 3: Encrypted Storage, 4: Validate Health, 5: AI Summaries, 6: Complete
   accountId: string;
   apiToken: string;
   /** Account email; required only when using a Global API Key. */
@@ -134,6 +134,25 @@ export interface WizardState {
   errorCode?: number;
   errorStatus?: number;
   errorEndpoint?: string;
+}
+
+/** The wizard's own steps, which the AI-summaries step extends beyond provisioning. */
+export type WizardStepId = 'auth' | 'provision' | 'encryption' | 'health' | 'ai' | 'complete';
+
+/**
+ * What the wizard remembers across reloads. Cloudflare provisioning is the
+ * expensive part (real API calls that create resources), so the completed flags
+ * and the discovered resource IDs are kept; credentials themselves stay in the
+ * encrypted vault and are never duplicated here.
+ */
+export interface WizardProgress {
+  completed: Record<WizardStepId, boolean>;
+  /** Whether the one-time AI setup (AI Logic + App Check) has been confirmed. */
+  aiConfigured: boolean;
+  details: WizardState['details'];
+  /** Furthest step reached, so a reload can resume instead of restarting. */
+  lastStep: number;
+  updatedAt: string;
 }
 
 export interface ScaffoldFile {

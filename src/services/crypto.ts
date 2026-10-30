@@ -74,7 +74,13 @@ export async function encryptAndSaveCredentials(
 
 export async function loadAndDecryptCredentials(
   passphrase = 'CloudTube-Device-Vault-Key-2026'
-): Promise<{ accountId: string; apiToken: string; customSecret?: string } | null> {
+): Promise<{
+  accountId: string;
+  apiToken: string;
+  accountEmail?: string;
+  authMode?: 'token' | 'global';
+  customSecret?: string;
+} | null> {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (!stored) return null;
 
