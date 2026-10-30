@@ -162,7 +162,7 @@ export const ScaffoldingExplorerView: React.FC = () => {
                       <span className="text-[10px] text-emerald-400 font-mono">OFFLINE</span>
                     </div>
                     <div className="text-[11px] text-slate-400">
-                      Stale-while-revalidate strategy for UI, thumbnails, and fallback API mock.
+                      Stale-while-revalidate strategy for UI and thumbnail caching.
                     </div>
                   </div>
 

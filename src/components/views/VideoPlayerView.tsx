@@ -92,7 +92,7 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
       setTimeout(() => setSummaryFeedback(null), 3500);
     } catch (err: any) {
       console.error('Failed to generate summary with Gemini:', err);
-      setSummaryFeedback('Error generating summary with Gemini API.');
+      setSummaryFeedback(`Error generating summary: ${err?.message || 'Gemini API error'}`);
     } finally {
       setIsGeneratingSummary(false);
     }

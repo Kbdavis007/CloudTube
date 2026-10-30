@@ -158,7 +158,114 @@ export class YouTubeApiClient {
     });
   }
 
-  // 5. Fetch comments for a specific video
+  // 5. Fetch a channel by its ID with real statistics
+  static async getChannelById(accessToken: string, channelId: string): Promise<ChannelMetadata | null> {
+    const res = await fetch(
+      `${this.BASE_URL}/channels?part=snippet,statistics,contentDetails&id=${encodeURIComponent(channelId)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: 'application/json',
+        },
+      }
+    );
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || `YouTube API returned status ${res.status}`);
+    }
+
+    const data = await res.json();
+    const item = data.items?.[0];
+    if (!item) return null;
+
+    return {
+      channelId: item.id,
+      title: item.snippet.title,
+      description: item.snippet.description || '',
+      customUrl: item.snippet.customUrl || `@${item.snippet.title.replace(/\s+/g, '').toLowerCase()}`,
+      publishedAt: item.snippet.publishedAt,
+      thumbnail:
+        item.snippet.thumbnails?.high?.url ||
+        item.snippet.thumbnails?.medium?.url ||
+        item.snippet.thumbnails?.default?.url ||
+        '',
+      subscriberCount: parseInt(item.statistics?.subscriberCount || '0', 10),
+      videoCount: parseInt(item.statistics?.videoCount || '0', 10),
+      viewCount: parseInt(item.statistics?.viewCount || '0', 10),
+      isExpanded: false,
+    };
+  }
+
+  // 6. Resolve a channel handle (e.g. "@fireship") to a real channel
+  static async getChannelByHandle(accessToken: string, handle: string): Promise<ChannelMetadata | null> {
+    const res = await fetch(
+      `${this.BASE_URL}/search?part=snippet&type=channel&maxResults=1&q=${encodeURIComponent(handle)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: 'application/json',
+        },
+      }
+    );
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || 'Failed to resolve channel handle');
+    }
+
+    const data = await res.json();
+    const channelId = data.items?.[0]?.id?.channelId;
+    if (!channelId) return null;
+    return this.getChannelById(accessToken, channelId);
+  }
+
+  // 7. Fetch all uploads for a channel via its uploads playlist
+  static async getChannelUploads(accessToken: string, channelId: string): Promise<VideoMetadata[]> {
+    const channelRes = await fetch(
+      `${this.BASE_URL}/channels?part=contentDetails&id=${encodeURIComponent(channelId)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: 'application/json',
+        },
+      }
+    );
+
+    if (!channelRes.ok) {
+      const err = await channelRes.json().catch(() => ({}));
+      throw new Error(err.error?.message || 'Failed to resolve channel uploads playlist');
+    }
+
+    const channelData = await channelRes.json();
+    const uploadsPlaylistId = channelData.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+    if (!uploadsPlaylistId) return [];
+
+    const playlistRes = await fetch(
+      `${this.BASE_URL}/playlistItems?part=contentDetails&maxResults=50&playlistId=${encodeURIComponent(uploadsPlaylistId)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: 'application/json',
+        },
+      }
+    );
+
+    if (!playlistRes.ok) {
+      const err = await playlistRes.json().catch(() => ({}));
+      throw new Error(err.error?.message || 'Failed to fetch channel uploads');
+    }
+
+    const playlistData = await playlistRes.json();
+    const videoIds = (playlistData.items || [])
+      .map((item: any) => item.contentDetails?.videoId)
+      .filter(Boolean);
+
+    if (videoIds.length === 0) return [];
+    return this.getVideoDetails(accessToken, videoIds);
+  }
+
+  // 8. Fetch comments for a specific video
   static async getVideoComments(accessToken: string, videoId: string): Promise<VideoComment[]> {
     const res = await fetch(
       `${this.BASE_URL}/commentThreads?part=snippet&videoId=${videoId}&maxResults=20&order=relevance`,

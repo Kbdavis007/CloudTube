@@ -30,7 +30,7 @@ export default function App() {
   const [channels, setChannels] = useState<ChannelMetadata[]>([]);
   const [comments, setComments] = useState<VideoComment[]>([]);
   const [jobs, setJobs] = useState<CrawlJob[]>([]);
-  const [selectedVideoId, setSelectedVideoId] = useState<string>('kJQP7kiw5Fk');
+  const [selectedVideoId, setSelectedVideoId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'info' } | null>(null);
 
@@ -38,9 +38,8 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isImportingChannel, setIsImportingChannel] = useState(false);
-  const [isGuest, setIsGuest] = useState(false);
 
-  const isLoggedIn = !!user || isGuest;
+  const isLoggedIn = !!user;
 
   // Initialize Auth State Listener
   useEffect(() => {
@@ -105,25 +104,17 @@ export default function App() {
   const handleIndexVideo = async (video: VideoMetadata) => {
     await idbService.saveVideo(video);
 
-    // Also ensure channel is registered
+    // Register the channel from real YouTube data if it is not tracked yet
     const existingChan = channels.find((c) => c.channelId === video.channelId);
-    if (!existingChan) {
-      const newChan: ChannelMetadata = {
-        channelId: video.channelId,
-        title: video.channelTitle,
-        description: `Discovered channel for ${video.channelTitle}`,
-        customUrl: `@${video.channelTitle.toLowerCase().replace(/\s+/g, '')}`,
-        publishedAt: video.publishedAt,
-        thumbnail: video.thumbnails.medium,
-        subscriberCount: 50000,
-        videoCount: 25,
-        viewCount: 1000000,
-        isExpanded: false,
-      };
-      await idbService.saveChannel(newChan);
+    if (!existingChan && accessToken) {
+      try {
+        const realChan = await YouTubeApiClient.getChannelById(accessToken, video.channelId);
+        if (realChan) await idbService.saveChannel(realChan);
+      } catch (err) {
+        console.error('Failed to fetch channel metadata from YouTube API:', err);
+      }
     }
 
-    // Add crawl job record
     const job: CrawlJob = {
       id: crypto.randomUUID(),
       type: 'search',
@@ -137,34 +128,49 @@ export default function App() {
     await idbService.addCrawlJob(job);
 
     await refreshLibraryData();
-    showToast(`Indexed "${video.title.slice(0, 30)}..." into Cloudflare D1 Library!`);
+    showToast(`Indexed "${video.title.slice(0, 30)}..." into your library!`);
   };
 
-  // 2. Expand a channel
+  // 2. Expand a channel by fetching its real uploads
   const handleExpandChannel = async (channelId: string, channelTitle: string) => {
-    const chan = channels.find((c) => c.channelId === channelId);
-    if (chan) {
-      chan.isExpanded = true;
-      chan.lastExpandedAt = new Date().toISOString();
-      chan.expandedVideoCount = chan.videoCount;
-      await idbService.saveChannel(chan);
+    if (!accessToken) {
+      showToast('Sign in with Google to expand channels from the live YouTube API.', 'info');
+      return;
     }
 
-    // Add background crawl job record
-    const job: CrawlJob = {
-      id: crypto.randomUUID(),
-      type: 'channel_expansion',
-      status: 'completed',
-      queryOrTarget: `${channelTitle} (${channelId})`,
-      itemsFound: chan?.videoCount || 50,
-      progressPct: 100,
-      createdAt: new Date().toISOString(),
-      completedAt: new Date().toISOString(),
-    };
-    await idbService.addCrawlJob(job);
+    try {
+      const uploads = await YouTubeApiClient.getChannelUploads(accessToken, channelId);
+      for (const v of uploads) {
+        v.sourceFlags = ['ChannelUploads', 'YouTubeSearch'];
+        await idbService.saveVideo(v);
+      }
 
-    await refreshLibraryData();
-    showToast(`Channel "${channelTitle}" fully expanded via Cloudflare Queue!`);
+      const chan = channels.find((c) => c.channelId === channelId);
+      if (chan) {
+        chan.isExpanded = true;
+        chan.lastExpandedAt = new Date().toISOString();
+        chan.expandedVideoCount = uploads.length;
+        await idbService.saveChannel(chan);
+      }
+
+      const job: CrawlJob = {
+        id: crypto.randomUUID(),
+        type: 'channel_expansion',
+        status: 'completed',
+        queryOrTarget: `${channelTitle} (${channelId})`,
+        itemsFound: uploads.length,
+        progressPct: 100,
+        createdAt: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
+      };
+      await idbService.addCrawlJob(job);
+
+      await refreshLibraryData();
+      showToast(`Imported ${uploads.length} videos from "${channelTitle}"!`);
+    } catch (err: any) {
+      console.error('Channel expansion failed:', err);
+      showToast(`Channel expansion failed: ${err.message}`, 'info');
+    }
   };
 
   // 3. Update Personal Metadata (IndexScore, Notes, Rating, Tags)
@@ -173,44 +179,37 @@ export default function App() {
     await refreshLibraryData();
   };
 
-  // 4. Harvest comments for video
+  // 4. Harvest real comments for a video from the YouTube API
   const handleHarvestComments = async (youtubeId: string) => {
-    const sampleAuthors = ['DevOps_Guru', 'CloudArchitect', 'TypeScriptFan', 'EdgeRunner'];
-    const sampleTexts = [
-      'The D1 batch insert speed on Workers is astonishing. Zero cold starts.',
-      'Great explanation of the Durable Object alarm pattern for YouTube quota reset.',
-      'R2 completely eliminates AWS S3 egress bill panic. Excellent architecture guide.',
-    ];
-
-    for (let i = 0; i < 2; i++) {
-      const comm: VideoComment = {
-        id: `comm-harvested-${Date.now()}-${i}`,
-        videoId: youtubeId,
-        authorName: sampleAuthors[i % sampleAuthors.length],
-        authorChannelId: `UC_${sampleAuthors[i].toLowerCase()}`,
-        authorAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
-        text: sampleTexts[i % sampleTexts.length],
-        likes: Math.floor(Math.random() * 80) + 10,
-        publishedAt: new Date().toISOString(),
-        sentiment: 'positive',
-      };
-      await idbService.saveComment(comm);
+    if (!accessToken) {
+      showToast('Sign in with Google to harvest live comments.', 'info');
+      return;
     }
 
-    const job: CrawlJob = {
-      id: crypto.randomUUID(),
-      type: 'comment_harvest',
-      status: 'completed',
-      queryOrTarget: `Comments for ${youtubeId}`,
-      itemsFound: 2,
-      progressPct: 100,
-      createdAt: new Date().toISOString(),
-      completedAt: new Date().toISOString(),
-    };
-    await idbService.addCrawlJob(job);
+    try {
+      const harvested = await YouTubeApiClient.getVideoComments(accessToken, youtubeId);
+      for (const comm of harvested) {
+        await idbService.saveComment(comm);
+      }
 
-    await refreshLibraryData();
-    showToast('Harvested 2 new comments into SQLite & R2 archive vault!');
+      const job: CrawlJob = {
+        id: crypto.randomUUID(),
+        type: 'comment_harvest',
+        status: 'completed',
+        queryOrTarget: `Comments for ${youtubeId}`,
+        itemsFound: harvested.length,
+        progressPct: 100,
+        createdAt: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
+      };
+      await idbService.addCrawlJob(job);
+
+      await refreshLibraryData();
+      showToast(`Harvested ${harvested.length} comments from YouTube.`);
+    } catch (err: any) {
+      console.error('Comment harvest failed:', err);
+      showToast(`Comment harvest failed: ${err.message}`, 'info');
+    }
   };
 
   // 5. Select video to play
@@ -231,7 +230,6 @@ export default function App() {
     setUser(authUser);
     setAccessToken(token);
     setCachedAccessToken(token);
-    setIsGuest(false);
     setCurrentTab('dashboard');
     showToast(`Welcome, ${authUser.displayName || authUser.email}! YouTube & Google AI active.`);
   };
@@ -240,7 +238,6 @@ export default function App() {
     setUser(null);
     setAccessToken(null);
     setCachedAccessToken(null);
-    setIsGuest(false);
     setCurrentTab('dashboard');
     showToast('Signed out from Google account.');
   };
@@ -316,14 +313,7 @@ export default function App() {
               </div>
             </div>
           ) : !isLoggedIn ? (
-            <LandingSplashView
-              onAuthSuccess={handleAuthSuccess}
-              onContinueAsGuest={() => {
-                setIsGuest(true);
-                setCurrentTab('dashboard');
-                showToast('Guest preview active with offline cached library.');
-              }}
-            />
+            <LandingSplashView onAuthSuccess={handleAuthSuccess} />
           ) : (
             <>
               {currentTab === 'dashboard' && (

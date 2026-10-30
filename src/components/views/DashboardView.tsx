@@ -143,94 +143,50 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* Cloudflare Free Tier Quota Matrix */}
+      {/* Cloudflare Free Tier Limits (static reference — no fabricated usage) */}
       <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h2 className="text-base font-bold text-white flex items-center gap-2">
               <Server className="w-4 h-4 text-orange-500" />
-              Cloudflare Free Tier Quota Monitor
+              Cloudflare Free Tier Limits
             </h2>
             <p className="text-xs text-slate-400">
-              Live edge resource usage tracked against Cloudflare's generous free allowance
+              Static reference of Cloudflare's published free-tier allowances
             </p>
           </div>
-          <span className="self-start sm:self-auto text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-            All Free Quotas Safe
-          </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
-          {/* Workers API */}
-          <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-2">
-            <div className="flex justify-between items-center text-xs">
-              <span className="font-semibold text-slate-300">Workers Requests</span>
-              <span className="font-mono text-slate-400">124 / 100,000 /day</span>
-            </div>
-            <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-              <div className="h-full bg-emerald-500 rounded-full" style={{ width: '0.12%' }} />
-            </div>
-            <p className="text-[10px] text-slate-300">Resets daily at 00:00 UTC</p>
+          <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1">
+            <div className="text-xs font-semibold text-slate-300">Workers Requests</div>
+            <div className="font-mono text-lg text-white">100,000 /day</div>
+            <p className="text-[10px] text-slate-400">Resets daily at 00:00 UTC</p>
           </div>
-
-          {/* D1 Database Reads */}
-          <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-2">
-            <div className="flex justify-between items-center text-xs">
-              <span className="font-semibold text-slate-300">D1 SQLite Rows Read</span>
-              <span className="font-mono text-slate-400">3,420 / 5,000,000 /day</span>
-            </div>
-            <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-              <div className="h-full bg-emerald-500 rounded-full" style={{ width: '0.07%' }} />
-            </div>
-            <p className="text-[10px] text-slate-300">5M reads daily limit (99.9% remaining)</p>
+          <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1">
+            <div className="text-xs font-semibold text-slate-300">D1 Rows Read</div>
+            <div className="font-mono text-lg text-white">5,000,000 /day</div>
+            <p className="text-[10px] text-slate-400">Serverless SQLite reads</p>
           </div>
-
-          {/* D1 Database Writes */}
-          <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-2">
-            <div className="flex justify-between items-center text-xs">
-              <span className="font-semibold text-slate-300">D1 SQLite Rows Written</span>
-              <span className="font-mono text-slate-400">42 / 100,000 /day</span>
-            </div>
-            <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-              <div className="h-full bg-emerald-500 rounded-full" style={{ width: '0.04%' }} />
-            </div>
-            <p className="text-[10px] text-slate-300">Batch insertions optimized</p>
+          <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1">
+            <div className="text-xs font-semibold text-slate-300">D1 Rows Written</div>
+            <div className="font-mono text-lg text-white">100,000 /day</div>
+            <p className="text-[10px] text-slate-400">Batch insertions supported</p>
           </div>
-
-          {/* R2 Object Storage */}
-          <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-2">
-            <div className="flex justify-between items-center text-xs">
-              <span className="font-semibold text-slate-300">R2 Object Storage</span>
-              <span className="font-mono text-slate-400">0.08 GB / 10 GB</span>
-            </div>
-            <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-              <div className="h-full bg-orange-500 rounded-full" style={{ width: '0.8%' }} />
-            </div>
-            <p className="text-[10px] text-slate-300">$0 egress fee guarantee</p>
+          <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1">
+            <div className="text-xs font-semibold text-slate-300">R2 Object Storage</div>
+            <div className="font-mono text-lg text-white">10 GB</div>
+            <p className="text-[10px] text-slate-400">$0 egress fee guarantee</p>
           </div>
-
-          {/* KV Fast Lookups */}
-          <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-2">
-            <div className="flex justify-between items-center text-xs">
-              <span className="font-semibold text-slate-300">KV Cache Reads</span>
-              <span className="font-mono text-slate-400">620 / 100,000 /day</span>
-            </div>
-            <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-              <div className="h-full bg-emerald-500 rounded-full" style={{ width: '0.62%' }} />
-            </div>
-            <p className="text-[10px] text-slate-300">Sub-millisecond edge lookups</p>
+          <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1">
+            <div className="text-xs font-semibold text-slate-300">KV Reads</div>
+            <div className="font-mono text-lg text-white">100,000 /day</div>
+            <p className="text-[10px] text-slate-400">Sub-millisecond edge lookups</p>
           </div>
-
-          {/* Cloudflare Queues */}
-          <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-2">
-            <div className="flex justify-between items-center text-xs">
-              <span className="font-semibold text-slate-300">Queues & Durable Objects</span>
-              <span className="font-mono text-slate-400">Active / Free Tier</span>
-            </div>
-            <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-              <div className="h-full bg-purple-500 rounded-full" style={{ width: '5%' }} />
-            </div>
-            <p className="text-[10px] text-slate-300">Async crawler batch processing</p>
+          <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1">
+            <div className="text-xs font-semibold text-slate-300">Queues &amp; Durable Objects</div>
+            <div className="font-mono text-lg text-white">Included</div>
+            <p className="text-[10px] text-slate-400">Async crawler batch processing</p>
           </div>
         </div>
       </div>

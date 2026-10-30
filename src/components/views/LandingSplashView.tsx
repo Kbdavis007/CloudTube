@@ -20,13 +20,9 @@ import {
 
 interface LandingSplashViewProps {
   onAuthSuccess: (user: User, token: string) => void;
-  onContinueAsGuest?: () => void;
 }
 
-export const LandingSplashView: React.FC<LandingSplashViewProps> = ({
-  onAuthSuccess,
-  onContinueAsGuest,
-}) => {
+export const LandingSplashView: React.FC<LandingSplashViewProps> = ({ onAuthSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -142,19 +138,6 @@ export const LandingSplashView: React.FC<LandingSplashViewProps> = ({
               </div>
             </div>
           </div>
-
-          {/* Guest / Demo preview button */}
-          {onContinueAsGuest && (
-            <div className="pt-2 border-t border-slate-800">
-              <button
-                onClick={onContinueAsGuest}
-                className="text-xs text-slate-400 hover:text-orange-400 font-semibold transition flex items-center justify-center gap-1 mx-auto"
-              >
-                <span>Or explore as guest with offline cached library</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
 
           <div className="pt-1 text-[11px] text-slate-400 flex items-center justify-center gap-1.5">
             <Lock className="w-3 h-3 text-emerald-400" />

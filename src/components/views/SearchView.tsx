@@ -46,7 +46,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
   const [searchError, setSearchError] = useState<string | null>(null);
 
   // Quick prompt pills
-  const sampleQueries = [
+  const suggestedQueries = [
     'Cloudflare Workers & D1',
     'System Design YouTube Architecture',
     'TypeScript Edge Runtimes',
@@ -160,7 +160,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
           <span className="text-slate-500 text-[11px] uppercase tracking-wider font-semibold shrink-0">
             Popular:
           </span>
-          {sampleQueries.map((q) => (
+          {suggestedQueries.map((q) => (
             <button
               key={q}
               onClick={() => {

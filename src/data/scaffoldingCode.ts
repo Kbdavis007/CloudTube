@@ -900,7 +900,7 @@ export class AwsS3StorageProvider implements IStorageProvider {
   async getObject(key: string): Promise<ArrayBuffer | null> { return null; }
   async deleteObject(key: string): Promise<void> {}
   async getPresignedUrl(key: string): Promise<string> {
-    return \`https://s3.amazonaws.com/yt-library/\${key}?sig=mock\`;
+    return \`https://s3.amazonaws.com/yt-library/\${key}?sig=PRESIGNED_SIGNATURE\`;
   }
 }
 

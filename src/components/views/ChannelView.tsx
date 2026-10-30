@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ChannelMetadata, VideoMetadata } from '../../types';
+import { YouTubeApiClient } from '../../services/youtubeApi';
 import {
   Tv,
   Play,
@@ -19,6 +20,7 @@ interface ChannelViewProps {
   onExpandChannel: (channelId: string, channelTitle: string) => Promise<void>;
   onSelectVideo: (youtubeId: string) => void;
   onAddChannel: (channel: ChannelMetadata) => void;
+  accessToken?: string | null;
 }
 
 export const ChannelView: React.FC<ChannelViewProps> = ({
@@ -27,9 +29,10 @@ export const ChannelView: React.FC<ChannelViewProps> = ({
   onExpandChannel,
   onSelectVideo,
   onAddChannel,
+  accessToken,
 }) => {
   const [selectedChannelId, setSelectedChannelId] = useState<string>(
-    channels[0]?.channelId || 'UC_cloudflare_official'
+    channels[0]?.channelId || ''
   );
   const [isExpanding, setIsExpanding] = useState(false);
   const [expansionProgress, setExpansionProgress] = useState<{
@@ -42,6 +45,7 @@ export const ChannelView: React.FC<ChannelViewProps> = ({
   // New channel modal state
   const [showAddModal, setShowAddModal] = useState(false);
   const [newChannelHandle, setNewChannelHandle] = useState('');
+  const [addChannelError, setAddChannelError] = useState<string | null>(null);
 
   const selectedChannel = channels.find((c) => c.channelId === selectedChannelId) || channels[0];
   const channelVideos = videos.filter((v) => v.channelId === selectedChannelId);
@@ -55,63 +59,62 @@ export const ChannelView: React.FC<ChannelViewProps> = ({
   const handleTriggerExpansion = async (channel: ChannelMetadata) => {
     setIsExpanding(true);
     setExpansionProgress({
-      pct: 10,
+      pct: 20,
       currentCount: channelVideos.length,
       totalExpected: channel.videoCount,
-      statusText: 'Contacting YouTube Data API via Cloudflare Queue...',
+      statusText: 'Contacting YouTube Data API...',
     });
 
-    // Simulate animated Queue batch processing & DO pagination
-    await new Promise((r) => setTimeout(r, 600));
-    setExpansionProgress({
-      pct: 35,
-      currentCount: Math.min(channel.videoCount, channelVideos.length + 15),
-      totalExpected: channel.videoCount,
-      statusText: 'Paginating uploads playlist tokens via CrawlOrchestratorDO...',
-    });
-
-    await new Promise((r) => setTimeout(r, 700));
-    setExpansionProgress({
-      pct: 75,
-      currentCount: Math.min(channel.videoCount, channelVideos.length + 35),
-      totalExpected: channel.videoCount,
-      statusText: 'Bulk inserting metadata rows into Cloudflare D1 SQLite...',
-    });
-
-    await new Promise((r) => setTimeout(r, 600));
-    setExpansionProgress({
-      pct: 100,
-      currentCount: channel.videoCount,
-      totalExpected: channel.videoCount,
-      statusText: 'Completed! All uploads indexed with zero egress cost.',
-    });
-
-    await onExpandChannel(channel.channelId, channel.title);
-    setTimeout(() => {
-      setIsExpanding(false);
-      setExpansionProgress(null);
-    }, 1200);
+    try {
+      await onExpandChannel(channel.channelId, channel.title);
+      setExpansionProgress({
+        pct: 100,
+        currentCount: channel.videoCount,
+        totalExpected: channel.videoCount,
+        statusText: 'Completed. All available uploads indexed.',
+      });
+    } catch (err: any) {
+      setExpansionProgress({
+        pct: 100,
+        currentCount: channelVideos.length,
+        totalExpected: channel.videoCount,
+        statusText: `Expansion failed: ${err?.message || 'unknown error'}`,
+      });
+    } finally {
+      setTimeout(() => {
+        setIsExpanding(false);
+        setExpansionProgress(null);
+      }, 1200);
+    }
   };
 
-  const handleAddNewChannel = () => {
-    if (!newChannelHandle.trim()) return;
-    const clean = newChannelHandle.replace('@', '').trim();
-    const newChan: ChannelMetadata = {
-      channelId: `UC_${clean}_${Date.now().toString().slice(-4)}`,
-      title: clean.toUpperCase() + ' Dev',
-      description: `Discovered channel for ${clean}. Tracked in Cloudflare D1 database.`,
-      customUrl: `@${clean}`,
-      publishedAt: '2023-01-01T00:00:00Z',
-      thumbnail: 'https://images.unsplash.com/photo-1534972195531-a756b11269d5?w=200&auto=format&fit=crop&q=80',
-      subscriberCount: 85000,
-      videoCount: 140,
-      viewCount: 4200000,
-      isExpanded: false,
-    };
-    onAddChannel(newChan);
-    setSelectedChannelId(newChan.channelId);
-    setNewChannelHandle('');
-    setShowAddModal(false);
+  const handleAddNewChannel = async () => {
+    const input = newChannelHandle.trim();
+    if (!input) return;
+    if (!accessToken) {
+      setAddChannelError('Sign in with Google to add channels from the live YouTube API.');
+      return;
+    }
+
+    setAddChannelError(null);
+    try {
+      const handle = input.startsWith('@') ? input : `@${input}`;
+      const realChan = input.startsWith('UC')
+        ? await YouTubeApiClient.getChannelById(accessToken, input)
+        : await YouTubeApiClient.getChannelByHandle(accessToken, handle);
+
+      if (!realChan) {
+        setAddChannelError(`No YouTube channel found for "${input}".`);
+        return;
+      }
+
+      await onAddChannel(realChan);
+      setSelectedChannelId(realChan.channelId);
+      setNewChannelHandle('');
+      setShowAddModal(false);
+    } catch (err: any) {
+      setAddChannelError(`Failed to resolve channel: ${err?.message || 'unknown error'}`);
+    }
   };
 
   return (
@@ -129,7 +132,10 @@ export const ChannelView: React.FC<ChannelViewProps> = ({
         </div>
 
         <button
-          onClick={() => setShowAddModal(true)}
+          onClick={() => {
+            setAddChannelError(null);
+            setShowAddModal(true);
+          }}
           className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition shadow-sm active:scale-95"
         >
           <Plus className="w-4 h-4" /> Add Channel
@@ -332,6 +338,9 @@ export const ChannelView: React.FC<ChannelViewProps> = ({
               placeholder="e.g. @cloudflare or @fireship"
               className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-hidden focus:border-orange-500"
             />
+            {addChannelError && (
+              <p className="text-xs text-red-300">{addChannelError}</p>
+            )}
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 onClick={() => setShowAddModal(false)}
