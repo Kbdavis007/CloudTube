@@ -301,16 +301,19 @@ export class CloudflareAdminClient {
       } else if (responseStatus === 401) {
         recommendation =
           ' -> Auth Error: Cloudflare rejected the Authorization header. Check the token has no surrounding quotes or "Bearer " prefix, then retry.';
+      } else if (firstError?.code === 10042) {
+        // Cloudflare's own wording: "Please enable R2 through the Cloudflare
+        // Dashboard." This is an account-state gate, not a token scope problem,
+        // so do not send the user off to edit their token.
+        recommendation =
+          ' -> R2 Not Enabled: this is not a token problem. R2 must be activated once for the account before any bucket can be created, even on the free tier. Open dash.cloudflare.com > R2 > Overview and complete the enable/checkout flow (a payment method is required on file even though the free tier is $0). Then re-run this step; the existing token will work unchanged.';
       } else if (responseStatus === 403 || firstError?.code === 9109) {
-        // R2 in particular returns 403 until the account has activated an R2
-        // subscription, which is a free but separate checkout step. Surface it
-        // first, because a correctly scoped token still fails here without it.
         const isR2 = endpoint.includes('/r2/');
         const r2Hint = isR2
-          ? ' If this is the R2 bucket step, first activate R2 for the account at dash.cloudflare.com (R2 > Overview > enable/checkout). R2 is free tier but the subscription must exist before the API will create buckets, and it returns 403 until then even with a fully scoped token.'
+          ? ' If this is the R2 bucket step and the error code is 10042, R2 is not enabled for the account yet — enable it at dash.cloudflare.com > R2 > Overview.'
           : '';
         recommendation =
-          ' -> Permission Error: Cloudflare accepted the token but rejected this operation. Either the token is missing the required scope, or the account has not enabled the product. Add the matching "Edit" permission at dash.cloudflare.com/profile/api-tokens (R2 -> Workers R2 Storage: Edit, plus D1, KV, Queues, Workers as needed), then re-run. A token that passes /user/tokens/verify can still 403 here because verify does not check resource scopes.' +
+          ' -> Permission Error: Cloudflare accepted the token but rejected this operation. The token is most likely missing the required scope. Add the matching "Edit" permission at dash.cloudflare.com/profile/api-tokens (R2 -> Workers R2 Storage: Edit, plus D1, KV, Queues, Workers as needed), then re-run. A token that passes /user/tokens/verify can still 403 here because verify does not check resource scopes.' +
           r2Hint;
       } else if (responseStatus === 404 || firstError?.code === 7003) {
         recommendation = ' -> Account Error: Verify your 32-character Cloudflare Account ID.';
