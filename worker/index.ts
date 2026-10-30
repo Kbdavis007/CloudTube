@@ -8,9 +8,11 @@
  *
  *   GET  /api/health            -> build/version provenance
  *   POST /api/cloudflare/proxy  -> server-side relay to the Cloudflare API
+ *   GET  /api/xvideos/export    -> streams the XVideos catalogue export
  *
  * The proxy exists because api.cloudflare.com sends no CORS headers, so a
- * browser cannot call it directly.
+ * browser cannot call it directly. /api/xvideos/export exists for the same
+ * reason: the XVideos export CDN also sends no CORS headers.
  */
 
 import {
@@ -22,6 +24,7 @@ import {
   DIRTY,
   VERSION_LABEL,
 } from '../src/generated/version';
+import { XVIDEOS_EXPORT_RANGES } from '../src/services/xvideosApi';
 
 interface Env {
   ASSETS: { fetch: (request: Request) => Promise<Response> };
@@ -52,6 +55,49 @@ const handleHealth = (): Response =>
     dirty: DIRTY,
     versionLabel: VERSION_LABEL,
   });
+
+/**
+ * Stream the XVideos catalogue export through the Worker.
+ *
+ * The export CDN sends no CORS headers, so the browser cannot fetch it directly.
+ * Only the two fixed export URLs are reachable, so this is not an open relay.
+ * The gzip is passed through untouched and decompressed client-side, which keeps
+ * the Worker's CPU cost to a stream copy rather than a 12k-row parse.
+ */
+async function handleXvideosExport(request: Request): Promise<Response> {
+  const range = new URL(request.url).searchParams.get('range') === 'full' ? 'full' : 'week';
+
+  try {
+    const upstream = await fetch(XVIDEOS_EXPORT_RANGES[range], {
+      headers: { 'User-Agent': 'CloudTube-Studio/1.0' },
+    });
+
+    if (!upstream.ok || !upstream.body) {
+      return json(
+        {
+          success: false,
+          errors: [{ message: `XVideos export upstream returned ${upstream.status}` }],
+        },
+        upstream.status === 200 ? 502 : upstream.status
+      );
+    }
+
+    const headers = new Headers({
+      'Content-Type': 'application/gzip',
+      'Cache-Control': 'public, max-age=3600',
+    });
+    const length = upstream.headers.get('content-length');
+    if (length) headers.set('Content-Length', length);
+
+    return new Response(upstream.body, { status: 200, headers });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown network error';
+    return json(
+      { success: false, errors: [{ message: `Failed to reach XVideos export CDN: ${message}` }] },
+      502
+    );
+  }
+}
 
 async function handleProxy(request: Request): Promise<Response> {
   let payload: ProxyBody;
@@ -144,6 +190,26 @@ export default {
         );
       }
       return handleProxy(request);
+    }
+
+    if (pathname === '/api/xvideos/export') {
+      if (request.method === 'OPTIONS') {
+        return new Response(null, {
+          status: 204,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+          },
+        });
+      }
+      if (request.method !== 'GET') {
+        return json(
+          { status: 405, ok: false, errors: [{ message: 'Use GET for /api/xvideos/export' }] },
+          405
+        );
+      }
+      return handleXvideosExport(request);
     }
 
     // Unknown API paths must not fall through to the SPA (which would answer

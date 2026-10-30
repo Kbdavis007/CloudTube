@@ -14,6 +14,7 @@ import { Sidebar, PageTab } from './components/Sidebar';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { DashboardView } from './components/views/DashboardView';
 import { SearchView } from './components/views/SearchView';
+import { XvideosSourceView } from './components/views/XvideosSourceView';
 import { VideoPlayerView } from './components/views/VideoPlayerView';
 import { ChannelView } from './components/views/ChannelView';
 import { CommentsView } from './components/views/CommentsView';
@@ -113,9 +114,13 @@ export default function App() {
   const handleIndexVideo = async (video: VideoMetadata) => {
     await idbService.saveVideo(video);
 
-    // Register the channel from real YouTube data if it is not tracked yet
+    // Register the channel from real YouTube data if it is not tracked yet.
+    // Non-YouTube sources have no YouTube channel to look up.
+    const isYouTube = video.sourceFlags.some(
+      (flag) => flag === 'YouTubeSearch' || flag === 'ChannelUploads'
+    );
     const existingChan = channels.find((c) => c.channelId === video.channelId);
-    if (!existingChan && accessToken) {
+    if (isYouTube && !existingChan && accessToken) {
       try {
         const realChan = await YouTubeApiClient.getChannelById(accessToken, video.channelId);
         if (realChan) await idbService.saveChannel(realChan);
@@ -295,6 +300,14 @@ export default function App() {
     setCurrentTab('player');
   };
 
+  // 5b. Play a video that may not be in the library yet: index it first so the
+  // player has metadata to render, then select it.
+  const handleIndexAndPlay = async (video: VideoMetadata) => {
+    await handleIndexVideo(video);
+    setSelectedVideoId(video.youtubeId);
+    setCurrentTab('player');
+  };
+
   // 6. Update AI Summary in database metadata
   const handleUpdateAiSummary = async (youtubeId: string, aiSummary: string) => {
     await idbService.updateVideoAiSummary(youtubeId, aiSummary);
@@ -434,6 +447,14 @@ export default function App() {
                   accessToken={accessToken}
                   userEmail={user?.email}
                   tasteProfile={tasteProfile}
+                />
+              )}
+
+              {currentTab === 'xvideos' && (
+                <XvideosSourceView
+                  onIndexVideo={handleIndexVideo}
+                  onPlayVideo={handleIndexAndPlay}
+                  indexedVideoIds={indexedVideoIds}
                 />
               )}
 
