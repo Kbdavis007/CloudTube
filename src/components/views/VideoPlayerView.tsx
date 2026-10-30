@@ -39,6 +39,7 @@ interface VideoPlayerViewProps {
   onUpdatePersonal: (youtubeId: string, personal: Partial<PersonalMetadata>) => Promise<void>;
   onHarvestComments: (youtubeId: string) => void;
   onUpdateAiSummary: (youtubeId: string, aiSummary: string) => Promise<void>;
+  onRequestRemoval: (youtubeId: string) => void;
 }
 
 export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
@@ -49,6 +50,7 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
   onUpdatePersonal,
   onHarvestComments,
   onUpdateAiSummary,
+  onRequestRemoval,
 }) => {
   if (!currentVideo) {
     return (
@@ -243,6 +245,14 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
                   title={isFavorite ? 'Favorited' : 'Add to Favorites'}
                 >
                   <Bookmark className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
+                </button>
+
+                <button
+                  onClick={() => onRequestRemoval(currentVideo.youtubeId)}
+                  className="p-2 rounded-xl border bg-slate-800 text-slate-400 border-slate-700 hover:text-red-300 hover:border-red-800/70 hover:bg-red-900/30 transition"
+                  title="Remove this video and record why it should not be recommended again"
+                >
+                  <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             </div>

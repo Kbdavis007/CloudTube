@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   VideoMetadata,
   SourceFlag,
   CrawlJob,
+  TasteProfile,
 } from '../../types';
 import {
   Search,
@@ -17,8 +18,11 @@ import {
   Loader2,
   Sparkles,
   Zap,
+  Ban,
+  TrendingDown,
 } from 'lucide-react';
 import { YouTubeApiClient } from '../../services/youtubeApi';
+import { rankCandidates } from '../../services/tasteProfile';
 import { ApiErrorCard } from '../ApiErrorCard';
 
 interface SearchViewProps {
@@ -28,6 +32,7 @@ interface SearchViewProps {
   indexedVideoIds: Set<string>;
   accessToken?: string | null;
   userEmail?: string | null;
+  tasteProfile: TasteProfile;
 }
 
 export const SearchView: React.FC<SearchViewProps> = ({
@@ -37,6 +42,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
   indexedVideoIds,
   accessToken,
   userEmail,
+  tasteProfile,
 }) => {
   const [searchTerm, setSearchTerm] = useState('Cloudflare Workers & D1');
   const [isSearching, setIsSearching] = useState(false);
@@ -45,6 +51,8 @@ export const SearchView: React.FC<SearchViewProps> = ({
   const [results, setResults] = useState<VideoMetadata[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  // Personalized ranking is on by default: removal reasons should change what you see.
+  const [personalize, setPersonalize] = useState(true);
 
   // Quick prompt pills
   const suggestedQueries = [
@@ -97,6 +105,24 @@ export const SearchView: React.FC<SearchViewProps> = ({
     selectedSourceFilter === 'ALL'
       ? results
       : results.filter((r) => r.sourceFlags.includes(selectedSourceFilter));
+
+  // Apply the learned taste profile: demote penalized tags and sort muted
+  // channels to the end. Falls back to the raw order when personalization is off
+  // or nothing has been removed yet.
+  const rankedResults = useMemo(() => {
+    if (!personalize || tasteProfile.totalRemovals === 0) {
+      return filteredResults.map((video) => ({
+        video,
+        assessment: { penalty: 0, muted: false, signals: [] },
+        adjustedScore: video.personal?.indexScore ?? 50,
+      }));
+    }
+    return rankCandidates(filteredResults, tasteProfile);
+  }, [filteredResults, personalize, tasteProfile]);
+
+  const personalizedCount = rankedResults.filter(
+    (r) => r.assessment.penalty > 0 || r.assessment.muted
+  ).length;
 
   const formatViews = (views: number) => {
     if (views >= 1_000_000) return (views / 1_000_000).toFixed(1) + 'M views';
@@ -176,7 +202,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
         </div>
       </div>
 
-      {/* Filter by Source Flags */}
+      {/* Filter by Source Flags + personalization toggle */}
       {results.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-slate-900/60 border border-slate-800/80">
           <div className="flex items-center gap-2">
@@ -214,6 +240,19 @@ export const SearchView: React.FC<SearchViewProps> = ({
               );
             })}
           </div>
+
+          <button
+            onClick={() => setPersonalize(!personalize)}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition border ${
+              personalize
+                ? 'bg-orange-500/15 text-orange-300 border-orange-500/40'
+                : 'bg-slate-950/40 text-slate-400 border-slate-800 hover:text-slate-200'
+            }`}
+            title="Use your removal reasons to re-rank and mute results"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            {personalize ? `Personalized${personalizedCount > 0 ? ` (${personalizedCount})` : ''}` : 'Personalized: Off'}
+          </button>
         </div>
       )}
 
@@ -226,15 +265,20 @@ export const SearchView: React.FC<SearchViewProps> = ({
         </div>
       )}
 
-      {!isSearching && filteredResults.length > 0 && (
+      {!isSearching && rankedResults.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredResults.map((video) => {
+          {rankedResults.map(({ video, assessment, adjustedScore }) => {
             const isIndexed = indexedVideoIds.has(video.youtubeId);
+            const demoted = assessment.penalty > 0 || assessment.muted;
 
             return (
               <div
                 key={video.youtubeId}
-                className="flex flex-col rounded-2xl bg-slate-900/80 border border-slate-800 overflow-hidden hover:border-orange-500/50 transition group shadow-md"
+                className={`flex flex-col rounded-2xl bg-slate-900/80 border overflow-hidden transition group shadow-md ${
+                  assessment.muted
+                    ? 'border-red-900/50 opacity-80 hover:opacity-100'
+                    : 'border-slate-800 hover:border-orange-500/50'
+                }`}
               >
                 {/* Thumbnail Header */}
                 <div className="relative aspect-video w-full bg-slate-950 overflow-hidden">
@@ -260,11 +304,23 @@ export const SearchView: React.FC<SearchViewProps> = ({
                     {video.duration.replace('PT', '').toLowerCase()}
                   </div>
 
-                  {/* Pre-calculated IndexScore */}
+                  {/* Pre-calculated IndexScore, adjusted by the taste profile */}
                   <div className="absolute top-2 left-2 px-2.5 py-1 rounded-lg bg-orange-600/90 backdrop-blur-xs text-white text-[11px] font-extrabold shadow-md flex items-center gap-1">
                     <Star className="w-3 h-3 fill-current" />
-                    <span>Score: {video.personal?.indexScore ?? 15}</span>
+                    <span>Score: {adjustedScore}</span>
+                    {demoted && (
+                      <span className="text-[10px] font-bold text-amber-200" title={`Taste penalty -${assessment.penalty}`}>
+                        (base {video.personal?.indexScore ?? 50})
+                      </span>
+                    )}
                   </div>
+
+                  {/* Taste profile badges */}
+                  {assessment.muted && (
+                    <div className="absolute top-2 right-2 px-2 py-1 rounded-lg bg-red-600/90 text-white text-[10px] font-extrabold shadow-md flex items-center gap-1">
+                      <Ban className="w-3 h-3" /> Muted channel
+                    </div>
+                  )}
                 </div>
 
                 {/* Card Body */}
@@ -294,6 +350,23 @@ export const SearchView: React.FC<SearchViewProps> = ({
                       </span>
                     ))}
                   </div>
+
+                  {/* Why this video was demoted by the learned taste profile */}
+                  {demoted && (
+                    <div className="p-2.5 rounded-xl bg-amber-950/30 border border-amber-600/30 space-y-1">
+                      <div className="text-[10px] font-bold text-amber-300 flex items-center gap-1 uppercase tracking-wider">
+                        <TrendingDown className="w-3 h-3" /> Demoted by your removals
+                      </div>
+                      <ul className="space-y-0.5">
+                        {assessment.signals.slice(0, 3).map((signal, i) => (
+                          <li key={i} className="text-[10px] text-amber-200/90 flex items-center justify-between gap-2">
+                            <span className="truncate">{signal.label}</span>
+                            <span className="font-mono shrink-0">-{signal.penalty}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
                   {/* Actions: Index to D1 & Expand Channel */}
                   <div className="pt-2 flex items-center gap-2 border-t border-slate-800/80">
@@ -337,7 +410,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
         <ApiErrorCard message={searchError} title="Search unavailable" />
       )}
 
-      {!isSearching && hasSearched && !searchError && filteredResults.length === 0 && (
+      {!isSearching && hasSearched && !searchError && rankedResults.length === 0 && (
         <div className="py-16 text-center space-y-2">
           <p className="text-sm font-semibold text-white">No results matched your search term.</p>
           <p className="text-xs text-slate-400">Try searching for "Cloudflare Workers" or "System Design".</p>

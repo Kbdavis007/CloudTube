@@ -12,6 +12,7 @@ import {
   Settings,
   HardDrive,
   Lock,
+  Trash2,
 } from 'lucide-react';
 
 export type PageTab =
@@ -21,6 +22,7 @@ export type PageTab =
   | 'channels'
   | 'comments'
   | 'ratings'
+  | 'removals'
   | 'wizard'
   | 'scaffolding'
   | 'settings';
@@ -31,6 +33,7 @@ interface SidebarProps {
   videoCount: number;
   channelCount: number;
   commentCount: number;
+  removalCount?: number;
   isLoggedIn?: boolean;
 }
 
@@ -40,6 +43,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   videoCount,
   channelCount,
   commentCount,
+  removalCount = 0,
   isLoggedIn = false,
 }) => {
   const navItems = [
@@ -78,6 +82,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'Ratings & Notes',
       icon: Star,
       badge: null,
+    },
+    {
+      id: 'removals' as PageTab,
+      label: 'Removed & Taste',
+      icon: Trash2,
+      badge: removalCount > 0 ? String(removalCount) : null,
     },
     {
       id: 'wizard' as PageTab,

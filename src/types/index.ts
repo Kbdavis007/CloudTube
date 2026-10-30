@@ -48,6 +48,75 @@ export interface PersonalMetadata {
   watchProgressSeconds?: number;
 }
 
+/**
+ * Why a video was removed. The reason is kept so future discovery can be tuned
+ * against it, so the set is deliberately coarse: each value maps to a distinct
+ * signal (topic, creator, format, redundancy) rather than a free-text tag.
+ */
+export type RemovalReason =
+  | 'not-relevant'
+  | 'disliked-creator'
+  | 'low-quality'
+  | 'clickbait'
+  | 'already-known'
+  | 'duplicate'
+  | 'too-long'
+  | 'outdated'
+  | 'other';
+
+/** A removal event: the video snapshot plus why and when it was dropped. */
+export interface VideoRemoval {
+  id: string; // Internal UUID for the removal event
+  youtubeId: string;
+  /** Full snapshot so a removal can be reversed exactly as it was. */
+  video: VideoMetadata;
+  reason: RemovalReason;
+  note: string;
+  removedAt: string;
+  /** Whether this removal feeds the taste profile used to rank future videos. */
+  appliedToProfile: boolean;
+}
+
+/** Aggregated dislike signal for one channel, derived from removals. */
+export interface ChannelPenalty {
+  channelId: string;
+  channelTitle: string;
+  removals: number;
+  penalty: number; // 0-50, added to a video's indexScore (1 = best)
+  lastReason: RemovalReason;
+  lastRemovedAt: string;
+}
+
+/** Aggregated dislike signal for one tag, derived from removals. */
+export interface TagPenalty {
+  tag: string;
+  removals: number;
+  penalty: number; // 0-18
+}
+
+/** The learned model of what the user does not want to see. */
+export interface TasteProfile {
+  totalRemovals: number;
+  reasonCounts: Record<RemovalReason, number>;
+  channelPenalties: ChannelPenalty[];
+  tagPenalties: TagPenalty[];
+  /** Channels penalized enough that new videos from them are muted outright. */
+  mutedChannelIds: string[];
+}
+
+/** One reason a specific video scored against the taste profile. */
+export interface TasteSignal {
+  kind: 'channel' | 'tag';
+  label: string;
+  penalty: number;
+}
+
+export interface TasteAssessment {
+  penalty: number;
+  muted: boolean;
+  signals: TasteSignal[];
+}
+
 export interface ChannelMetadata {
   channelId: string;
   title: string;

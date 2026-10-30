@@ -18,6 +18,7 @@ import {
   Eye,
   Star,
   Activity,
+  Trash2,
 } from 'lucide-react';
 
 interface DashboardViewProps {
@@ -27,6 +28,7 @@ interface DashboardViewProps {
   jobs: CrawlJob[];
   onSelectVideo: (videoId: string) => void;
   onNavigate: (tab: any) => void;
+  onRequestRemoval: (youtubeId: string) => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -36,6 +38,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   jobs,
   onSelectVideo,
   onNavigate,
+  onRequestRemoval,
 }) => {
   // Compute library statistics
   const totalViews = videos.reduce((acc, v) => acc + (v.viewCount || 0), 0);
@@ -253,6 +256,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       </span>
                     </div>
                   </div>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRequestRemoval(video.youtubeId);
+                    }}
+                    className="self-start sm:self-center shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-red-900/50 border border-slate-700/80 hover:border-red-800/70 text-slate-300 hover:text-red-300 text-[11px] font-semibold transition active:scale-95"
+                    title="Remove this video and record why"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Remove</span>
+                  </button>
                 </div>
               );
             })}

@@ -12,18 +12,21 @@ import {
   Save,
   CheckCircle2,
   HelpCircle,
+  Trash2,
 } from 'lucide-react';
 
 interface RatingsNotesViewProps {
   videos: VideoMetadata[];
   onSelectVideo: (youtubeId: string) => void;
   onUpdatePersonal: (youtubeId: string, personal: Partial<PersonalMetadata>) => Promise<void>;
+  onRequestRemoval: (youtubeId: string) => void;
 }
 
 export const RatingsNotesView: React.FC<RatingsNotesViewProps> = ({
   videos,
   onSelectVideo,
   onUpdatePersonal,
+  onRequestRemoval,
 }) => {
   const [filterType, setFilterType] = useState<'all' | 'needs_rating' | 'has_notes' | 'elite' | 'favorites'>('all');
   const [editingVideo, setEditingVideo] = useState<VideoMetadata | null>(null);
@@ -197,6 +200,14 @@ export const RatingsNotesView: React.FC<RatingsNotesViewProps> = ({
                     className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition border border-slate-700 active:scale-95"
                   >
                     Edit Notes & Score
+                  </button>
+
+                  <button
+                    onClick={() => onRequestRemoval(video.youtubeId)}
+                    className="p-1.5 rounded-xl bg-slate-800 hover:bg-red-900/50 text-slate-400 hover:text-red-300 border border-slate-700 transition active:scale-95"
+                    title="Remove this video and record why"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>

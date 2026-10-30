@@ -61,7 +61,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshData, video
   };
 
   const handleClearLibrary = async () => {
-    if (confirm('Permanently delete all videos, channels, comments, and crawl jobs from this device?')) {
+    if (confirm('Permanently delete all videos, channels, comments, crawl jobs, and removal reasons from this device?')) {
       await idbService.clearDatabase();
       await onRefreshData();
       setImportStatus('Library cleared. All local data removed.');
@@ -145,8 +145,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshData, video
           </h2>
         </div>
         <p className="text-xs text-slate-300 leading-relaxed">
-          Export your complete YouTube library, ratings, channel graphs, and study notes as a JSON file, or
-          restore from a previous backup.
+          Export your complete YouTube library, ratings, channel graphs, study notes, and removal reasons as
+          a JSON file, or restore from a previous backup. Restoring a backup also restores the taste profile
+          learned from those reasons.
         </p>
 
         <div className="flex flex-wrap items-center gap-3 pt-2">

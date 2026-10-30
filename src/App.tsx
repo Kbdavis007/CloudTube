@@ -5,8 +5,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
-import { VideoMetadata, ChannelMetadata, VideoComment, CrawlJob, PersonalMetadata } from './types';
+import { VideoMetadata, ChannelMetadata, VideoComment, CrawlJob, PersonalMetadata, VideoRemoval, TasteProfile } from './types';
 import { idbService } from './services/indexedDB';
+import { buildTasteProfile } from './services/tasteProfile';
+import { getRemovalReason } from './data/removalReasons';
 import { Header } from './components/Header';
 import { Sidebar, PageTab } from './components/Sidebar';
 import { OfflineIndicator } from './components/OfflineIndicator';
@@ -16,6 +18,8 @@ import { VideoPlayerView } from './components/views/VideoPlayerView';
 import { ChannelView } from './components/views/ChannelView';
 import { CommentsView } from './components/views/CommentsView';
 import { RatingsNotesView } from './components/views/RatingsNotesView';
+import { RemovalsView } from './components/views/RemovalsView';
+import { RemoveVideoModal, RemovalRequest } from './components/RemoveVideoModal';
 import { SetupWizardView } from './components/views/SetupWizardView';
 import { ScaffoldingExplorerView } from './components/views/ScaffoldingExplorerView';
 import { SettingsView } from './components/views/SettingsView';
@@ -31,6 +35,8 @@ export default function App() {
   const [channels, setChannels] = useState<ChannelMetadata[]>([]);
   const [comments, setComments] = useState<VideoComment[]>([]);
   const [jobs, setJobs] = useState<CrawlJob[]>([]);
+  const [removals, setRemovals] = useState<VideoRemoval[]>([]);
+  const [videoPendingRemoval, setVideoPendingRemoval] = useState<VideoMetadata | null>(null);
   const [selectedVideoId, setSelectedVideoId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'info' } | null>(null);
@@ -75,17 +81,19 @@ export default function App() {
   // Load all library data from IndexedDB
   const refreshLibraryData = async () => {
     try {
-      const [vList, cList, commList, jList] = await Promise.all([
+      const [vList, cList, commList, jList, rList] = await Promise.all([
         idbService.getAllVideos(),
         idbService.getAllChannels(),
         idbService.getAllComments(),
         idbService.getCrawlJobs(),
+        idbService.getRemovals(),
       ]);
 
       setVideos(vList);
       setChannels(cList);
       setComments(commList);
       setJobs(jList);
+      setRemovals(rList);
 
       if (vList.length > 0 && !selectedVideoId) {
         setSelectedVideoId(vList[0].youtubeId);
@@ -178,6 +186,74 @@ export default function App() {
   const handleUpdatePersonal = async (youtubeId: string, personal: Partial<PersonalMetadata>) => {
     await idbService.updatePersonalMetadata(youtubeId, personal);
     await refreshLibraryData();
+  };
+
+  // 3b. Open the "remove video" dialog for a specific video
+  const handleRequestRemoval = (youtubeId: string) => {
+    const video = videos.find((v) => v.youtubeId === youtubeId);
+    if (!video) {
+      showToast('That video is not in your library.', 'info');
+      return;
+    }
+    setVideoPendingRemoval(video);
+  };
+
+  // 3c. Remove a video and record why, so future selection can learn from it
+  const handleConfirmRemoval = async (request: RemovalRequest) => {
+    const video = videoPendingRemoval;
+    if (!video) return;
+
+    const removal: VideoRemoval = {
+      id: crypto.randomUUID(),
+      youtubeId: video.youtubeId,
+      video,
+      reason: request.reason,
+      note: request.note,
+      removedAt: new Date().toISOString(),
+      appliedToProfile: request.applyToProfile,
+    };
+
+    await idbService.removeVideoWithReason(removal);
+
+    const job: CrawlJob = {
+      id: crypto.randomUUID(),
+      type: 'search',
+      status: 'completed',
+      queryOrTarget: `Removed: ${video.title}`,
+      itemsFound: 1,
+      progressPct: 100,
+      createdAt: new Date().toISOString(),
+      completedAt: new Date().toISOString(),
+    };
+    await idbService.addCrawlJob(job);
+
+    setVideoPendingRemoval(null);
+    if (selectedVideoId === video.youtubeId) setSelectedVideoId('');
+    await refreshLibraryData();
+
+    const meta = getRemovalReason(request.reason);
+    showToast(
+      request.applyToProfile
+        ? `Removed "${video.title.slice(0, 24)}..." (${meta.label}). Future selection updated.`
+        : `Removed "${video.title.slice(0, 24)}..." (${meta.label}).`
+    );
+  };
+
+  // 3d. Undo a removal: put the video back and drop its reason
+  const handleRestoreRemoval = async (removalId: string) => {
+    const restored = await idbService.restoreRemoval(removalId);
+    await refreshLibraryData();
+    if (restored) {
+      setSelectedVideoId(restored.youtubeId);
+      showToast(`Restored "${restored.video.title.slice(0, 24)}..." to your library.`);
+    }
+  };
+
+  // 3e. Forget a removal without restoring: it stops influencing selection
+  const handleForgetRemoval = async (removalId: string) => {
+    await idbService.forgetRemoval(removalId);
+    await refreshLibraryData();
+    showToast('Removal forgotten. It no longer affects future selection.');
   };
 
   // 4. Harvest real comments for a video from the YouTube API
@@ -293,6 +369,10 @@ export default function App() {
   const currentVideoComments = comments.filter((c) => c.videoId === selectedVideoId);
   const indexedVideoIds = new Set(videos.map((v) => v.youtubeId));
 
+  // The taste profile is derived from the removal log, so restoring or
+  // forgetting a removal immediately changes what discovery demotes.
+  const tasteProfile: TasteProfile = React.useMemo(() => buildTasteProfile(removals), [removals]);
+
   return (
     <div className="min-h-screen bg-[#050811] text-slate-100 flex flex-col selection:bg-orange-500/30 selection:text-orange-200">
       {/* Top Navbar */}
@@ -317,6 +397,7 @@ export default function App() {
           videoCount={videos.length}
           channelCount={channels.length}
           commentCount={comments.length}
+          removalCount={removals.length}
           isLoggedIn={isLoggedIn}
         />
 
@@ -340,6 +421,7 @@ export default function App() {
                   jobs={jobs}
                   onSelectVideo={handleSelectVideo}
                   onNavigate={setCurrentTab}
+                  onRequestRemoval={handleRequestRemoval}
                 />
               )}
 
@@ -351,6 +433,7 @@ export default function App() {
                   indexedVideoIds={indexedVideoIds}
                   accessToken={accessToken}
                   userEmail={user?.email}
+                  tasteProfile={tasteProfile}
                 />
               )}
 
@@ -363,6 +446,7 @@ export default function App() {
                   onUpdatePersonal={handleUpdatePersonal}
                   onHarvestComments={handleHarvestComments}
                   onUpdateAiSummary={handleUpdateAiSummary}
+                  onRequestRemoval={handleRequestRemoval}
                 />
               )}
 
@@ -396,6 +480,16 @@ export default function App() {
                   videos={videos}
                   onSelectVideo={handleSelectVideo}
                   onUpdatePersonal={handleUpdatePersonal}
+                  onRequestRemoval={handleRequestRemoval}
+                />
+              )}
+
+              {currentTab === 'removals' && (
+                <RemovalsView
+                  removals={removals}
+                  profile={tasteProfile}
+                  onRestore={handleRestoreRemoval}
+                  onForget={handleForgetRemoval}
                 />
               )}
 
@@ -420,6 +514,15 @@ export default function App() {
 
       {/* Floating Offline Notification */}
       <OfflineIndicator />
+
+      {/* Remove Video dialog: captures the reason used to tune future selection */}
+      {videoPendingRemoval && (
+        <RemoveVideoModal
+          video={videoPendingRemoval}
+          onClose={() => setVideoPendingRemoval(null)}
+          onConfirm={handleConfirmRemoval}
+        />
+      )}
 
       {/* Toast Notification */}
       {toastMessage && (
