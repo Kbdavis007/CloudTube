@@ -1,4 +1,5 @@
 import React from 'react';
+import { VERSION_LABEL, COMMIT, BRANCH, COMMIT_DATE } from '../generated/version';
 import {
   LayoutDashboard,
   Search,
@@ -160,6 +161,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
             );
           })
         )}
+      </div>
+
+      {/* Release / deployment stamp */}
+      <div className="hidden md:block mt-3 px-3 py-2 rounded-2xl bg-slate-950/60 border border-slate-800/60">
+        <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
+          <span title={`Commit ${COMMIT} on ${BRANCH}`}>CloudTube {VERSION_LABEL}</span>
+          <span>{COMMIT}</span>
+        </div>
+        <div className="text-[9px] text-slate-500 font-mono truncate">
+          {COMMIT_DATE || 'local build'} · {BRANCH}
+        </div>
       </div>
 
       {/* Cloudflare Free Tier Mini Gauge in Sidebar Footer */}

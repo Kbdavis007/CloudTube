@@ -4,6 +4,7 @@ import { User } from 'firebase/auth';
 import { PWAInstallButton } from './PWAInstallButton';
 import { GoogleAuthButton } from './GoogleAuthButton';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import { VERSION, VERSION_LABEL, COMMIT, BRANCH, DIRTY } from '../generated/version';
 
 interface HeaderProps {
   onOpenWizard: () => void;
@@ -48,6 +49,16 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="font-extrabold text-base tracking-tight text-white">CloudTube</span>
               <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 border border-orange-500/30">
                 100% CF Free Tier
+              </span>
+              <span
+                className={`text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded border ${
+                  DIRTY
+                    ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                    : 'bg-slate-800 text-slate-300 border-slate-700'
+                }`}
+                title={`CloudTube ${VERSION_LABEL} · commit ${COMMIT} on ${BRANCH}${DIRTY ? ' (uncommitted changes)' : ''}`}
+              >
+                v{VERSION}
               </span>
             </div>
             <p className="text-[11px] text-slate-400 hidden sm:block">

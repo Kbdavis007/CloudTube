@@ -1,4 +1,13 @@
 import express from 'express';
+import {
+  VERSION,
+  TAG,
+  COMMIT,
+  COMMIT_DATE,
+  BRANCH,
+  DIRTY,
+  VERSION_LABEL,
+} from './src/generated/version';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -19,6 +28,13 @@ async function startServer() {
       status: 'ok',
       timestamp: new Date().toISOString(),
       service: 'CloudTube Studio Backend',
+      version: VERSION,
+      tag: TAG,
+      commit: COMMIT,
+      commitDate: COMMIT_DATE,
+      branch: BRANCH,
+      dirty: DIRTY,
+      versionLabel: VERSION_LABEL,
     });
   });
 
