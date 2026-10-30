@@ -9,12 +9,13 @@ import {
   Settings,
   Lock,
   Trash2,
-  ShieldAlert,
+  Film,
 } from 'lucide-react';
 
 export type PageTab =
   | 'dashboard'
   | 'search'
+  | 'sources'
   | 'xvideos'
   | 'player'
   | 'channels'
@@ -58,10 +59,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       badge: 'Live',
     },
     {
-      id: 'xvideos' as PageTab,
-      label: 'XVideos Source',
-      icon: ShieldAlert,
-      badge: '18+',
+      id: 'sources' as PageTab,
+      label: 'Video Sources',
+      icon: Film,
+      badge: '2',
     },
     {
       id: 'player' as PageTab,

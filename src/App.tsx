@@ -15,6 +15,7 @@ import { OfflineIndicator } from './components/OfflineIndicator';
 import { DashboardView } from './components/views/DashboardView';
 import { SearchView } from './components/views/SearchView';
 import { XvideosSourceView } from './components/views/XvideosSourceView';
+import { VideoSourcesView } from './components/views/VideoSourcesView';
 import { VideoPlayerView } from './components/views/VideoPlayerView';
 import { ChannelView } from './components/views/ChannelView';
 import { CommentsView } from './components/views/CommentsView';
@@ -464,6 +465,8 @@ export default function App() {
                   tasteProfile={tasteProfile}
                 />
               )}
+
+              {currentTab === 'sources' && <VideoSourcesView onSelectSource={setCurrentTab} />}
 
               {currentTab === 'xvideos' && (
                 <XvideosSourceView
