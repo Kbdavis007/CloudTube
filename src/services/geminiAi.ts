@@ -39,9 +39,11 @@ export class GeminiAiService {
   static async analyzeVideo(video: VideoMetadata): Promise<VideoAiAnalysis> {
     const ai = this.getClient();
 
-    if (ai) {
-      try {
-        const prompt = `Analyze this YouTube video metadata:
+    if (!ai) {
+      throw new Error('Gemini API key is not configured. Set GEMINI_API_KEY to enable AI analysis.');
+    }
+
+    const prompt = `Analyze this YouTube video metadata:
 Title: "${video.title}"
 Channel: "${video.channelTitle}"
 Description: "${video.description.slice(0, 800)}"
@@ -54,48 +56,34 @@ Respond in strict JSON with keys:
 "suggestedIndexScore": integer from 1 to 100 where 1 is absolute must-watch masterpiece and 100 is low priority,
 "scoreRationale": 1-sentence justification for the score based on depth and engagement`;
 
-        const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: prompt,
-          config: {
-            responseMimeType: 'application/json',
-          },
-        });
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+      },
+    });
 
-        const text = response.text;
-        if (text) {
-          return JSON.parse(text);
-        }
-      } catch (err) {
-        console.warn('Gemini live API call failed, falling back to heuristic engine:', err);
-      }
+    const text = response.text;
+    if (!text) {
+      throw new Error('Gemini returned an empty response for video analysis.');
     }
-
-    // Heuristic AI fallback if API key is not configured or in offline mode
-    const likeRatio = video.viewCount > 0 ? (video.likeCount / video.viewCount) * 100 : 2;
-    const score = Math.max(1, Math.min(100, Math.round(100 - likeRatio * 15)));
-
-    return {
-      summary: `A focused deep dive into ${video.title} presented by ${video.channelTitle}. It covers architectural design principles, implementation mechanics, and best practices for modern developers.`,
-      keyTakeaways: [
-        `Core architectural paradigms demonstrated by ${video.channelTitle}`,
-        `Step-by-step practical implementation patterns with minimal latency overhead`,
-        `Real-world edge performance considerations and scaling strategies`,
-      ],
-      suggestedTags: ['Architecture', 'Best-Practices', 'Edge-Computing', 'Tutorial'],
-      suggestedIndexScore: score,
-      scoreRationale: `Calculated from a strong ${likeRatio.toFixed(1)}% viewer engagement ratio and comprehensive duration.`,
-    };
+    return JSON.parse(text);
   }
 
   // 2. Synthesize comments and viewer sentiment
   static async summarizeComments(videoTitle: string, comments: VideoComment[]): Promise<CommentInsightsAi> {
     const ai = this.getClient();
 
-    if (ai && comments.length > 0) {
-      try {
-        const commentsText = comments.slice(0, 15).map((c) => `- "${c.text}" (likes: ${c.likes})`).join('\n');
-        const prompt = `Analyze viewer comments for the video: "${videoTitle}"
+    if (!ai) {
+      throw new Error('Gemini API key is not configured. Set GEMINI_API_KEY to enable comment analysis.');
+    }
+    if (comments.length === 0) {
+      throw new Error('No comments available to analyze.');
+    }
+
+    const commentsText = comments.slice(0, 15).map((c) => `- "${c.text}" (likes: ${c.likes})`).join('\n');
+    const prompt = `Analyze viewer comments for the video: "${videoTitle}"
 Comments:
 ${commentsText}
 
@@ -105,41 +93,30 @@ Respond in strict JSON with keys:
 "topQuestions": array of top 2-3 viewer questions or discussions,
 "communityThemes": array of 3 recurring discussion topics`;
 
-        const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: prompt,
-          config: {
-            responseMimeType: 'application/json',
-          },
-        });
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+      },
+    });
 
-        const text = response.text;
-        if (text) {
-          return JSON.parse(text);
-        }
-      } catch (err) {
-        console.warn('Gemini comment synthesis failed, using heuristic engine:', err);
-      }
+    const text = response.text;
+    if (!text) {
+      throw new Error('Gemini returned an empty response for comment analysis.');
     }
-
-    return {
-      overallSentiment: 'Positive & Discussion-Heavy (88% favorability)',
-      sentimentBreakdown: { positive: 75, neutral: 20, negative: 5 },
-      topQuestions: [
-        'How does this approach compare to traditional server-side rendering pipelines?',
-        'What are the memory limits when handling concurrent background queue workers?',
-      ],
-      communityThemes: ['Low-latency edge caching', 'Zero egress pricing advantage', 'Clean TypeScript types'],
-    };
+    return JSON.parse(text);
   }
 
   // 3. Generate concise summary directly from title and description
   static async generateConciseSummary(title: string, description: string): Promise<string> {
     const ai = this.getClient();
 
-    if (ai) {
-      try {
-        const prompt = `You are an expert video analyzer. Generate a clear, concise, high-value summary of the following YouTube video content based strictly on its title and description.
+    if (!ai) {
+      throw new Error('Gemini API key is not configured. Set GEMINI_API_KEY to generate AI summaries.');
+    }
+
+    const prompt = `You are an expert video analyzer. Generate a clear, concise, high-value summary of the following YouTube video content based strictly on its title and description.
 
 Video Title: "${title}"
 Video Description:
@@ -150,29 +127,15 @@ Requirements:
 - Include 3 bullet points highlighting what a viewer or developer will learn.
 - Keep the tone professional, direct, and insightful.`;
 
-        const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: prompt,
-        });
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+    });
 
-        const text = response.text;
-        if (text && text.trim().length > 0) {
-          return text.trim();
-        }
-      } catch (err) {
-        console.warn('Gemini summary generation failed, falling back to synthesis:', err);
-      }
+    const text = response.text;
+    if (!text || text.trim().length === 0) {
+      throw new Error('Gemini returned an empty summary.');
     }
-
-    // High quality synthesis fallback
-    return `### Overview
-This video, **"${title}"**, delivers an essential walkthrough examining core implementation concepts, architectural choices, and practical design patterns.
-
-### Core Takeaways
-• **System Mechanics:** Clear breakdown of edge computing, state distribution, and low-latency streaming workflows.
-• **Practical Implementation:** Step-by-step techniques to optimize query execution and avoid common configuration pitfalls.
-• **Production Scalability:** Insights into resilient error handling, resource budgeting, and minimizing network overhead.
-
-*Summary synthesized by Gemini AI engine based on video title & description.*`;
+    return text.trim();
   }
 }

@@ -71,12 +71,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshData, video
     reader.readAsText(file);
   };
 
-  const handleResetSampleData = async () => {
-    if (confirm('Reset library to default curated sample videos and channels?')) {
+  const handleClearLibrary = async () => {
+    if (confirm('Permanently delete all videos, channels, comments, and crawl jobs from this device?')) {
       await idbService.clearDatabase();
-      await idbService.init(); // re-seeds
       await onRefreshData();
-      setImportStatus('Library reset to curated default sample dataset.');
+      setImportStatus('Library cleared. All local data removed.');
       setTimeout(() => setImportStatus(null), 3000);
     }
   };
@@ -142,8 +141,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshData, video
           <h2 className="text-sm font-bold text-white">YouTube Data API v3 Key (Optional)</h2>
         </div>
         <p className="text-xs text-slate-300 leading-relaxed">
-          CloudTube includes a built-in high-fidelity search engine simulator. If you have a Google Cloud
-          YouTube Data API v3 key, you can enter it here to query live YouTube endpoints directly.
+          CloudTube queries the live YouTube Data API v3. Sign in with Google to grant access, or
+          enter a Google Cloud YouTube Data API v3 key below to query YouTube endpoints directly.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-2">
@@ -192,11 +191,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshData, video
           </label>
 
           <button
-            onClick={handleResetSampleData}
+            onClick={handleClearLibrary}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 text-xs font-semibold transition"
           >
             <RotateCcw className="w-4 h-4" />
-            <span>Reset to Curated Sample Data</span>
+            <span>Clear Library Data</span>
           </button>
         </div>
       </div>

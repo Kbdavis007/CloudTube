@@ -43,6 +43,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
   const [selectedSourceFilter, setSelectedSourceFilter] = useState<SourceFlag | 'ALL'>('ALL');
   const [results, setResults] = useState<VideoMetadata[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   // Quick prompt pills
   const sampleQueries = [
@@ -67,181 +68,28 @@ export const SearchView: React.FC<SearchViewProps> = ({
     if (!query.trim()) return;
     setIsSearching(true);
     setHasSearched(true);
+    setSearchError(null);
 
-    // 1. If user is signed in with Google, query live YouTube Data API
-    if (accessToken) {
-      try {
-        const liveResults = await YouTubeApiClient.searchVideos(accessToken, query);
-        if (liveResults && liveResults.length > 0) {
-          setResults(liveResults);
-          setIsLiveSearchActive(true);
-          setIsSearching(false);
-          return;
-        }
-      } catch (err) {
-        console.warn('Live YouTube search failed, falling back to edge crawler simulator:', err);
-      }
+    if (!accessToken) {
+      setResults([]);
+      setIsLiveSearchActive(false);
+      setIsSearching(false);
+      setSearchError('Sign in with Google to search live YouTube data. CloudTube does not generate placeholder results.');
+      return;
     }
 
-    setIsLiveSearchActive(false);
-    // 2. High-fidelity edge crawler simulator fallback
-    setTimeout(() => {
-      const mockResults: VideoMetadata[] = [
-        {
-          id: crypto.randomUUID(),
-          youtubeId: 'kJQP7kiw5Fk',
-          title: 'Building Full-Stack Edge Apps with Cloudflare D1, Workers & R2',
-          description: 'Learn how to architect stateful, low-latency applications at the edge using Cloudflare D1 (serverless SQLite), Workers KV for caching, and R2 object storage.',
-          tags: ['Cloudflare', 'D1', 'Workers', 'R2', 'TypeScript'],
-          channelId: 'UC_cloudflare_official',
-          channelTitle: 'Cloudflare',
-          publishedAt: '2026-03-15T14:30:00Z',
-          duration: 'PT24M10S',
-          durationSeconds: 1450,
-          viewCount: 89400,
-          likeCount: 4120,
-          commentCount: 382,
-          thumbnails: {
-            default: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=600&auto=format&fit=crop&q=80',
-            medium: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=600&auto=format&fit=crop&q=80',
-            high: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1280&auto=format&fit=crop&q=80',
-          },
-          sourceFlags: ['YouTubeSearch', 'Google'],
-          indexedAt: new Date().toISOString(),
-          lastUpdatedAt: new Date().toISOString(),
-          personal: {
-            videoId: 'kJQP7kiw5Fk',
-            indexScore: 8,
-            userRating: 94,
-            userNotes: 'High quality reference on D1 prepared statements and bulk writes.',
-            userTags: ['Cloudflare', 'Edge', 'Must-Watch'],
-          },
-        },
-        {
-          id: crypto.randomUUID(),
-          youtubeId: 'M576WGiDBdQ',
-          title: 'Cloudflare Queues & Durable Objects: Stateful Job Orchestration Explained',
-          description: 'Deep dive into background job scheduling, rate limiting, and distributed state coordination using Cloudflare Durable Objects and Queues.',
-          tags: ['Durable Objects', 'Queues', 'Cloudflare', 'Background Jobs'],
-          channelId: 'UC_cloudflare_official',
-          channelTitle: 'Cloudflare',
-          publishedAt: '2026-04-02T10:15:00Z',
-          duration: 'PT18M45S',
-          durationSeconds: 1125,
-          viewCount: 64200,
-          likeCount: 3200,
-          commentCount: 195,
-          thumbnails: {
-            default: 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=600&auto=format&fit=crop&q=80',
-            medium: 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=600&auto=format&fit=crop&q=80',
-            high: 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=1280&auto=format&fit=crop&q=80',
-          },
-          sourceFlags: ['YouTubeSearch', 'Reddit'],
-          indexedAt: new Date().toISOString(),
-          lastUpdatedAt: new Date().toISOString(),
-          personal: {
-            videoId: 'M576WGiDBdQ',
-            indexScore: 10,
-            userRating: 90,
-            userNotes: 'Singleton DO pattern for quota enforcement.',
-            userTags: ['Architecture', 'Queues'],
-          },
-        },
-        {
-          id: crypto.randomUUID(),
-          youtubeId: '7Q1qF2V1Y4w',
-          title: 'Cloudflare Hyperdrive: Accelerate Global Database Queries to Single-Digit Milliseconds',
-          description: 'How Hyperdrive creates connection pooling and query caching at 300+ data centers across the globe without changing your database connection strings.',
-          tags: ['Hyperdrive', 'Postgres', 'Edge', 'Latency'],
-          channelId: 'UC_cloudflare_official',
-          channelTitle: 'Cloudflare',
-          publishedAt: '2026-01-20T12:00:00Z',
-          duration: 'PT12M30S',
-          durationSeconds: 750,
-          viewCount: 41800,
-          likeCount: 2190,
-          commentCount: 120,
-          thumbnails: {
-            default: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&auto=format&fit=crop&q=80',
-            medium: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&auto=format&fit=crop&q=80',
-            high: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1280&auto=format&fit=crop&q=80',
-          },
-          sourceFlags: ['YouTubeSearch', 'LinkedIn', 'X'],
-          indexedAt: new Date().toISOString(),
-          lastUpdatedAt: new Date().toISOString(),
-          personal: {
-            videoId: '7Q1qF2V1Y4w',
-            indexScore: 15,
-            userRating: 88,
-            userNotes: 'Examines connection pooling vs serverless cold starts.',
-            userTags: ['Hyperdrive', 'Databases'],
-          },
-        },
-        {
-          id: crypto.randomUUID(),
-          youtubeId: 'bMknfKXIFA8',
-          title: 'System Design 101: How YouTube Serves Billions of Videos Daily',
-          description: 'Complete YouTube architectural breakdown: CDN edge caching, video transcoding pipelines, metadata database sharding, and real-time recommendation engines.',
-          tags: ['YouTube', 'Architecture', 'System Design'],
-          channelId: 'UC_bytebytego_sys',
-          channelTitle: 'ByteByteGo',
-          publishedAt: '2025-11-12T16:00:00Z',
-          duration: 'PT15M30S',
-          durationSeconds: 930,
-          viewCount: 1420000,
-          likeCount: 88500,
-          commentCount: 2450,
-          thumbnails: {
-            default: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=600&auto=format&fit=crop&q=80',
-            medium: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=600&auto=format&fit=crop&q=80',
-            high: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=1280&auto=format&fit=crop&q=80',
-          },
-          sourceFlags: ['YouTubeSearch', 'Reddit', 'Google'],
-          indexedAt: new Date().toISOString(),
-          lastUpdatedAt: new Date().toISOString(),
-          personal: {
-            videoId: 'bMknfKXIFA8',
-            indexScore: 5,
-            userRating: 96,
-            userNotes: 'Video chunking and CDN delivery fundamentals.',
-            userTags: ['System-Design', 'Video-Streaming'],
-          },
-        },
-        {
-          id: crypto.randomUUID(),
-          youtubeId: 'cuHDQhDhvPE',
-          title: 'TypeScript in 100 Seconds + Complete Modern Edge Setup',
-          description: 'A rapid overview of TypeScript features, strict mode, generics, and setting up type safety across full-stack edge runtimes.',
-          tags: ['TypeScript', 'JavaScript', 'Edge'],
-          channelId: 'UC_fireship_dev',
-          channelTitle: 'Fireship',
-          publishedAt: '2025-08-19T18:00:00Z',
-          duration: 'PT02M15S',
-          durationSeconds: 135,
-          viewCount: 890000,
-          likeCount: 67000,
-          commentCount: 1420,
-          thumbnails: {
-            default: 'https://images.unsplash.com/photo-1516116211227-bbc1552a425a?w=600&auto=format&fit=crop&q=80',
-            medium: 'https://images.unsplash.com/photo-1516116211227-bbc1552a425a?w=600&auto=format&fit=crop&q=80',
-            high: 'https://images.unsplash.com/photo-1516116211227-bbc1552a425a?w=1280&auto=format&fit=crop&q=80',
-          },
-          sourceFlags: ['YouTubeSearch', 'Playlist'],
-          indexedAt: new Date().toISOString(),
-          lastUpdatedAt: new Date().toISOString(),
-          personal: {
-            videoId: 'cuHDQhDhvPE',
-            indexScore: 12,
-            userRating: 90,
-            userNotes: 'Concise summary of TS benefits in edge workers.',
-            userTags: ['TypeScript'],
-          },
-        },
-      ];
-
-      setResults(mockResults);
+    try {
+      const liveResults = await YouTubeApiClient.searchVideos(accessToken, query);
+      setResults(liveResults);
+      setIsLiveSearchActive(true);
+    } catch (err: any) {
+      console.error('Live YouTube search failed:', err);
+      setResults([]);
+      setIsLiveSearchActive(false);
+      setSearchError(err?.message || 'Live YouTube search failed. Check your Google sign-in and try again.');
+    } finally {
       setIsSearching(false);
-    }, 600);
+    }
   };
 
   const filteredResults =
@@ -277,9 +125,9 @@ export const SearchView: React.FC<SearchViewProps> = ({
               <span>Live YouTube API Active</span>
             </div>
           ) : (
-            <div className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/15 border border-orange-500/30 text-orange-400 text-xs font-semibold">
+            <div className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800/60 border border-slate-700 text-slate-400 text-xs font-semibold">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Edge Crawler Simulator</span>
+              <span>Sign in to search live YouTube</span>
             </div>
           )}
         </div>
@@ -484,7 +332,14 @@ export const SearchView: React.FC<SearchViewProps> = ({
         </div>
       )}
 
-      {!isSearching && hasSearched && filteredResults.length === 0 && (
+      {!isSearching && searchError && (
+        <div className="p-4 rounded-2xl bg-red-950/40 border border-red-800/60 space-y-1">
+          <p className="text-sm font-bold text-red-300">Search unavailable</p>
+          <p className="text-xs text-red-200/90">{searchError}</p>
+        </div>
+      )}
+
+      {!isSearching && hasSearched && !searchError && filteredResults.length === 0 && (
         <div className="py-16 text-center space-y-2">
           <p className="text-sm font-semibold text-white">No results matched your search term.</p>
           <p className="text-xs text-slate-400">Try searching for "Cloudflare Workers" or "System Design".</p>
@@ -506,7 +361,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
             onClick={() => handleSearch('Cloudflare Workers & D1')}
             className="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold transition shadow-md"
           >
-            Run Demo Search Now
+            Search YouTube Now
           </button>
         </div>
       )}
