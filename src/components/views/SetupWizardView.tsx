@@ -486,6 +486,18 @@ bindings = [
               <p className="text-[11px] text-slate-500">
                 Opens the Cloudflare dashboard with these permissions pre-selected. You still review and create it there — CloudTube never creates credentials for you.
               </p>
+              <a
+                href="https://dash.cloudflare.com/?to=/:account/r2/overview"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-orange-400 hover:text-orange-300 underline underline-offset-2"
+              >
+                <ExternalLink className="w-3 h-3" />
+                <span>Activate R2 for this account</span>
+              </a>
+              <p className="text-[11px] text-slate-500">
+                R2 is free tier but must be enabled once per account. Until then the bucket step returns 403 even with a correct token.
+              </p>
               <p className="text-[11px] text-amber-500/80">
                 Must be an <span className="font-semibold">API Token</span> (~40 chars) created at dash.cloudflare.com/profile/api-tokens — not a Global API Key. Paste it as-is; surrounding quotes or a "Bearer " prefix are stripped automatically.
               </p>
