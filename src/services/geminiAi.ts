@@ -99,12 +99,16 @@ export class GeminiAiService {
     // a pending request produces no error of its own. App Check is the usual cause,
     // since AI Logic rejects any call whose attestation token is missing.
     if (/abort|timed? ?out|timeout|deadline|network ?request ?failed/i.test(message)) {
+      // Name the host so the fix is unambiguous: the App Check provider and the
+      // reCAPTCHA Enterprise key must both allow it.
+      const host =
+        typeof location !== 'undefined' ? location.hostname : 'the app hostname';
       throw new Error(
         `The AI request did not complete within ${Math.round(GEMINI_TIMEOUT_MS / 1000)}s. ` +
-          `If App Check is enforced, this browser's domain must be registered on the reCAPTCHA ` +
-          `Enterprise key and the app's App Check provider, otherwise every Gemini call is ` +
-          `rejected. Check the browser console for an App Check error, confirm AI Logic is ` +
-          `enabled at ${GEMINI_AI_SETUP_URL}, then retry. (${message})`
+          `If App Check is enforced, "${host}" must be registered as an allowed domain on ` +
+          `both the reCAPTCHA Enterprise key and the app's App Check provider, otherwise ` +
+          `every Gemini call is rejected. Check the browser console for an App Check error, ` +
+          `confirm AI Logic is enabled at ${GEMINI_AI_SETUP_URL}, then retry. (${message})`
       );
     }
     // A retired model name returns 404 with "no longer available to new users".

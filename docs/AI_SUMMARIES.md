@@ -56,6 +56,12 @@ Setup once per project:
    selecting **reCAPTCHA Enterprise** as the provider. This links the key so Firebase
    accepts tokens minted with it.
 
+The production domain is **`https://ct.devmatrix.top`**. Both step 2 (the reCAPTCHA
+Enterprise key) and step 3 (the App Check app) must cover it. A sandbox
+`*.prod-runtime.all-hands.dev` domain is ephemeral and will not authorise the
+production host, so register the custom domain, not the sandbox one. This is the first
+thing to check when AI calls work locally but are refused in production.
+
 `src/services/firebaseApp.ts` calls `initializeAppCheck` with
 `new ReCaptchaEnterpriseProvider(siteKey)`.
 
