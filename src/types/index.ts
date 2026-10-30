@@ -5,7 +5,21 @@ export type SourceFlag =
   | 'Reddit'
   | 'X'
   | 'LinkedIn'
-  | 'Playlist';
+  | 'Playlist'
+  | 'Xvideos';
+
+/**
+ * Where a video can be played. YouTube videos derive their embed URL from
+ * `youtubeId`; sources that ship their own embed code (the XVideos export does)
+ * set this instead, so the player does not have to know which source it is
+ * looking at.
+ */
+export interface PlaybackTarget {
+  /** Embeddable player URL, loaded in an iframe. */
+  embedUrl: string;
+  /** Canonical page on the source site, for "open original". */
+  externalUrl: string;
+}
 
 export interface VideoMetadata {
   id: string; // Internal UUID
@@ -30,6 +44,12 @@ export interface VideoMetadata {
   sourceFlags: SourceFlag[];
   indexedAt: string;
   lastUpdatedAt: string;
+  /** Set by sources that provide their own embed; absent for YouTube. */
+  playback?: PlaybackTarget;
+  /** Source-native identifier (e.g. the XVideos video slug) when it is not YouTube. */
+  sourceVideoId?: string;
+  /** Poster/preview image for non-YouTube sources, where the thumbnail grid differs. */
+  posterUrl?: string;
   // AI Summary persisted in metadata database
   aiSummary?: string;
   aiSummaryGeneratedAt?: string;

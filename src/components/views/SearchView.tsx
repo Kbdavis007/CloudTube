@@ -71,6 +71,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
     X: 'bg-sky-500/20 text-sky-400 border-sky-500/30',
     LinkedIn: 'bg-blue-600/20 text-blue-300 border-blue-600/30',
     Playlist: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+    Xvideos: 'bg-orange-700/20 text-orange-300 border-orange-700/40',
   };
 
   const handleSearch = async (query = searchTerm) => {

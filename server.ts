@@ -11,6 +11,7 @@ import {
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { XVIDEOS_EXPORT_RANGES as XVideosExportRanges } from './src/services/xvideosApi';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -105,6 +106,53 @@ async function startServer() {
           },
         ],
       });
+    }
+  });
+
+  // XVideos catalogue export proxy.
+  //
+  // The export CDN (public-assets.xvideos-cdn.com) sends no CORS headers, so the
+  // browser cannot fetch the export directly. Only the fixed URLs below are
+  // reachable, so this cannot be used as an open relay. The gzip is streamed
+  // through untouched; the client decompresses and parses it.
+  app.get('/api/xvideos/export', async (req, res) => {
+    const range = req.query.range === 'full' ? 'full' : 'week';
+    const url = XVideosExportRanges[range];
+
+    try {
+      const upstream = await fetch(url, {
+        headers: { 'User-Agent': 'CloudTube-Studio/1.0' },
+      });
+
+      if (!upstream.ok || !upstream.body) {
+        return res.status(upstream.status === 200 ? 502 : upstream.status).json({
+          success: false,
+          errors: [{ message: `XVideos export upstream returned ${upstream.status}` }],
+        });
+      }
+
+      res.setHeader('Content-Type', 'application/gzip');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      const length = upstream.headers.get('content-length');
+      if (length) res.setHeader('Content-Length', length);
+
+      const reader = upstream.body.getReader();
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        res.write(Buffer.from(value));
+      }
+      res.end();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown network error';
+      if (!res.headersSent) {
+        res.status(502).json({
+          success: false,
+          errors: [{ message: `Failed to reach XVideos export CDN: ${message}` }],
+        });
+      } else {
+        res.end();
+      }
     }
   });
 

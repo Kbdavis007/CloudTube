@@ -159,6 +159,7 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
     X: 'bg-sky-500/20 text-sky-400 border-sky-500/30',
     LinkedIn: 'bg-blue-600/20 text-blue-300 border-blue-600/30',
     Playlist: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+    Xvideos: 'bg-orange-700/20 text-orange-300 border-orange-700/40',
   };
 
   return (
@@ -192,10 +193,14 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Video Embed & Metadata (2 Cols) */}
         <div className="lg:col-span-2 space-y-4">
-          {/* YouTube Responsive Embed Container */}
+          {/* Responsive embed. Sources that ship their own player URL (XVideos)
+              use it directly; YouTube derives the URL from the video id. */}
           <div className="relative aspect-video w-full rounded-3xl overflow-hidden bg-black shadow-2xl border border-slate-800">
             <iframe
-              src={`https://www.youtube-nocookie.com/embed/${currentVideo.youtubeId}?autoplay=0&rel=0&modestbranding=1`}
+              src={
+                currentVideo.playback?.embedUrl ||
+                `https://www.youtube-nocookie.com/embed/${currentVideo.youtubeId}?autoplay=0&rel=0&modestbranding=1`
+              }
               title={currentVideo.title}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
