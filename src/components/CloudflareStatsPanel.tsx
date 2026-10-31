@@ -77,7 +77,7 @@ export const CloudflareStatsPanel: React.FC<CloudflareStatsPanelProps> = ({
       cfClient.setCredentials(creds.accountId, creds.apiToken, creds.accountEmail, creds.authMode);
       setSnapshot(await cfClient.fetchUsageSnapshot());
     } catch (err: any) {
-      const message = err?.message || 'Failed to read Cloudflare usage analytics.';
+      const message = err?.message || 'Failed to read usage analytics.';
       setError(message);
       // A missing scope is the one failure the user can fix from here, so it
       // gets a button rather than just an explanation.
@@ -106,7 +106,7 @@ export const CloudflareStatsPanel: React.FC<CloudflareStatsPanelProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <HardDrive className="w-4 h-4 text-orange-400" />
-          <h2 className="text-sm font-bold text-white">Cloudflare Free Tier Usage</h2>
+          <h2 className="text-sm font-bold text-white">Storage & Activity</h2>
           {snapshot && (
             <span
               className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-semibold ${
@@ -139,16 +139,15 @@ export const CloudflareStatsPanel: React.FC<CloudflareStatsPanelProps> = ({
       {isLoading && !snapshot && (
         <div className="flex items-center gap-2 text-xs text-slate-400 py-4">
           <Loader2 className="w-4 h-4 animate-spin text-orange-400" />
-          <span>Reading live analytics from the Cloudflare GraphQL API...</span>
+          <span>Reading your latest usage...</span>
         </div>
       )}
 
       {notConfigured && (
         <div className="space-y-3">
           <p className="text-xs text-slate-300 leading-relaxed">
-            Connect a Cloudflare account to see live Workers, D1, KV, and R2 usage for the current
-            UTC day. Usage is read from the same GraphQL Analytics API the Cloudflare dashboard
-            uses — nothing is estimated.
+            Connect your account to see live storage and activity for the current day. These numbers
+            come straight from your provider — nothing is estimated.
           </p>
           {onOpenWizard && (
             <button
@@ -156,7 +155,7 @@ export const CloudflareStatsPanel: React.FC<CloudflareStatsPanelProps> = ({
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition active:scale-95"
             >
               <ShieldCheck className="w-4 h-4" />
-              <span>Connect via Setup Wizard</span>
+              <span>Connect Account</span>
             </button>
           )}
         </div>
@@ -173,10 +172,10 @@ export const CloudflareStatsPanel: React.FC<CloudflareStatsPanelProps> = ({
           {needsPermission ? (
             <>
               <p className="text-[11px] text-slate-300 leading-relaxed">
-                Cloudflare cannot add a scope to an existing token, so this needs a replacement
-                token that includes{' '}
-                <span className="font-mono text-slate-200">Account Analytics: Read</span>. Your
-                other permissions are unchanged.
+                Your access token needs permission to read account analytics. Create a replacement
+                token with{' '}
+                <span className="font-mono text-slate-200">Account Analytics: Read</span> added — your
+                other permissions stay the same.
               </p>
               <div className="flex flex-wrap items-center gap-2">
                 <a
@@ -207,13 +206,13 @@ export const CloudflareStatsPanel: React.FC<CloudflareStatsPanelProps> = ({
                 </button>
               </div>
               <p className="text-[11px] text-slate-500 leading-relaxed">
-                The form opens with the scope pre-selected; you still review and create the token in
-                the Cloudflare dashboard.
+                The form opens with the permission pre-selected; you still review and create the
+                token yourself.
               </p>
             </>
           ) : (
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              This is usually a transient Cloudflare API problem. Retry, or check the token has{' '}
+              This is usually a temporary problem. Retry, or check the token has{' '}
               <span className="font-mono">Account Analytics: Read</span> if it keeps failing.
             </p>
           )}
@@ -231,7 +230,7 @@ export const CloudflareStatsPanel: React.FC<CloudflareStatsPanelProps> = ({
           <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-800/60">
             <span className="flex items-center gap-1.5">
               <Activity className="w-3 h-3" />
-              Measured via Cloudflare GraphQL Analytics API
+              Live usage from your account
             </span>
             <span className="font-mono">
               {new Date(snapshot.fetchedAt).toLocaleTimeString([], {

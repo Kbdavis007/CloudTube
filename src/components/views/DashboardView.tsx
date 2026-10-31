@@ -4,6 +4,7 @@ import {
   ChannelMetadata,
   CrawlJob,
 } from '../../types';
+import { jobTypeLabel } from '../../data/sourceLabels';
 import {
   PlaySquare,
   Tv,
@@ -60,33 +61,36 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="absolute top-0 right-0 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 max-w-3xl space-y-3">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/20 border border-orange-500/30 text-orange-400 text-xs font-bold uppercase tracking-wider">
-            <Server className="w-3.5 h-3.5" /> 100% Cloudflare Free Tier Architecture
+            <Server className="w-3.5 h-3.5" /> Your Personal Video Library
           </div>
           <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
-            YouTube Library & Edge Harvester
+            YouTube Library & Collector
           </h1>
           <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
-            Personal video library, deep channel expansion engine, and comment harvester running
-            serverless on Cloudflare Workers, D1 SQLite, R2 Object Storage, and Durable Objects.
+            Your personal video library with channel collecting, saved comments, smart summaries, and
+            notes — all in one place.
           </p>
           <div className="flex flex-wrap items-center gap-3 pt-2">
             <button
               onClick={() => onNavigate('search')}
+              title="Search YouTube and save videos to your library"
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition shadow-lg shadow-orange-600/30 active:scale-95"
             >
-              <Search className="w-4 h-4" /> Search & Index YouTube
+              <Search className="w-4 h-4" /> Search YouTube
             </button>
             <button
               onClick={() => onNavigate('wizard')}
+              title="Set up CloudTube"
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition active:scale-95"
             >
-              <Sparkles className="w-4 h-4 text-orange-400" /> Run 5-Min Setup Wizard
+              <Sparkles className="w-4 h-4 text-orange-400" /> Set Up
             </button>
             <button
               onClick={() => onNavigate('scaffolding')}
+              title="Browse the code behind CloudTube"
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-semibold transition"
             >
-              <Layers className="w-4 h-4 text-slate-400" /> View Scaffolding Code
+              <Layers className="w-4 h-4 text-slate-400" /> View Code
             </button>
           </div>
         </div>
@@ -96,14 +100,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-slate-800">
           <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">Indexed Videos</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">Saved Videos</span>
             <div className="p-2 rounded-xl bg-orange-500/10 text-orange-400">
               <PlaySquare className="w-4 h-4" />
             </div>
           </div>
           <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono">{videos.length}</div>
           <div className="text-[11px] text-emerald-400 flex items-center gap-1 mt-1 font-medium">
-            <TrendingUp className="w-3 h-3" /> Indexed in D1 & IndexedDB
+            <TrendingUp className="w-3 h-3" /> Saved to your workspace
           </div>
         </div>
 
@@ -122,18 +126,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-slate-800">
           <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">Comments Harvested</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">Comments Collected</span>
             <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400">
               <MessageSquare className="w-4 h-4" />
             </div>
           </div>
           <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono">{commentCount}</div>
-          <div className="text-[11px] text-slate-400 mt-1">Stored in SQLite & R2 Vault</div>
+          <div className="text-[11px] text-slate-400 mt-1">Saved to your workspace</div>
         </div>
 
         <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-slate-800">
           <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">Avg Index Score</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">Avg Score</span>
             <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400">
               <Star className="w-4 h-4" />
             </div>
@@ -146,50 +150,56 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* Cloudflare Free Tier Limits (static reference — no fabricated usage) */}
+      {/* Tips (user-facing guidance, no infrastructure detail) */}
       <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <Server className="w-4 h-4 text-orange-500" />
-              Cloudflare Free Tier Limits
+              <Sparkles className="w-4 h-4 text-orange-500" />
+              Getting the Most Out of Your Library
             </h2>
             <p className="text-xs text-slate-400">
-              Static reference of Cloudflare's published free-tier allowances
+              A few ways to keep your collection useful and easy to browse
             </p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
           <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1">
-            <div className="text-xs font-semibold text-slate-300">Workers Requests</div>
-            <div className="font-mono text-lg text-white">100,000 /day</div>
-            <p className="text-[10px] text-slate-400">Resets daily at 00:00 UTC</p>
+            <div className="text-xs font-semibold text-slate-300">Save what matters</div>
+            <p className="text-[10px] text-slate-400 leading-relaxed">
+              Add videos, channels, and comments you want to keep.
+            </p>
           </div>
           <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1">
-            <div className="text-xs font-semibold text-slate-300">D1 Rows Read</div>
-            <div className="font-mono text-lg text-white">5,000,000 /day</div>
-            <p className="text-[10px] text-slate-400">Serverless SQLite reads</p>
+            <div className="text-xs font-semibold text-slate-300">Rate and review</div>
+            <p className="text-[10px] text-slate-400 leading-relaxed">
+              Give each video a score so the best rise to the top.
+            </p>
           </div>
           <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1">
-            <div className="text-xs font-semibold text-slate-300">D1 Rows Written</div>
-            <div className="font-mono text-lg text-white">100,000 /day</div>
-            <p className="text-[10px] text-slate-400">Batch insertions supported</p>
+            <div className="text-xs font-semibold text-slate-300">Take notes</div>
+            <p className="text-[10px] text-slate-400 leading-relaxed">
+              Capture insights and tags to find them again later.
+            </p>
           </div>
           <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1">
-            <div className="text-xs font-semibold text-slate-300">R2 Object Storage</div>
-            <div className="font-mono text-lg text-white">10 GB</div>
-            <p className="text-[10px] text-slate-400">$0 egress fee guarantee</p>
+            <div className="text-xs font-semibold text-slate-300">Summarize</div>
+            <p className="text-[10px] text-slate-400 leading-relaxed">
+              Create a smart summary from any video's title and description.
+            </p>
           </div>
           <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1">
-            <div className="text-xs font-semibold text-slate-300">KV Reads</div>
-            <div className="font-mono text-lg text-white">100,000 /day</div>
-            <p className="text-[10px] text-slate-400">Sub-millisecond edge lookups</p>
+            <div className="text-xs font-semibold text-slate-300">Tune your feed</div>
+            <p className="text-[10px] text-slate-400 leading-relaxed">
+              Removing videos teaches the app what you want to see next.
+            </p>
           </div>
           <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1">
-            <div className="text-xs font-semibold text-slate-300">Queues &amp; Durable Objects</div>
-            <div className="font-mono text-lg text-white">Included</div>
-            <p className="text-[10px] text-slate-400">Async crawler batch processing</p>
+            <div className="text-xs font-semibold text-slate-300">Keep a backup</div>
+            <p className="text-[10px] text-slate-400 leading-relaxed">
+              Export your library any time from Settings.
+            </p>
           </div>
         </div>
       </div>
@@ -207,7 +217,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               onClick={() => onNavigate('player')}
               className="text-xs text-orange-400 hover:text-orange-300 font-semibold flex items-center gap-1"
             >
-              View Player <ArrowUpRight className="w-3.5 h-3.5" />
+              View Library <ArrowUpRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
@@ -274,14 +284,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-        {/* Background Crawler Jobs & Workers (1 Col) */}
+        {/* Recent Activity (1 Col) */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold text-white flex items-center gap-2">
               <Activity className="w-4 h-4 text-orange-500" />
-              Crawler Jobs
+              Recent Activity
             </h2>
-            <span className="text-xs text-slate-400">{jobs.length} jobs logged</span>
+            <span className="text-xs text-slate-400">{jobs.length} recent</span>
           </div>
 
           <div className="space-y-2.5">
@@ -291,7 +301,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-white capitalize">{job.type.replace('_', ' ')}</span>
+                  <span className="text-xs font-bold text-white">{jobTypeLabel(job.type)}</span>
                   <span
                     className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                       job.status === 'completed'
@@ -314,13 +324,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
             <div className="p-4 rounded-2xl bg-orange-950/20 border border-orange-500/20 text-center space-y-2">
               <p className="text-xs text-orange-300 font-medium">
-                Want to expand an entire YouTube channel?
+                Want to collect an entire YouTube channel?
               </p>
               <button
                 onClick={() => onNavigate('channels')}
                 className="w-full py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition shadow-sm active:scale-95"
               >
-                Open Channel Expander
+                Open Channel Collector
               </button>
             </div>
           </div>

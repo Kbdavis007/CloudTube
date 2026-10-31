@@ -59,7 +59,7 @@ export const AiAnalysisModal: React.FC<AiAnalysisModalProps> = ({
       indexScore: analysis.suggestedIndexScore,
       userTags: mergedTags,
       userNotes: (video.personal?.userNotes ? video.personal.userNotes + '\n\n' : '') +
-        `[Google AI Summary]: ${analysis.summary}`,
+        `[AI Summary]: ${analysis.summary}`,
     });
 
     setIsApplied(true);
@@ -77,7 +77,7 @@ export const AiAnalysisModal: React.FC<AiAnalysisModalProps> = ({
               <Brain className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">Google AI (Gemini) Video Analysis</h3>
+              <h3 className="text-base font-bold text-white">AI Video Insights</h3>
               <p className="text-[11px] text-slate-400 truncate max-w-sm">{video.title}</p>
             </div>
           </div>
@@ -89,12 +89,12 @@ export const AiAnalysisModal: React.FC<AiAnalysisModalProps> = ({
         {isAnalyzing ? (
           <div className="py-12 text-center space-y-3">
             <Loader2 className="w-8 h-8 text-orange-500 animate-spin mx-auto" />
-            <p className="text-sm font-semibold text-white">Synthesizing metadata with Google AI...</p>
-            <p className="text-xs text-slate-400">Evaluating engagement metrics & extracting core takeaways</p>
+            <p className="text-sm font-semibold text-white">Analyzing this video with AI...</p>
+            <p className="text-xs text-slate-400">Reading the title and description, and finding the key takeaways</p>
           </div>
         ) : error ? (
           <div className="space-y-3">
-            <ApiErrorCard message={error} title="Google AI request failed" />
+            <ApiErrorCard message={error} title="AI request failed" />
             <button
               onClick={runAiAnalysis}
               className="w-full py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition active:scale-95"
@@ -128,12 +128,12 @@ export const AiAnalysisModal: React.FC<AiAnalysisModalProps> = ({
               </ul>
             </div>
 
-            {/* AI Evaluated IndexScore */}
+            {/* AI Evaluated Score */}
             <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-4">
               <div>
                 <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
                   <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                  Recommended IndexScore (1=Best, 100=Worst)
+                  Recommended Score (1=Best, 100=Worst)
                 </div>
                 <div className="text-[11px] text-slate-400 mt-0.5">{analysis.scoreRationale}</div>
               </div>
@@ -146,7 +146,7 @@ export const AiAnalysisModal: React.FC<AiAnalysisModalProps> = ({
             <div className="space-y-1.5">
               <div className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
                 <Tag className="w-3.5 h-3.5 text-orange-400" />
-                Suggested Personal Tags:
+                Suggested Tags:
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {analysis.suggestedTags.map((tag) => (
@@ -175,11 +175,11 @@ export const AiAnalysisModal: React.FC<AiAnalysisModalProps> = ({
               >
                 {isApplied ? (
                   <>
-                    <Check className="w-4 h-4 text-emerald-400" /> Applied to Personal Metadata!
+                    <Check className="w-4 h-4 text-emerald-400" /> Applied!
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-4 h-4" /> Apply Score & Tags to Video
+                    <Sparkles className="w-4 h-4" /> Apply Score & Tags
                   </>
                 )}
               </button>

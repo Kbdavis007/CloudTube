@@ -54,7 +54,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'search' as PageTab,
-      label: 'Search & Harvest',
+      label: 'Search & Collect',
       icon: Search,
       badge: 'Live',
     },
@@ -66,19 +66,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'player' as PageTab,
-      label: 'Video Viewer',
+      label: 'Videos',
       icon: PlaySquare,
       badge: videoCount > 0 ? String(videoCount) : null,
     },
     {
       id: 'channels' as PageTab,
-      label: 'Channel Viewer',
+      label: 'Channels',
       icon: Tv,
       badge: channelCount > 0 ? String(channelCount) : null,
     },
     {
       id: 'comments' as PageTab,
-      label: 'Comments Viewer',
+      label: 'Comments',
       icon: MessageSquare,
       badge: commentCount > 0 ? String(commentCount) : null,
     },
@@ -96,7 +96,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'settings' as PageTab,
-      label: 'Settings & Admin',
+      label: 'Settings',
       icon: Settings,
       badge: null,
     },
@@ -106,7 +106,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <aside className="w-full md:w-64 border-r border-slate-800/80 bg-slate-950/60 p-3 flex md:flex-col justify-between shrink-0 overflow-x-auto md:overflow-x-visible">
       <div className="flex md:flex-col gap-1 w-full">
         <div className="hidden md:flex items-center justify-between px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-300">
-          <span>{isLoggedIn ? 'YouTube Library Core' : 'Navigation Locked'}</span>
+          <span>{isLoggedIn ? 'Your Library' : 'Navigation Locked'}</span>
           {!isLoggedIn && <Lock className="w-3.5 h-3.5 text-orange-400" />}
         </div>
 

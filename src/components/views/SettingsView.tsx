@@ -8,7 +8,6 @@ import {
   RotateCcw,
   ShieldCheck,
   CheckCircle2,
-  Server,
   Sparkles,
   Layers,
   Cloud,
@@ -103,11 +102,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       <div>
         <h1 className="text-xl sm:text-2xl font-extrabold text-white flex items-center gap-2">
           <Settings className="w-5 h-5 text-orange-500" />
-          Settings & Administration
+          Settings
         </h1>
         <p className="text-xs sm:text-sm text-slate-400">
-          Live Cloudflare usage, API credentials, encrypted client vault, library backups, and
-          deployment controls — everything administrative lives here.
+          Manage your library backups, connected accounts, storage, and setup options.
         </p>
       </div>
 
@@ -118,7 +116,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       )}
 
-      {/* Live Cloudflare Free Tier Usage (top of settings) */}
+      {/* Live storage & activity usage (top of settings) */}
       <CloudflareStatsPanel
         onOpenWizard={() => onNavigate?.('wizard')}
         onUpdateToken={onUpdateToken}
@@ -166,21 +164,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-3">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-orange-500" />
-          <h2 className="text-sm font-bold text-white">YouTube Data API Access</h2>
+          <h2 className="text-sm font-bold text-white">YouTube Access</h2>
         </div>
         <p className="text-xs text-slate-300 leading-relaxed">
-          CloudTube queries the live YouTube Data API v3 using the OAuth access token granted when you
-          sign in with Google. Signing in requests the YouTube, YouTube readonly, YouTube force-SSL,
-          profile, and email scopes. No separate API key is required.
+          CloudTube connects to YouTube using the access you grant when you sign in with Google. Signing
+          in requests permission to read your YouTube library, profile, and email. No separate API key is
+          required.
         </p>
       </div>
 
-      {/* IndexedDB Database Backup & Restore */}
+      {/* Library Backup & Restore */}
       <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-4">
         <div className="flex items-center gap-2">
           <Database className="w-4 h-4 text-blue-400" />
           <h2 className="text-sm font-bold text-white">
-            Library Database Management ({videoCount} Videos Cached)
+            Library Backup & Restore ({videoCount} videos saved)
           </h2>
         </div>
         <p className="text-xs text-slate-300 leading-relaxed">
@@ -195,12 +193,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition active:scale-95"
           >
             <Download className="w-4 h-4 text-orange-400" />
-            <span>Export Library JSON</span>
+            <span>Export Library</span>
           </button>
 
           <label className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold cursor-pointer transition active:scale-95">
             <Upload className="w-4 h-4 text-blue-400" />
-            <span>Import / Restore Backup</span>
+            <span>Restore Backup</span>
             <input type="file" accept=".json" onChange={handleImportFile} className="hidden" />
           </label>
 
@@ -214,68 +212,48 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </div>
 
-      {/* Cloudflare Free Tier Guarantees Sheet */}
+      {/* What the library keeps, in plain terms (live usage meters are above) */}
       <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-3">
         <div className="flex items-center gap-2">
-          <Server className="w-4 h-4 text-orange-500" />
-          <h2 className="text-sm font-bold text-white">Cloudflare Free Tier Limits Reference</h2>
+          <Database className="w-4 h-4 text-orange-500" />
+          <h2 className="text-sm font-bold text-white">What Your Library Keeps</h2>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-slate-800 text-slate-400 font-mono">
-                <th className="pb-2">Resource</th>
-                <th className="pb-2">Free Tier Limit</th>
-                <th className="pb-2">CloudTube Role</th>
-                <th className="pb-2">Cost Risk</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60 font-mono text-slate-300">
-              <tr>
-                <td className="py-2.5 font-bold text-white">Workers</td>
-                <td className="py-2.5 text-orange-400">100,000 requests / day</td>
-                <td className="py-2.5">API router & endpoints</td>
-                <td className="py-2.5 text-emerald-400">Free Forever</td>
-              </tr>
-              <tr>
-                <td className="py-2.5 font-bold text-white">D1 Database</td>
-                <td className="py-2.5 text-orange-400">5,000,000 rows read / day</td>
-                <td className="py-2.5">Video & comment tables</td>
-                <td className="py-2.5 text-emerald-400">Free Forever</td>
-              </tr>
-              <tr>
-                <td className="py-2.5 font-bold text-white">R2 Storage</td>
-                <td className="py-2.5 text-orange-400">10 GB + $0 Egress Fees</td>
-                <td className="py-2.5">Media & comments vault</td>
-                <td className="py-2.5 text-emerald-400">Free Forever</td>
-              </tr>
-              <tr>
-                <td className="py-2.5 font-bold text-white">Workers KV</td>
-                <td className="py-2.5 text-orange-400">100,000 reads / day</td>
-                <td className="py-2.5">Fast metadata cache</td>
-                <td className="py-2.5 text-emerald-400">Free Forever</td>
-              </tr>
-              <tr>
-                <td className="py-2.5 font-bold text-white">Pages PWA</td>
-                <td className="py-2.5 text-orange-400">Unlimited requests & bandwidth</td>
-                <td className="py-2.5">React PWA hosting</td>
-                <td className="py-2.5 text-emerald-400">Free Forever</td>
-              </tr>
-            </tbody>
-          </table>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1">
+            <div className="text-xs font-semibold text-slate-300">Videos & channels</div>
+            <p className="text-[10px] text-slate-400 leading-relaxed">
+              Everything you save, ready to browse, search, and play.
+            </p>
+          </div>
+          <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1">
+            <div className="text-xs font-semibold text-slate-300">Ratings, notes & comments</div>
+            <p className="text-[10px] text-slate-400 leading-relaxed">
+              Your scores, notes, tags, and collected comments.
+            </p>
+          </div>
+          <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1">
+            <div className="text-xs font-semibold text-slate-300">Backups</div>
+            <p className="text-[10px] text-slate-400 leading-relaxed">
+              Export or restore your whole library at any time.
+            </p>
+          </div>
         </div>
+
+        <p className="text-[11px] text-slate-500 leading-relaxed">
+          Storage and activity meters are shown above. Nothing is estimated — they come from the same
+          numbers your account provider reports.
+        </p>
       </div>
 
-      {/* Administration: build provenance + admin-only actions */}
+      {/* Administration: build provenance + setup shortcuts */}
       <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-4">
         <div className="flex items-center gap-2">
           <Cloud className="w-4 h-4 text-orange-500" />
           <h2 className="text-sm font-bold text-white">Administration</h2>
         </div>
         <p className="text-xs text-slate-300 leading-relaxed">
-          Infrastructure provisioning and architecture controls are administrative actions, so they
-          are launched from here rather than the main navigation.
+          Setup and build details live here so they stay out of the way of everyday use.
         </p>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -284,7 +262,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white text-xs font-bold transition shadow-sm active:scale-95"
           >
             <Sparkles className="w-4 h-4" />
-            <span>Cloudflare Setup Wizard</span>
+            <span>Setup Wizard</span>
           </button>
 
           <button
@@ -292,7 +270,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition active:scale-95"
           >
             <Layers className="w-4 h-4 text-slate-400" />
-            <span>Architecture & Scaffolding</span>
+            <span>View Code</span>
           </button>
 
           <a
@@ -302,7 +280,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-semibold transition"
           >
             <ArrowUpRight className="w-4 h-4 text-orange-400" />
-            <span>Cloudflare Dashboard</span>
+            <span>Open Dashboard</span>
           </a>
         </div>
 

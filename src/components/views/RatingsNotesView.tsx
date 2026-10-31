@@ -78,10 +78,10 @@ export const RatingsNotesView: React.FC<RatingsNotesViewProps> = ({
         <div>
           <h1 className="text-xl sm:text-2xl font-extrabold text-white flex items-center gap-2">
             <Star className="w-5 h-5 text-orange-500 fill-orange-500" />
-            Ratings & Personal Notes Editor
+            Ratings & Notes
           </h1>
           <p className="text-xs sm:text-sm text-slate-400">
-            Curation workbench for managing IndexScores (1=best, 100=worst), star ratings, tags, and study notes.
+            Review and edit scores (1=best, 100=worst), star ratings, tags, and your notes.
           </p>
         </div>
 
@@ -90,7 +90,7 @@ export const RatingsNotesView: React.FC<RatingsNotesViewProps> = ({
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-semibold transition"
         >
           <HelpCircle className="w-3.5 h-3.5 text-orange-400" />
-          <span>IndexScore Formula</span>
+          <span>How Scoring Works</span>
         </button>
       </div>
 
@@ -98,12 +98,12 @@ export const RatingsNotesView: React.FC<RatingsNotesViewProps> = ({
       {showFormulaInfo && (
         <div className="p-4 rounded-2xl bg-orange-950/20 border border-orange-500/30 text-xs text-slate-300 space-y-2 animate-fadeIn">
           <div className="flex items-center justify-between">
-            <span className="font-bold text-orange-400">How IndexScore (1 to 100) is Determined:</span>
+            <span className="font-bold text-orange-400">How the Score (1 to 100) is Determined:</span>
             <button onClick={() => setShowFormulaInfo(false)} className="text-slate-400 hover:text-white">&times;</button>
           </div>
           <p className="leading-relaxed text-slate-300">
-            IndexScore ranks the essential utility of a video. <strong>1 is the ultimate masterpiece</strong>,
-            while 100 is low-priority archive. It combines:
+            The score reflects how useful a video is to you. <strong>1 is a must-watch</strong>,
+            while 100 is low priority. It combines:
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 font-mono text-[11px] text-orange-200">
             <div className="p-2 rounded bg-black/30">1. Like-to-View Ratio (Engagement Quality)</div>
@@ -180,7 +180,7 @@ export const RatingsNotesView: React.FC<RatingsNotesViewProps> = ({
                   </div>
                 </div>
 
-                {/* IndexScore & Rating Badges + Quick Edit Trigger */}
+                {/* Score & Rating Badges + Quick Edit Trigger */}
                 <div className="flex items-center gap-3 self-end sm:self-auto">
                   <div className="text-right">
                     <div className="flex items-center gap-1.5 justify-end">
@@ -198,8 +198,9 @@ export const RatingsNotesView: React.FC<RatingsNotesViewProps> = ({
                   <button
                     onClick={() => openQuickEdit(video)}
                     className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition border border-slate-700 active:scale-95"
+                    title="Edit your notes and score"
                   >
-                    Edit Notes & Score
+                    Edit
                   </button>
 
                   <button
@@ -215,7 +216,7 @@ export const RatingsNotesView: React.FC<RatingsNotesViewProps> = ({
               {/* Personal Notes Preview & Tags */}
               <div className="pt-2 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                 <div className="flex-1 text-slate-300 italic truncate font-mono text-[11px]">
-                  {notes ? `"${notes}"` : <span className="text-slate-500 not-italic">No personal notes yet.</span>}
+                  {notes ? `"${notes}"` : <span className="text-slate-500 not-italic">No notes yet.</span>}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1 shrink-0">
@@ -253,10 +254,10 @@ export const RatingsNotesView: React.FC<RatingsNotesViewProps> = ({
 
             <p className="text-xs font-semibold text-slate-300 line-clamp-1">{editingVideo.title}</p>
 
-            {/* IndexScore slider */}
+            {/* Score slider */}
             <div className="space-y-1.5 p-3 rounded-xl bg-slate-950 border border-slate-800">
               <div className="flex justify-between text-xs">
-                <span className="text-slate-200 font-semibold">IndexScore (1=best, 100=worst):</span>
+                <span className="text-slate-200 font-semibold">Score (1=best, 100=worst):</span>
                 <span className="font-mono font-bold text-orange-400">{editScore}</span>
               </div>
               <input
@@ -272,7 +273,7 @@ export const RatingsNotesView: React.FC<RatingsNotesViewProps> = ({
             {/* UserRating slider */}
             <div className="space-y-1.5 p-3 rounded-xl bg-slate-950 border border-slate-800">
               <div className="flex justify-between text-xs">
-                <span className="text-slate-200 font-semibold">Personal Rating (0-100):</span>
+                <span className="text-slate-200 font-semibold">Rating (0-100):</span>
                 <span className="font-mono font-bold text-amber-400">{editRating}%</span>
               </div>
               <input
@@ -287,7 +288,7 @@ export const RatingsNotesView: React.FC<RatingsNotesViewProps> = ({
 
             {/* Notes */}
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-300">Personal Notes:</label>
+              <label className="text-xs font-semibold text-slate-300">Notes:</label>
               <textarea
                 value={editNotes}
                 onChange={(e) => setEditNotes(e.target.value)}
@@ -298,7 +299,7 @@ export const RatingsNotesView: React.FC<RatingsNotesViewProps> = ({
 
             {/* Tags */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">Personal Tags:</label>
+              <label className="text-xs font-semibold text-slate-300">Tags:</label>
               <div className="flex flex-wrap gap-1">
                 {editTags.map((t) => (
                   <span
@@ -348,7 +349,7 @@ export const RatingsNotesView: React.FC<RatingsNotesViewProps> = ({
                 onClick={handleSaveQuickEdit}
                 className="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold shadow-sm"
               >
-                Save Changes
+                Save
               </button>
             </div>
           </div>

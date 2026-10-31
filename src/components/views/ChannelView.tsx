@@ -62,7 +62,7 @@ export const ChannelView: React.FC<ChannelViewProps> = ({
       pct: 20,
       currentCount: channelVideos.length,
       totalExpected: channel.videoCount,
-      statusText: 'Contacting YouTube Data API...',
+      statusText: 'Connecting to YouTube...',
     });
 
     try {
@@ -71,14 +71,14 @@ export const ChannelView: React.FC<ChannelViewProps> = ({
         pct: 100,
         currentCount: channel.videoCount,
         totalExpected: channel.videoCount,
-        statusText: 'Completed. All available uploads indexed.',
+        statusText: 'Completed. All available uploads saved.',
       });
     } catch (err: any) {
       setExpansionProgress({
         pct: 100,
         currentCount: channelVideos.length,
         totalExpected: channel.videoCount,
-        statusText: `Expansion failed: ${err?.message || 'unknown error'}`,
+        statusText: `Collection failed: ${err?.message || 'unknown error'}`,
       });
     } finally {
       setTimeout(() => {
@@ -124,10 +124,10 @@ export const ChannelView: React.FC<ChannelViewProps> = ({
         <div>
           <h1 className="text-xl sm:text-2xl font-extrabold text-white flex items-center gap-2">
             <Tv className="w-5 h-5 text-orange-500" />
-            Channel Viewer & Deep Expander
+            Channels
           </h1>
           <p className="text-xs sm:text-sm text-slate-400">
-            Expand discovered channels to retrieve ALL uploads into your personal Cloudflare D1 library.
+            Collect every video from the channels you follow into your library.
           </p>
         </div>
 
@@ -168,7 +168,7 @@ export const ChannelView: React.FC<ChannelViewProps> = ({
                   <h3 className="text-sm font-bold text-white truncate">{chan.title}</h3>
                   {chan.isExpanded && (
                     <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-0.5">
-                      <CheckCircle2 className="w-3 h-3" /> Expanded
+                      <CheckCircle2 className="w-3 h-3" /> Collected
                     </span>
                   )}
                 </div>
@@ -228,12 +228,12 @@ export const ChannelView: React.FC<ChannelViewProps> = ({
               >
                 {isExpanding ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" /> Expanding Channel...
+                    <Loader2 className="w-4 h-4 animate-spin" /> Collecting Videos...
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
-                    <span>Expand ALL {selectedChannel.videoCount} Videos</span>
+                    <span>Collect All {selectedChannel.videoCount} Videos</span>
                   </>
                 )}
               </button>
@@ -256,9 +256,9 @@ export const ChannelView: React.FC<ChannelViewProps> = ({
                 />
               </div>
               <div className="flex justify-between text-[11px] text-slate-400">
-                <span>Orchestrated via Cloudflare Queue + Durable Objects</span>
+                <span>Collecting videos in the background</span>
                 <span>
-                  Harvested {expansionProgress.currentCount} of {expansionProgress.totalExpected} uploads
+                  Collected {expansionProgress.currentCount} of {expansionProgress.totalExpected} uploads
                 </span>
               </div>
             </div>
@@ -269,18 +269,18 @@ export const ChannelView: React.FC<ChannelViewProps> = ({
       {/* Videos from this Channel */}
       <div className="space-y-3">
         <h3 className="text-base font-bold text-white flex items-center justify-between">
-          <span>Videos Indexed from {selectedChannel?.title} ({channelVideos.length})</span>
-          <span className="text-xs text-slate-400 font-normal">Sorted by IndexScore</span>
+          <span>Videos Saved from {selectedChannel?.title} ({channelVideos.length})</span>
+          <span className="text-xs text-slate-400 font-normal">Sorted by Score</span>
         </h3>
 
         {channelVideos.length === 0 ? (
           <div className="py-12 text-center p-6 rounded-2xl bg-slate-900/40 border border-slate-800 space-y-3">
-            <p className="text-sm text-slate-300">No videos from this channel indexed in library yet.</p>
+            <p className="text-sm text-slate-300">No videos from this channel saved yet.</p>
             <button
               onClick={() => handleTriggerExpansion(selectedChannel)}
               className="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition shadow-sm"
             >
-              Trigger Channel Expansion Now
+              Collect Channel Now
             </button>
           </div>
         ) : (
@@ -326,16 +326,16 @@ export const ChannelView: React.FC<ChannelViewProps> = ({
           <div className="w-full max-w-md rounded-2xl bg-slate-900 border border-slate-800 p-6 space-y-4 shadow-2xl">
             <h3 className="text-base font-bold text-white flex items-center gap-2">
               <Tv className="w-4 h-4 text-orange-500" />
-              Add YouTube Channel to Track
+              Add YouTube Channel
             </h3>
             <p className="text-xs text-slate-300">
-              Enter a channel handle, custom URL, or channel ID to register into Cloudflare D1.
+              Enter a channel handle, custom URL, or channel ID to add to your library.
             </p>
             <input
               type="text"
               value={newChannelHandle}
               onChange={(e) => setNewChannelHandle(e.target.value)}
-              placeholder="e.g. @cloudflare or @fireship"
+              placeholder="e.g. @mkbhd or @fireship"
               className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-hidden focus:border-orange-500"
             />
             {addChannelError && (

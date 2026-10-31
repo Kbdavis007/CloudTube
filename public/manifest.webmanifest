@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "CloudTube Studio - Cloudflare YouTube Library",
+  "name": "CloudTube — Personal YouTube Library",
   "short_name": "CloudTube",
-  "description": "YouTube Library, Manager & Player running 100% on Cloudflare's free tier with D1, R2, KV, Queues and Durable Objects.",
+  "description": "Collect the YouTube videos you care about, save notes, and get smart summaries — all in one private library that works offline.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

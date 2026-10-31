@@ -4,7 +4,7 @@ import { User } from 'firebase/auth';
 import { PWAInstallButton } from './PWAInstallButton';
 import { GoogleAuthButton } from './GoogleAuthButton';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
-import { VERSION, VERSION_LABEL, COMMIT, BRANCH, DIRTY } from '../generated/version';
+import { VERSION, VERSION_LABEL, DIRTY } from '../generated/version';
 
 interface HeaderProps {
   onOpenWizard: () => void;
@@ -48,7 +48,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center gap-2">
               <span className="font-extrabold text-base tracking-tight text-white">CloudTube</span>
               <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 border border-orange-500/30">
-                100% CF Free Tier
+                Personal Library
               </span>
               <span
                 className={`text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded border ${
@@ -56,13 +56,13 @@ export const Header: React.FC<HeaderProps> = ({
                     ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
                     : 'bg-slate-800 text-slate-300 border-slate-700'
                 }`}
-                title={`CloudTube ${VERSION_LABEL} · commit ${COMMIT} on ${BRANCH}${DIRTY ? ' (uncommitted changes)' : ''}`}
+                title={`CloudTube ${VERSION_LABEL}`}
               >
                 v{VERSION}
               </span>
             </div>
             <p className="text-[11px] text-slate-400 hidden sm:block">
-              Workers · D1 · R2 · KV · Queues · Durable Objects · PWA
+              Videos · Channels · Notes · Summaries
             </p>
           </div>
         </div>
@@ -76,15 +76,19 @@ export const Header: React.FC<HeaderProps> = ({
                 ? 'bg-emerald-950/40 text-emerald-300 border-emerald-800/50'
                 : 'bg-amber-950/40 text-amber-300 border-amber-800/50'
             }`}
+            title={isOnline ? 'You are connected' : 'Working offline with your saved videos'}
           >
             <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-            {isOnline ? 'Edge Online' : 'IndexedDB Offline'}
+            {isOnline ? 'Connected' : 'Offline'}
           </div>
 
-          {/* Cloudflare Free Tier Quota Shield */}
-          <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-900 border border-slate-800 text-slate-300">
+          {/* Saved video count */}
+          <div
+            className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-900 border border-slate-800 text-slate-300"
+            title="Videos saved to your library"
+          >
             <ShieldCheck className="w-3.5 h-3.5 text-orange-400" />
-            <span>{videoCount} Indexed Videos</span>
+            <span>{videoCount} Saved Videos</span>
           </div>
 
           {/* Google Auth & YouTube OAuth Button */}
@@ -102,10 +106,10 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={onOpenWizard}
             className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white text-xs font-semibold shadow-sm transition active:scale-95"
-            title="Launch 5-Minute Automated Setup Wizard"
+            title="Set up CloudTube"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>5-Min Wizard</span>
+            <span>Set Up</span>
           </button>
 
           {/* PWA Install Button */}

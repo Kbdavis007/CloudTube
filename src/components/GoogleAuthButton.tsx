@@ -79,7 +79,7 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
             </div>
           )}
           <span className="hidden sm:inline max-w-[110px] truncate">{user.displayName || user.email}</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" title="YouTube API & Google AI Connected" />
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" title="YouTube and AI features connected" />
           <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
         </button>
 
@@ -94,7 +94,7 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
                 }`}
               >
                 <CheckCircle2 className="w-3 h-3" />
-                {isTokenConnected ? 'YouTube & Google AI Active' : 'YouTube access expired'}
+                {isTokenConnected ? 'YouTube connected' : 'YouTube access expired'}
               </div>
             </div>
 
@@ -148,7 +148,7 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
         onClick={handleSignIn}
         disabled={isLoading}
         className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 disabled:opacity-50 text-slate-800 text-xs font-semibold transition shadow-md active:scale-95"
-        title="Sign in with Google to grant YouTube & Google AI permissions"
+        title="Sign in with Google to connect your YouTube library"
       >
         {isLoading ? (
           <Loader2 className="w-4 h-4 text-orange-600 animate-spin" />

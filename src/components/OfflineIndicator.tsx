@@ -1,5 +1,5 @@
 import React from 'react';
-import { WifiOff, Database } from 'lucide-react';
+import { WifiOff, Download } from 'lucide-react';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 
 export const OfflineIndicator: React.FC = () => {
@@ -13,7 +13,7 @@ export const OfflineIndicator: React.FC = () => {
       <span className="flex items-center gap-1.5">
         Offline Mode Active
         <span className="inline-flex items-center gap-1 rounded bg-black/20 px-1.5 py-0.5 text-[10px]">
-          <Database className="w-3 h-3" /> IndexedDB Local Cache
+          <Download className="w-3 h-3" /> Saved Videos
         </span>
       </span>
     </div>

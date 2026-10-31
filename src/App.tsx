@@ -145,13 +145,13 @@ export default function App() {
     await idbService.addCrawlJob(job);
 
     await refreshLibraryData();
-    showToast(`Indexed "${video.title.slice(0, 30)}..." into your library!`);
+    showToast(`Saved "${video.title.slice(0, 30)}..." to your library!`);
   };
 
-  // 2. Expand a channel by fetching its real uploads
+  // 2. Collect a channel's uploads
   const handleExpandChannel = async (channelId: string, channelTitle: string) => {
     if (!accessToken) {
-      showToast('Sign in with Google to expand channels from the live YouTube API.', 'info');
+      showToast('Sign in with Google to collect channel videos from YouTube.', 'info');
       return;
     }
 
@@ -185,12 +185,12 @@ export default function App() {
       await refreshLibraryData();
       showToast(`Imported ${uploads.length} videos from "${channelTitle}"!`);
     } catch (err: any) {
-      console.error('Channel expansion failed:', err);
-      showToast(`Channel expansion failed: ${err.message}`, 'info');
+      console.error('Channel collection failed:', err);
+      showToast(`Channel collection failed: ${err.message}`, 'info');
     }
   };
 
-  // 3. Update Personal Metadata (IndexScore, Notes, Rating, Tags)
+  // 3. Update notes, score, rating and tags
   const handleUpdatePersonal = async (youtubeId: string, personal: Partial<PersonalMetadata>) => {
     await idbService.updatePersonalMetadata(youtubeId, personal);
     await refreshLibraryData();
@@ -264,10 +264,10 @@ export default function App() {
     showToast('Removal forgotten. It no longer affects future selection.');
   };
 
-  // 4. Harvest real comments for a video from the YouTube API
+  // 4. Collect real comments for a video from YouTube
   const handleHarvestComments = async (youtubeId: string) => {
     if (!accessToken) {
-      showToast('Sign in with Google to harvest live comments.', 'info');
+      showToast('Sign in with Google to collect comments.', 'info');
       return;
     }
 
@@ -290,10 +290,10 @@ export default function App() {
       await idbService.addCrawlJob(job);
 
       await refreshLibraryData();
-      showToast(`Harvested ${harvested.length} comments from YouTube.`);
+      showToast(`Collected ${harvested.length} comments from YouTube.`);
     } catch (err: any) {
-      console.error('Comment harvest failed:', err);
-      showToast(`Comment harvest failed: ${err.message}`, 'info');
+      console.error('Comment collection failed:', err);
+      showToast(`Comment collection failed: ${err.message}`, 'info');
     }
   };
 
@@ -324,11 +324,11 @@ export default function App() {
     setCurrentTab('player');
   };
 
-  // 6. Update AI Summary in database metadata
+  // 6. Update the video's saved summary
   const handleUpdateAiSummary = async (youtubeId: string, aiSummary: string) => {
     await idbService.updateVideoAiSummary(youtubeId, aiSummary);
     await refreshLibraryData();
-    showToast('AI Summary persisted to database video metadata.');
+    showToast('Summary saved to your notes.');
   };
 
   // Google Auth Handlers
@@ -337,7 +337,7 @@ export default function App() {
     setAccessToken(token);
     setCachedAccessToken(token);
     setCurrentTab('dashboard');
-    showToast(`Welcome, ${authUser.displayName || authUser.email}! YouTube & Google AI active.`);
+    showToast(`Welcome, ${authUser.displayName || authUser.email}! YouTube and AI features are ready.`);
   };
 
   // Re-acquire a YouTube OAuth token without a full sign-out (e.g. after a reload)
@@ -435,7 +435,7 @@ export default function App() {
             <div className="flex items-center justify-center h-64">
               <div className="text-center space-y-3">
                 <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto" />
-                <p className="text-xs font-mono text-slate-400">Loading CloudTube Edge Library...</p>
+                <p className="text-xs font-mono text-slate-400">Loading your library...</p>
               </div>
             </div>
           ) : !isLoggedIn ? (
@@ -498,7 +498,7 @@ export default function App() {
                   onAddChannel={async (chan) => {
                     await idbService.saveChannel(chan);
                     await refreshLibraryData();
-                    showToast(`Channel "${chan.title}" added to library tracker!`);
+                    showToast(`Channel "${chan.title}" added to your library!`);
                   }}
                 />
               )}
@@ -538,7 +538,7 @@ export default function App() {
                   onComplete={() => {
                     setWizardStep(undefined);
                     setCurrentTab('dashboard');
-                    showToast('Cloudflare Free Tier infrastructure successfully configured!');
+                    showToast('CloudTube is fully set up and ready to use!');
                   }}
                 />
               )}

@@ -52,7 +52,7 @@ export const LandingSplashView: React.FC<LandingSplashViewProps> = ({ onAuthSucc
         {/* Brand Badge */}
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900/90 border border-orange-500/30 text-xs font-semibold text-orange-400 shadow-xl backdrop-blur-md animate-fadeIn">
           <Cloud className="w-4 h-4 text-orange-500" />
-          <span>Cloudflare Free Tier & YouTube Edge Studio</span>
+          <span>Your Personal YouTube Library</span>
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
         </div>
 
@@ -61,12 +61,12 @@ export const LandingSplashView: React.FC<LandingSplashViewProps> = ({ onAuthSucc
           <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-white leading-tight">
             Personal YouTube Library,{' '}
             <span className="bg-gradient-to-r from-orange-400 via-amber-400 to-orange-500 bg-clip-text text-transparent">
-              Harvester & AI Manager
+              Collector & Smart Manager
             </span>
           </h1>
           <p className="text-sm sm:text-base md:text-lg text-slate-300 leading-relaxed max-w-2xl mx-auto">
-            Run 100% on Cloudflare's free tier with serverless D1 SQLite, R2 zero-egress media storage,
-            background crawler queues, and Gemini AI-powered video summaries.
+            Collect the videos you care about, save your notes, and get instant smart summaries —
+            all in one private library that keeps working even when you are offline.
           </p>
         </div>
 
@@ -75,7 +75,7 @@ export const LandingSplashView: React.FC<LandingSplashViewProps> = ({ onAuthSucc
           <div className="space-y-1">
             <h2 className="text-base font-bold text-white">Sign In to Launch Your Studio</h2>
             <p className="text-xs text-slate-400">
-              Authenticate with Google to grant YouTube Data API & Google AI permissions
+              Sign in with Google to connect your YouTube library
             </p>
           </div>
 
@@ -116,32 +116,32 @@ export const LandingSplashView: React.FC<LandingSplashViewProps> = ({ onAuthSucc
             </div>
           )}
 
-          {/* Scope badges list */}
+          {/* What you get list */}
           <div className="pt-2 border-t border-slate-800/80 space-y-1.5 text-left text-[11px] text-slate-400">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Granted Permissions:</div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">What you get:</div>
             <div className="grid grid-cols-2 gap-1.5">
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span className="truncate">YouTube Data API v3</span>
+                <span className="truncate">Your YouTube videos</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span className="truncate">Channel & Playlist Sync</span>
+                <span className="truncate">Channels & playlists</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span className="truncate">Gemini Flash AI Summaries</span>
+                <span className="truncate">Smart summaries</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span className="truncate">Comment Harvest Engine</span>
+                <span className="truncate">Saved comments</span>
               </div>
             </div>
           </div>
 
           <div className="pt-1 text-[11px] text-slate-400 flex items-center justify-center gap-1.5">
             <Lock className="w-3 h-3 text-emerald-400" />
-            <span>Tokens kept strictly in memory · No plaintext secrets stored</span>
+            <span>Your sign-in stays private · Nothing is shared</span>
           </div>
         </div>
 
@@ -151,9 +151,9 @@ export const LandingSplashView: React.FC<LandingSplashViewProps> = ({ onAuthSucc
             <div className="w-8 h-8 rounded-xl bg-orange-500/10 text-orange-400 flex items-center justify-center">
               <Cloud className="w-4 h-4" />
             </div>
-            <h3 className="text-xs font-bold text-white">100% Free Tier</h3>
+            <h3 className="text-xs font-bold text-white">Free to Use</h3>
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              Cloudflare Workers, D1 SQLite (5M reads/day), R2 ($0 egress), KV, and Durable Objects.
+              No subscriptions, no setup fees. Your library is ready the moment you sign in.
             </p>
           </div>
 
@@ -161,9 +161,9 @@ export const LandingSplashView: React.FC<LandingSplashViewProps> = ({ onAuthSucc
             <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
               <Brain className="w-4 h-4" />
             </div>
-            <h3 className="text-xs font-bold text-white">Gemini AI Summaries</h3>
+            <h3 className="text-xs font-bold text-white">Smart Summaries</h3>
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              Instant concise video summaries, key takeaways, and IndexScores cached in database metadata.
+              Instant summaries, key takeaways, and a score for every video you save.
             </p>
           </div>
 
@@ -171,9 +171,9 @@ export const LandingSplashView: React.FC<LandingSplashViewProps> = ({ onAuthSucc
             <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
               <Tv className="w-4 h-4" />
             </div>
-            <h3 className="text-xs font-bold text-white">Channel Expander</h3>
+            <h3 className="text-xs font-bold text-white">Channel Collector</h3>
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              Retrieve ALL video uploads from discovered channels using background queue workers.
+              Collect every video from a channel you follow, with progress you can watch.
             </p>
           </div>
 
@@ -181,9 +181,9 @@ export const LandingSplashView: React.FC<LandingSplashViewProps> = ({ onAuthSucc
             <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center">
               <Database className="w-4 h-4" />
             </div>
-            <h3 className="text-xs font-bold text-white">Full Offline PWA</h3>
+            <h3 className="text-xs font-bold text-white">Works Offline</h3>
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              Browser IndexedDB and Service Worker caching keep your complete library available anywhere.
+              Your saved videos and notes stay available even without a connection.
             </p>
           </div>
         </div>

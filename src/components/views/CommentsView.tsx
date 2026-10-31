@@ -41,11 +41,10 @@ export const CommentsView: React.FC<CommentsViewProps> = ({
     return matchesSearch && matchesSentiment && matchesVideo;
   });
 
-  const handleExportR2Json = () => {
+  const handleExportComments = () => {
     const archivePayload = {
-      archiveFormat: 'Cloudflare R2 Comments Vault v1',
+      archiveFormat: 'Comments Export v1',
       exportedAt: new Date().toISOString(),
-      r2PathPrefix: 'youtube-library-media-vault/comments-archive/',
       totalComments: filteredComments.length,
       comments: filteredComments,
     };
@@ -53,7 +52,7 @@ export const CommentsView: React.FC<CommentsViewProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `comments-r2-vault-${Date.now()}.json`;
+    a.download = `comments-export-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -65,28 +64,29 @@ export const CommentsView: React.FC<CommentsViewProps> = ({
         <div>
           <h1 className="text-xl sm:text-2xl font-extrabold text-white flex items-center gap-2">
             <MessageSquare className="w-5 h-5 text-orange-500" />
-            Comments Viewer & Harvester
+            Comments
           </h1>
           <p className="text-xs sm:text-sm text-slate-400">
-            Harvest discussions, search community insights, and backup to Cloudflare R2 storage archive.
+            Browse and search collected comments, and export them to a file.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
-            onClick={handleExportR2Json}
+            onClick={handleExportComments}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition active:scale-95"
-            title="Download JSON schema matching R2 comments archive"
+            title="Download your comments as a JSON file"
           >
             <Download className="w-4 h-4 text-orange-400" />
-            <span>Export to R2 JSON</span>
+            <span>Export</span>
           </button>
           <button
             onClick={onHarvestMore}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition shadow-sm active:scale-95"
+            title="Collect the latest comments from YouTube"
           >
             <Sparkles className="w-4 h-4" />
-            <span>Harvest Latest</span>
+            <span>Collect Latest</span>
           </button>
         </div>
       </div>

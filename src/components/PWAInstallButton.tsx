@@ -19,7 +19,7 @@ export const PWAInstallButton: React.FC = () => {
         className="flex items-center gap-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white px-3 py-1.5 text-xs font-semibold shadow-sm transition active:scale-95"
       >
         <Download className="w-3.5 h-3.5" />
-        Install PWA
+        Install App
       </button>
     );
   }
@@ -54,7 +54,7 @@ export const PWAInstallButton: React.FC = () => {
               <p className="mt-3 text-xs leading-relaxed text-slate-300">
                 1. Tap the <strong className="text-orange-400">Share</strong> button in the Safari bottom toolbar.<br />
                 2. Scroll down and tap <strong className="text-orange-400">Add to Home Screen</strong>.<br />
-                3. Launch CloudTube for offline access with IndexedDB and Service Worker caching.
+                3. Launch CloudTube for offline access to your saved videos.
               </p>
               <button
                 onClick={() => setShowIOSGuide(false)}

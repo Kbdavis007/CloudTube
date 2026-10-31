@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { YouTubeApiClient } from '../../services/youtubeApi';
 import { rankCandidates } from '../../services/tasteProfile';
+import { sourceFlagLabel } from '../../data/sourceLabels';
 import { ApiErrorCard } from '../ApiErrorCard';
 
 interface SearchViewProps {
@@ -44,7 +45,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
   userEmail,
   tasteProfile,
 }) => {
-  const [searchTerm, setSearchTerm] = useState('Cloudflare Workers & D1');
+  const [searchTerm, setSearchTerm] = useState('System Design Explained');
   const [isSearching, setIsSearching] = useState(false);
   const [isLiveSearchActive, setIsLiveSearchActive] = useState(false);
   const [selectedSourceFilter, setSelectedSourceFilter] = useState<SourceFlag | 'ALL'>('ALL');
@@ -56,11 +57,11 @@ export const SearchView: React.FC<SearchViewProps> = ({
 
   // Quick prompt pills
   const suggestedQueries = [
-    'Cloudflare Workers & D1',
-    'System Design YouTube Architecture',
-    'TypeScript Edge Runtimes',
-    'Durable Objects & Queues',
-    'Full-Stack SQLite at the Edge',
+    'System Design Explained',
+    'TypeScript Fundamentals',
+    'Web Development Tips',
+    'Database Basics',
+    'Full-Stack Tutorials',
   ];
 
   const sourceFlagColors: Record<SourceFlag, string> = {
@@ -84,7 +85,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
       setResults([]);
       setIsLiveSearchActive(false);
       setIsSearching(false);
-      setSearchError('Sign in with Google to search live YouTube data. CloudTube does not generate placeholder results.');
+      setSearchError('Sign in with Google to search YouTube. CloudTube does not generate placeholder results.');
       return;
     }
 
@@ -96,7 +97,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
       console.error('Live YouTube search failed:', err);
       setResults([]);
       setIsLiveSearchActive(false);
-      setSearchError(err?.message || 'Live YouTube search failed. Check your Google sign-in and try again.');
+      setSearchError(err?.message || 'Search failed. Check your Google sign-in and try again.');
     } finally {
       setIsSearching(false);
     }
@@ -139,23 +140,23 @@ export const SearchView: React.FC<SearchViewProps> = ({
           <div>
             <h1 className="text-xl sm:text-2xl font-extrabold text-white flex items-center gap-2">
               <Search className="w-5 h-5 text-orange-500" />
-              Search & Multi-Source Harvester
+              Search & Collect
             </h1>
             <p className="text-xs sm:text-sm text-slate-400">
-              Search YouTube Data API, discover channels, and harvest metadata enriched with source flags
-              (YouTube Search, Reddit, X, LinkedIn, Google, Playlists).
+              Search YouTube, discover channels, and save videos with their details
+              (Search, Reddit, X, LinkedIn, Google, Playlists).
             </p>
           </div>
 
           {accessToken ? (
             <div className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
               <Zap className="w-3.5 h-3.5" />
-              <span>Live YouTube API Active</span>
+              <span>Connected to YouTube</span>
             </div>
           ) : (
             <div className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800/60 border border-slate-700 text-slate-400 text-xs font-semibold">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Sign in to search live YouTube</span>
+              <span>Sign in to search YouTube</span>
             </div>
           )}
         </div>
@@ -179,7 +180,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
             className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white text-xs font-bold transition shadow-lg shadow-orange-600/30 active:scale-95"
           >
             {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-            <span>Harvest Results</span>
+            <span>Search</span>
           </button>
         </div>
 
@@ -208,7 +209,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-slate-900/60 border border-slate-800/80">
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-orange-400" />
-            <span className="text-xs font-semibold text-slate-300">Filter Source Flag:</span>
+            <span className="text-xs font-semibold text-slate-300">Source:</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5">
@@ -236,7 +237,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
                       : 'bg-slate-950/40 text-slate-400 border-slate-800 hover:text-slate-200'
                   }`}
                 >
-                  {flag} ({count})
+                  {sourceFlagLabel(flag)} ({count})
                 </button>
               );
             })}
@@ -261,8 +262,8 @@ export const SearchView: React.FC<SearchViewProps> = ({
       {isSearching && (
         <div className="py-16 text-center space-y-3">
           <Loader2 className="w-8 h-8 text-orange-500 animate-spin mx-auto" />
-          <p className="text-sm font-semibold text-white">Querying YouTube API & crawling source links...</p>
-          <p className="text-xs text-slate-400">Verifying quota limits via QuotaManagerDO</p>
+          <p className="text-sm font-semibold text-white">Searching YouTube and checking sources...</p>
+          <p className="text-xs text-slate-400">This can take a moment</p>
         </div>
       )}
 
@@ -305,7 +306,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
                     {video.duration.replace('PT', '').toLowerCase()}
                   </div>
 
-                  {/* Pre-calculated IndexScore, adjusted by the taste profile */}
+                  {/* Pre-calculated score, adjusted by the taste profile */}
                   <div className="absolute top-2 left-2 px-2.5 py-1 rounded-lg bg-orange-600/90 backdrop-blur-xs text-white text-[11px] font-extrabold shadow-md flex items-center gap-1">
                     <Star className="w-3 h-3 fill-current" />
                     <span>Score: {adjustedScore}</span>
@@ -347,7 +348,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
                           sourceFlagColors[flag] || 'bg-slate-800 text-slate-300'
                         }`}
                       >
-                        {flag}
+                        {sourceFlagLabel(flag)}
                       </span>
                     ))}
                   </div>
@@ -369,7 +370,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
                     </div>
                   )}
 
-                  {/* Actions: Index to D1 & Expand Channel */}
+                  {/* Actions: Save to library & collect channel */}
                   <div className="pt-2 flex items-center gap-2 border-t border-slate-800/80">
                     <button
                       onClick={() => onIndexVideo(video)}
@@ -382,11 +383,11 @@ export const SearchView: React.FC<SearchViewProps> = ({
                     >
                       {isIndexed ? (
                         <>
-                          <Check className="w-3.5 h-3.5" /> Indexed in Library
+                          <Check className="w-3.5 h-3.5" /> Saved
                         </>
                       ) : (
                         <>
-                          <Plus className="w-3.5 h-3.5" /> Index to D1 & PWA
+                          <Plus className="w-3.5 h-3.5" /> Save
                         </>
                       )}
                     </button>
@@ -394,10 +395,10 @@ export const SearchView: React.FC<SearchViewProps> = ({
                     <button
                       onClick={() => onExpandChannel(video.channelId, video.channelTitle)}
                       className="flex items-center gap-1 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition active:scale-95 border border-slate-700"
-                      title="Expand discovered channel to retrieve ALL videos"
+                      title="Collect every video from this channel"
                     >
                       <Tv className="w-3.5 h-3.5 text-orange-400" />
-                      <span>Expand Channel</span>
+                      <span>Collect Channel</span>
                     </button>
                   </div>
                 </div>
@@ -414,7 +415,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
       {!isSearching && hasSearched && !searchError && rankedResults.length === 0 && (
         <div className="py-16 text-center space-y-2">
           <p className="text-sm font-semibold text-white">No results matched your search term.</p>
-          <p className="text-xs text-slate-400">Try searching for "Cloudflare Workers" or "System Design".</p>
+          <p className="text-xs text-slate-400">Try searching for "System Design" or "Web Development".</p>
         </div>
       )}
 
@@ -424,16 +425,16 @@ export const SearchView: React.FC<SearchViewProps> = ({
           <div className="w-12 h-12 rounded-2xl bg-orange-500/10 text-orange-400 flex items-center justify-center mx-auto">
             <Sparkles className="w-6 h-6" />
           </div>
-          <h2 className="text-base font-bold text-white">Ready to Crawl YouTube & Discover High-Quality Videos</h2>
+          <h2 className="text-base font-bold text-white">Search YouTube & Discover Videos Worth Saving</h2>
           <p className="text-xs text-slate-400 max-w-md mx-auto">
-            Type any topic or click one of the suggested search buttons above to fetch metadata, calculate
-            IndexScores, and catalog items into your local SQLite and Cloudflare edge database.
+            Type any topic or click one of the suggested searches above to find videos, score them,
+            and save them to your library.
           </p>
           <button
-            onClick={() => handleSearch('Cloudflare Workers & D1')}
+            onClick={() => handleSearch('System Design Explained')}
             className="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold transition shadow-md"
           >
-            Search YouTube Now
+            Search YouTube
           </button>
         </div>
       )}

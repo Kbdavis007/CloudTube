@@ -24,7 +24,6 @@ import {
   CheckCircle2,
   Brain,
   FileText,
-  Database,
   RefreshCw,
   Loader2,
 } from 'lucide-react';
@@ -32,6 +31,7 @@ import { AiAnalysisModal } from '../AiAnalysisModal';
 import { ApiErrorCard } from '../ApiErrorCard';
 import { MarkdownSummary } from '../MarkdownSummary';
 import { GeminiAiService } from '../../services/geminiAi';
+import { sourceFlagLabel } from '../../data/sourceLabels';
 
 interface VideoPlayerViewProps {
   currentVideo: VideoMetadata | null;
@@ -78,8 +78,8 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [summaryFeedback, setSummaryFeedback] = useState<string | null>(null);
 
-  // Check if AI Summary already exists in the video's database metadata
-  const hasDatabaseAiSummary = Boolean(currentVideo.aiSummary && currentVideo.aiSummary.trim().length > 0);
+  // Check whether this video already has a saved summary
+  const hasSavedSummary = Boolean(currentVideo.aiSummary && currentVideo.aiSummary.trim().length > 0);
 
   const handleGenerateAiSummary = async () => {
     setIsGeneratingSummary(true);
@@ -92,11 +92,11 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
       await onUpdateAiSummary(currentVideo.youtubeId, summaryText);
       currentVideo.aiSummary = summaryText;
       currentVideo.aiSummaryGeneratedAt = new Date().toISOString();
-      setSummaryFeedback('AI Summary saved to database metadata.');
+      setSummaryFeedback('Summary saved to your notes.');
       setTimeout(() => setSummaryFeedback(null), 3500);
     } catch (err: any) {
-      console.error('Failed to generate summary with Gemini:', err);
-      setSummaryFeedback(`Error generating summary: ${err?.message || 'Gemini API error'}`);
+      console.error('Failed to generate summary:', err);
+      setSummaryFeedback(`Error generating summary: ${err?.message || 'AI service error'}`);
     } finally {
       setIsGeneratingSummary(false);
     }
@@ -190,9 +190,9 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
         </button>
       </div>
 
-      {/* Main Grid: Player on Left, Personal Metadata Studio on Right */}
+      {/* Main Grid: Player on Left, Notes & Details on Right */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Video Embed & Metadata (2 Cols) */}
+        {/* Left Column: Video Embed & Details (2 Cols) */}
         <div className="lg:col-span-2 space-y-4">
           {/* Responsive embed. Sources that ship their own player URL (XVideos)
               use it directly; YouTube derives the URL from the video id. */}
@@ -215,7 +215,7 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
               <div className="flex flex-wrap items-center gap-2">
                 <span className="px-2.5 py-1 rounded-lg bg-orange-600/90 text-white text-xs font-extrabold shadow-sm flex items-center gap-1">
                   <Star className="w-3.5 h-3.5 fill-current" />
-                  IndexScore: {indexScore}
+                  Score: {indexScore}
                   <span className="text-[10px] opacity-75">(1=best)</span>
                 </span>
 
@@ -226,7 +226,7 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
                       sourceFlagColors[flag] || 'bg-slate-800 text-slate-300'
                     }`}
                   >
-                    {flag}
+                    {sourceFlagLabel(flag)}
                   </span>
                 ))}
               </div>
@@ -236,10 +236,10 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
                 <button
                   onClick={() => setShowAiModal(true)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white text-xs font-semibold shadow-sm transition active:scale-95"
-                  title="Analyze video with Google AI (Gemini)"
+                  title="Get AI insights about this video"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>Google AI Analysis</span>
+                  <span>AI Insights</span>
                 </button>
 
                 <button
@@ -308,11 +308,11 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
                   }`}
                 >
                   <Brain className="w-3.5 h-3.5 text-orange-400" />
-                  <span>AI Summary (Gemini)</span>
-                  {hasDatabaseAiSummary ? (
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Cached in database" />
+                  <span>Smart Summary</span>
+                  {hasSavedSummary ? (
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Summary saved" />
                   ) : (
-                    <span className="w-2 h-2 rounded-full bg-amber-400" title="Missing from database - Click to generate" />
+                    <span className="w-2 h-2 rounded-full bg-amber-400" title="No summary yet - click to create" />
                   )}
                 </button>
 
@@ -341,15 +341,15 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
                 </button>
               </div>
 
-              {/* Tab 1: AI Summary Content (Database-First Check) */}
+              {/* Tab 1: Smart Summary Content */}
               {activeUnderPlayerTab === 'ai_summary' && (
                 <div className="space-y-3">
-                  {hasDatabaseAiSummary ? (
+                  {hasSavedSummary ? (
                     <div className="space-y-3 animate-fadeIn">
                       <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs">
                         <div className="flex items-center gap-2">
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-mono text-[11px] font-bold border border-emerald-500/30">
-                            <Database className="w-3 h-3 text-emerald-400" /> Cached in Database (D1 / IndexedDB)
+                            <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Saved
                           </span>
                           {currentVideo.aiSummaryGeneratedAt && (
                             <span className="text-[11px] text-slate-400">
@@ -362,14 +362,14 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
                           onClick={handleGenerateAiSummary}
                           disabled={isGeneratingSummary}
                           className="flex items-center gap-1 text-[11px] text-orange-400 hover:text-orange-300 disabled:opacity-50 transition"
-                          title="Regenerate summary with Gemini API"
+                          title="Create a new summary"
                         >
                           <RefreshCw className={`w-3 h-3 ${isGeneratingSummary ? 'animate-spin' : ''}`} />
                           <span>Regenerate</span>
                         </button>
                       </div>
 
-                      {/* Display Cached AI Summary, rendered as an AI-overview style card */}
+                      {/* Saved summary, rendered as an AI-overview style card */}
                       <div className="rounded-2xl bg-slate-950/90 border border-orange-500/20 max-h-72 overflow-y-auto selection:bg-orange-500/30">
                         <div className="sticky top-0 z-10 flex items-center gap-2 px-4 py-2.5 bg-slate-950/95 backdrop-blur-sm border-b border-slate-800/80">
                           <span className="flex items-center justify-center w-5 h-5 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-sm shadow-orange-500/30">
@@ -387,22 +387,20 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
                       </div>
 
                       <div className="text-[11px] text-slate-500 flex items-center justify-between px-1">
-                        <span>Retrieved from local video database metadata (zero unnecessary API calls).</span>
-                        <span className="text-orange-400/80 font-mono">Gemini API Engine</span>
+                        <span>Saved to your notes — no need to generate it again.</span>
                       </div>
                     </div>
                   ) : (
-                    /* Missing from Database - Generate on Demand */
+                    /* No summary yet - create on demand */
                     <div className="p-6 rounded-2xl bg-slate-950/80 border border-dashed border-slate-800 text-center space-y-3.5 animate-fadeIn">
                       <div className="w-11 h-11 rounded-2xl bg-orange-500/10 text-orange-400 flex items-center justify-center mx-auto border border-orange-500/20">
                         <Brain className="w-5 h-5" />
                       </div>
                       <div className="space-y-1">
-                        <h4 className="text-xs font-bold text-white">No AI Summary in Database Yet</h4>
+                        <h4 className="text-xs font-bold text-white">No Summary Available Yet</h4>
                         <p className="text-[11px] text-slate-400 max-w-md mx-auto leading-relaxed">
-                          Database check: No cached AI summary exists in this video's metadata. Click below
-                          to invoke the Gemini API, generate a concise summary from the title and description,
-                          and persist it to your Cloudflare D1 & IndexedDB metadata store.
+                          Click below to create a concise summary from this video's title and
+                          description, and save it to your notes.
                         </p>
                       </div>
 
@@ -414,12 +412,12 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
                         {isGeneratingSummary ? (
                           <>
                             <Loader2 className="w-4 h-4 animate-spin" />
-                            <span>Generating with Gemini & Saving to Database...</span>
+                            <span>Creating Summary & Saving...</span>
                           </>
                         ) : (
                           <>
                             <Sparkles className="w-4 h-4" />
-                            <span>Generate AI Summary with Gemini</span>
+                            <span>Create Summary</span>
                           </>
                         )}
                       </button>
@@ -452,12 +450,13 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
               {activeUnderPlayerTab === 'comments' && (
                 <div className="pt-1 space-y-2">
                   <div className="flex items-center justify-between text-xs text-slate-400 pb-1">
-                    <span>{comments.length} harvested comments in library</span>
+                    <span>{comments.length} saved comments</span>
                     <button
                       onClick={() => onHarvestComments(currentVideo.youtubeId)}
                       className="text-orange-400 hover:text-orange-300 text-xs font-semibold flex items-center gap-1"
+                      title="Collect more comments from YouTube"
                     >
-                      <Sparkles className="w-3 h-3" /> Harvest More Comments
+                      <Sparkles className="w-3 h-3" /> Collect More
                     </button>
                   </div>
                   {comments.slice(0, 3).map((c) => (
@@ -471,7 +470,7 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
                   ))}
                   {comments.length === 0 && (
                     <div className="py-4 text-center text-xs text-slate-500">
-                      No comments harvested for this video yet.
+                      No comments saved for this video yet.
                     </div>
                   )}
                 </div>
@@ -480,25 +479,25 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
           </div>
         </div>
 
-        {/* Right Column: Personal Metadata Studio & Notes */}
+        {/* Right Column: Notes & Details */}
         <div className="space-y-4">
           <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-4 shadow-xl">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold text-white flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-orange-500" />
-                Personal Curation Studio
+                Notes & Details
               </h2>
               {isSavedRecently && (
                 <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Saved to D1
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Saved
                 </span>
               )}
             </div>
 
-            {/* IndexScore (1 = best, 100 = worst) */}
+            {/* Score (1 = best, 100 = worst) */}
             <div className="space-y-2 p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800">
               <div className="flex justify-between items-center text-xs">
-                <span className="font-semibold text-slate-200">IndexScore (1 = Best, 100 = Worst):</span>
+                <span className="font-semibold text-slate-200">Score (1 = Best, 100 = Worst):</span>
                 <span className="font-mono font-bold text-orange-400 text-sm">{indexScore}</span>
               </div>
               <input
@@ -578,7 +577,7 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
                   value={newTagInput}
                   onChange={(e) => setNewTagInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddTag()}
-                  placeholder="Add custom tag (e.g. Edge, Must-Watch)..."
+                  placeholder="Add custom tag (e.g. Must-Watch, Tutorial)..."
                   className="flex-1 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-orange-500"
                 />
                 <button
@@ -593,13 +592,13 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
             {/* Personal Study Notes */}
             <div className="space-y-2">
               <label className="text-xs font-semibold text-slate-200">
-                Personal Study Notes (Stored in IndexedDB & D1):
+                Your Notes:
               </label>
               <textarea
                 value={userNotes}
                 onChange={(e) => setUserNotes(e.target.value)}
                 rows={5}
-                placeholder="Write your personal insights, timestamps, architecture takeaways..."
+                placeholder="Write your personal insights, timestamps, takeaways..."
                 className="w-full p-3 rounded-2xl bg-slate-950 border border-slate-800 text-xs text-slate-200 placeholder-slate-500 focus:outline-hidden focus:border-orange-500 resize-none font-mono"
               />
             </div>
@@ -607,40 +606,42 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
             {/* Save Button */}
             <button
               onClick={handleSavePersonal}
+              title="Save your notes, score, rating, and tags"
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition shadow-md shadow-orange-600/30 active:scale-95"
             >
               <Save className="w-4 h-4" />
-              Save Curation Metadata
+              Save Notes
             </button>
           </div>
         </div>
       </div>
 
-      {/* Harvested Comments Section for this Video */}
+      {/* Comments for this Video */}
       <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-base font-bold text-white flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-orange-500" />
-              Harvested Comments ({comments.length})
+              Saved Comments ({comments.length})
             </h2>
             <p className="text-xs text-slate-400">
-              Extracted from YouTube Data API and indexed into SQLite & R2 archive vault
+              Collected from YouTube and saved to your library
             </p>
           </div>
 
           <button
             onClick={() => onHarvestComments(currentVideo.youtubeId)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition border border-slate-700"
+            title="Collect the top comments from YouTube"
           >
             <Sparkles className="w-3.5 h-3.5 text-orange-400" />
-            Harvest Top Comments
+            View Top Comments
           </button>
         </div>
 
         {comments.length === 0 ? (
           <div className="py-8 text-center text-xs text-slate-400">
-            No comments harvested for this video yet. Click "Harvest Top Comments" to retrieve discussion insights.
+            No comments saved for this video yet. Click "View Top Comments" to collect discussion insights.
           </div>
         ) : (
           <div className="space-y-3">
@@ -690,7 +691,7 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
         )}
       </div>
 
-      {/* Google AI Analysis Modal */}
+      {/* AI Insights Modal */}
       {showAiModal && (
         <AiAnalysisModal
           video={currentVideo}

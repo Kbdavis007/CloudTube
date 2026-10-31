@@ -21,9 +21,9 @@ const SOURCES: SourceOption[] = [
   {
     id: 'search',
     name: 'YouTube',
-    tagline: 'Search & Harvest',
+    tagline: 'Search & Collect',
     description:
-      'Search the live YouTube Data API, discover channels, and index videos with metadata.',
+      'Search YouTube, discover channels, and save videos to your library with their details.',
     icon: PlaySquare,
     accent: 'hover:border-red-500/50',
     iconClass: 'bg-red-500/10 border-red-500/20 text-red-400',
@@ -49,7 +49,7 @@ export const VideoSourcesView: React.FC<VideoSourcesViewProps> = ({ onSelectSour
           Video Sources
         </h1>
         <p className="text-xs sm:text-sm text-slate-400">
-          Pick a source to browse and index videos from.
+          Pick a source to browse and save videos from.
         </p>
       </div>
 
@@ -86,7 +86,7 @@ export const VideoSourcesView: React.FC<VideoSourcesViewProps> = ({ onSelectSour
               </div>
 
               <div className="mt-4 flex items-center gap-1 text-xs font-bold text-orange-400 group-hover:text-orange-300">
-                <span>Open source</span>
+                <span>Browse</span>
                 <ChevronRight className="w-3.5 h-3.5 transition group-hover:translate-x-0.5" />
               </div>
             </button>
