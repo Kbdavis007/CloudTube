@@ -6,7 +6,10 @@ export type SourceFlag =
   | 'X'
   | 'LinkedIn'
   | 'Playlist'
-  | 'Xvideos';
+  | 'Xvideos'
+  | 'ArchiveOrg'
+  | 'PeerTube'
+  | 'Dailymotion';
 
 /**
  * Where a video can be played. YouTube videos derive their embed URL from

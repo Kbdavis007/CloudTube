@@ -13,6 +13,9 @@ export const SOURCE_FLAG_LABELS: Record<SourceFlag, string> = {
   LinkedIn: 'LinkedIn',
   Playlist: 'Playlist',
   Xvideos: 'XVideos',
+  ArchiveOrg: 'Archive.org',
+  PeerTube: 'PeerTube',
+  Dailymotion: 'Dailymotion',
 };
 
 export const sourceFlagLabel = (flag: SourceFlag): string =>

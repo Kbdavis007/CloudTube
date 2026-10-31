@@ -22,6 +22,12 @@ import {
   TrendingDown,
 } from 'lucide-react';
 import { YouTubeApiClient } from '../../services/youtubeApi';
+import {
+  OPEN_SOURCES,
+  searchAllOpenSources,
+  openSourceById,
+  type OpenSourceId,
+} from '../../services/openSourcesApi';
 import { rankCandidates } from '../../services/tasteProfile';
 import { sourceFlagLabel } from '../../data/sourceLabels';
 import { ApiErrorCard } from '../ApiErrorCard';
@@ -50,6 +56,12 @@ export const SearchView: React.FC<SearchViewProps> = ({
   const [isLiveSearchActive, setIsLiveSearchActive] = useState(false);
   const [selectedSourceFilter, setSelectedSourceFilter] = useState<SourceFlag | 'ALL'>('ALL');
   const [results, setResults] = useState<VideoMetadata[]>([]);
+  const [openResults, setOpenResults] = useState<VideoMetadata[]>([]);
+  const [openSearchErrors, setOpenSearchErrors] = useState<Partial<Record<OpenSourceId, string>>>({});
+  // Open sources work without a sign-in, so they default to on.
+  const [selectedOpenSources, setSelectedOpenSources] = useState<Set<OpenSourceId>>(
+    new Set(OPEN_SOURCES.map((s) => s.id))
+  );
   const [hasSearched, setHasSearched] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   // Personalized ranking is on by default: removal reasons should change what you see.
@@ -73,6 +85,18 @@ export const SearchView: React.FC<SearchViewProps> = ({
     LinkedIn: 'bg-blue-600/20 text-blue-300 border-blue-600/30',
     Playlist: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
     Xvideos: 'bg-orange-700/20 text-orange-300 border-orange-700/40',
+    ArchiveOrg: 'bg-teal-500/20 text-teal-300 border-teal-500/30',
+    PeerTube: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30',
+    Dailymotion: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
+  };
+
+  const toggleOpenSource = (id: OpenSourceId) => {
+    setSelectedOpenSources((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
   const handleSearch = async (query = searchTerm) => {
@@ -80,17 +104,39 @@ export const SearchView: React.FC<SearchViewProps> = ({
     setIsSearching(true);
     setHasSearched(true);
     setSearchError(null);
+    setOpenSearchErrors({});
+
+    const openIds = [...selectedOpenSources];
+
+    // Open sources need no sign-in, so they run regardless of YouTube auth.
+    const openPromise: Promise<void> =
+      openIds.length > 0
+        ? searchAllOpenSources(openIds, query).then((outcomes) => {
+            setOpenResults(outcomes.flatMap((o) => o.videos));
+            const errors: Partial<Record<OpenSourceId, string>> = {};
+            outcomes.forEach((o) => {
+              if (o.error) errors[o.id] = o.error;
+            });
+            setOpenSearchErrors(errors);
+          })
+        : Promise.resolve().then(() => {
+            setOpenResults([]);
+          });
 
     if (!accessToken) {
       setResults([]);
       setIsLiveSearchActive(false);
-      setIsSearching(false);
       setSearchError('Sign in with Google to search YouTube. CloudTube does not generate placeholder results.');
+      await openPromise;
+      setIsSearching(false);
       return;
     }
 
     try {
-      const liveResults = await YouTubeApiClient.searchVideos(accessToken, query);
+      const [liveResults] = await Promise.all([
+        YouTubeApiClient.searchVideos(accessToken, query),
+        openPromise,
+      ]);
       setResults(liveResults);
       setIsLiveSearchActive(true);
     } catch (err: any) {
@@ -103,10 +149,15 @@ export const SearchView: React.FC<SearchViewProps> = ({
     }
   };
 
+  const combinedResults = useMemo(
+    () => [...results, ...openResults],
+    [results, openResults]
+  );
+
   const filteredResults =
     selectedSourceFilter === 'ALL'
-      ? results
-      : results.filter((r) => r.sourceFlags.includes(selectedSourceFilter));
+      ? combinedResults
+      : combinedResults.filter((r) => r.sourceFlags.includes(selectedSourceFilter));
 
   // Apply the learned taste profile: demote penalized tags and sort muted
   // channels to the end. Falls back to the raw order when personalization is off
@@ -143,8 +194,8 @@ export const SearchView: React.FC<SearchViewProps> = ({
               Search & Collect
             </h1>
             <p className="text-xs sm:text-sm text-slate-400">
-              Search YouTube, discover channels, and save videos with their details
-              (Search, Reddit, X, LinkedIn, Google, Playlists).
+              Search YouTube with your Google sign-in, and Archive.org, PeerTube and
+              Dailymotion with no sign-in. Save anything worth keeping.
             </p>
           </div>
 
@@ -184,6 +235,35 @@ export const SearchView: React.FC<SearchViewProps> = ({
           </button>
         </div>
 
+        {/* Open sources: key-free, sign-in-free catalogues */}
+        <div className="flex flex-wrap items-center gap-2 p-3 rounded-2xl bg-slate-900/60 border border-slate-800/80">
+          <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-400 shrink-0">
+            Also search:
+          </span>
+          {OPEN_SOURCES.map((source) => {
+            const active = selectedOpenSources.has(source.id);
+            const error = openSearchErrors[source.id];
+            return (
+              <button
+                key={source.id}
+                onClick={() => toggleOpenSource(source.id)}
+                title={error ? `Last search failed: ${error}` : source.tagline}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition border ${
+                  active
+                    ? source.accent + ' ring-1 ring-white/10'
+                    : 'bg-slate-950/40 text-slate-400 border-slate-800 hover:text-slate-200'
+                }`}
+              >
+                {source.name}
+                {error ? ' ⚠' : ''}
+              </button>
+            );
+          })}
+          <span className="text-[11px] text-slate-500">
+            No sign-in needed. Results play inside the app.
+          </span>
+        </div>
+
         {/* Suggestion Pills */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
           <span className="text-slate-500 text-[11px] uppercase tracking-wider font-semibold shrink-0">
@@ -205,7 +285,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
       </div>
 
       {/* Filter by Source Flags + personalization toggle */}
-      {results.length > 0 && (
+      {combinedResults.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-slate-900/60 border border-slate-800/80">
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-orange-400" />
@@ -221,11 +301,23 @@ export const SearchView: React.FC<SearchViewProps> = ({
                   : 'bg-slate-800 text-slate-400 hover:text-slate-200'
               }`}
             >
-              All Sources ({results.length})
+              All Sources ({combinedResults.length})
             </button>
 
-            {(['YouTubeSearch', 'Google', 'Reddit', 'X', 'LinkedIn', 'Playlist'] as SourceFlag[]).map((flag) => {
-              const count = results.filter((r) => r.sourceFlags.includes(flag)).length;
+            {(
+              [
+                'YouTubeSearch',
+                'Google',
+                'Reddit',
+                'X',
+                'LinkedIn',
+                'Playlist',
+                'ArchiveOrg',
+                'PeerTube',
+                'Dailymotion',
+              ] as SourceFlag[]
+            ).map((flag) => {
+              const count = combinedResults.filter((r) => r.sourceFlags.includes(flag)).length;
               if (count === 0) return null;
               return (
                 <button
@@ -272,6 +364,13 @@ export const SearchView: React.FC<SearchViewProps> = ({
           {rankedResults.map(({ video, assessment, adjustedScore }) => {
             const isIndexed = indexedVideoIds.has(video.youtubeId);
             const demoted = assessment.penalty > 0 || assessment.muted;
+            // Open-source results carry their own embed and have no YouTube
+            // channel to expand, so they play in-app without a sign-in.
+            const isOpenSource = !!video.playback;
+            const playVideo = () => {
+              if (isOpenSource && !isIndexed) onIndexVideo(video);
+              onPlayVideo(video.youtubeId);
+            };
 
             return (
               <div
@@ -293,7 +392,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
 
                   {/* Play Overlay */}
                   <button
-                    onClick={() => onPlayVideo(video.youtubeId)}
+                    onClick={playVideo}
                     className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition bg-black/40"
                   >
                     <div className="w-12 h-12 rounded-full bg-orange-600 flex items-center justify-center text-white shadow-xl hover:scale-110 transition">
@@ -330,7 +429,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs text-slate-400">
                       <span className="font-semibold text-orange-400/90">{video.channelTitle}</span>
-                      <span>{formatViews(video.viewCount)}</span>
+                      <span>{isOpenSource ? '' : formatViews(video.viewCount)}</span>
                     </div>
 
                     <h3 className="text-sm font-bold text-white line-clamp-2 group-hover:text-orange-400 transition">
@@ -392,14 +491,25 @@ export const SearchView: React.FC<SearchViewProps> = ({
                       )}
                     </button>
 
-                    <button
-                      onClick={() => onExpandChannel(video.channelId, video.channelTitle)}
-                      className="flex items-center gap-1 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition active:scale-95 border border-slate-700"
-                      title="Collect every video from this channel"
-                    >
-                      <Tv className="w-3.5 h-3.5 text-orange-400" />
-                      <span>Collect Channel</span>
-                    </button>
+                    {isOpenSource ? (
+                      <button
+                        onClick={playVideo}
+                        className="flex items-center gap-1 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition active:scale-95 border border-slate-700"
+                        title="Play this video inside CloudTube"
+                      >
+                        <Play className="w-3.5 h-3.5 text-orange-400" />
+                        <span>Play</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => onExpandChannel(video.channelId, video.channelTitle)}
+                        className="flex items-center gap-1 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition active:scale-95 border border-slate-700"
+                        title="Collect every video from this channel"
+                      >
+                        <Tv className="w-3.5 h-3.5 text-orange-400" />
+                        <span>Collect Channel</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -408,8 +518,16 @@ export const SearchView: React.FC<SearchViewProps> = ({
         </div>
       )}
 
-      {!isSearching && searchError && (
+      {/* YouTube needs a sign-in; open-source results still show, so only treat
+          the YouTube error as blocking when nothing at all came back. */}
+      {!isSearching && searchError && combinedResults.length === 0 && (
         <ApiErrorCard message={searchError} title="Search unavailable" />
+      )}
+
+      {!isSearching && searchError && combinedResults.length > 0 && (
+        <p className="text-xs text-amber-300/90 px-1">
+          YouTube search needs a Google sign-in right now — showing results from the open sources.
+        </p>
       )}
 
       {!isSearching && hasSearched && !searchError && rankedResults.length === 0 && (
@@ -427,8 +545,9 @@ export const SearchView: React.FC<SearchViewProps> = ({
           </div>
           <h2 className="text-base font-bold text-white">Search YouTube & Discover Videos Worth Saving</h2>
           <p className="text-xs text-slate-400 max-w-md mx-auto">
-            Type any topic or click one of the suggested searches above to find videos, score them,
-            and save them to your library.
+            Search YouTube with your Google sign-in, or Archive.org, PeerTube and Dailymotion
+            with no sign-in. Type any topic or click a suggested search to find videos, score
+            them, and save them to your library.
           </p>
           <button
             onClick={() => handleSearch('System Design Explained')}

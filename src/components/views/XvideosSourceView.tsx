@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   Check,
+  ChevronLeft,
+  ChevronRight,
   Download,
   ExternalLink,
   Loader2,
@@ -10,6 +12,7 @@ import {
   RefreshCw,
   Search,
   ShieldAlert,
+  SlidersHorizontal,
   Star,
   Trash2,
   X,
@@ -28,11 +31,60 @@ import {
 
 const CONSENT_STORAGE_KEY = 'cloudtube.xvideos.adultConfirmed';
 
-/** How many review rows to render at once; the filter narrows the rest. */
-const REVIEW_PAGE_SIZE = 120;
+/** Cards shown per review page. Bigger thumbnails mean fewer per page. */
+const REVIEW_PAGE_SIZE = 24;
 
 const recordKey = (record: XvideosRecord): string =>
   xvideosKey(extractSlug(record.pageUrl) || record.videoId);
+
+/** Review filters, built from the fields the export actually carries. */
+interface ReviewFilters {
+  query: string;
+  tag: string;
+  actor: string;
+  category: string;
+  uploader: string;
+  quality: string;
+  duration: string;
+  from: string;
+  to: string;
+  sort: string;
+}
+
+const EMPTY_REVIEW_FILTERS: ReviewFilters = {
+  query: '',
+  tag: 'all',
+  actor: 'all',
+  category: 'all',
+  uploader: 'all',
+  quality: 'all',
+  duration: 'all',
+  from: '',
+  to: '',
+  sort: 'newest',
+};
+
+const DURATION_BUCKETS: Record<string, (seconds: number) => boolean> = {
+  short: (s) => s < 300,
+  medium: (s) => s >= 300 && s <= 1200,
+  long: (s) => s > 1200,
+};
+
+/** Count the distinct values of a multi-valued field, most common first. */
+function countValues(
+  records: XvideosRecord[],
+  pick: (record: XvideosRecord) => string[]
+): { value: string; count: number }[] {
+  const counts = new Map<string, number>();
+  for (const record of records) {
+    for (const value of pick(record)) {
+      if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
+    }
+  }
+  return Array.from(counts, ([value, count]) => ({ value, count })).sort(
+    (a, b) => b.count - a.count || a.value.localeCompare(b.value)
+  );
+}
 
 interface XvideosSourceViewProps {
   onIndexVideo: (video: VideoMetadata) => void;
@@ -62,7 +114,9 @@ export const XvideosSourceView: React.FC<XvideosSourceViewProps> = ({
   // removed from the list beforehand.
   const [pending, setPending] = useState<XvideosRecord[] | null>(null);
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
-  const [reviewQuery, setReviewQuery] = useState('');
+  const [reviewFilters, setReviewFilters] = useState<ReviewFilters>(EMPTY_REVIEW_FILTERS);
+  const [reviewPage, setReviewPage] = useState(0);
+  const [showFilters, setShowFilters] = useState(true);
   const [isImporting, setIsImporting] = useState(false);
 
   // Load the catalogue from IndexedDB on first render so a returning user does
@@ -103,7 +157,8 @@ export const XvideosSourceView: React.FC<XvideosSourceViewProps> = ({
       records.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
       setPending(records);
       setExcluded(new Set());
-      setReviewQuery('');
+      setReviewFilters(EMPTY_REVIEW_FILTERS);
+      setReviewPage(0);
     } catch (err: any) {
       console.error('XVideos catalogue download failed', err);
       setCatalogError(err?.message || 'Failed to download the XVideos catalogue.');
@@ -116,7 +171,8 @@ export const XvideosSourceView: React.FC<XvideosSourceViewProps> = ({
   const cancelReview = () => {
     setPending(null);
     setExcluded(new Set());
-    setReviewQuery('');
+    setReviewFilters(EMPTY_REVIEW_FILTERS);
+    setReviewPage(0);
   };
 
   const toggleExcluded = (key: string) => {
@@ -172,24 +228,149 @@ export const XvideosSourceView: React.FC<XvideosSourceViewProps> = ({
     setAppliedQuery(query.trim());
   };
 
-  // Records still in the review list, after the local filter.
+  // Distinct filter values, tallied across the whole download so a facet is
+  // never hidden just because the current page does not contain it.
+  const reviewFacets = useMemo(() => {
+    const source = pending ?? [];
+    return {
+      tags: countValues(source, (r) => r.tags),
+      actors: countValues(source, (r) => r.actors),
+      categories: countValues(source, (r) => [r.category]),
+      uploaders: countValues(source, (r) => [r.uploader]),
+      qualities: countValues(source, (r) => [r.quality]),
+    };
+  }, [pending]);
+
+  // Records still in the review list, after every local filter and the sort.
   const reviewRecords = useMemo(() => {
     if (!pending) return [];
-    const q = reviewQuery.trim().toLowerCase();
-    if (!q) return pending;
-    return pending.filter((r) =>
-      `${r.title} ${r.uploader} ${r.tags.join(' ')} ${r.actors.join(' ')} ${r.category}`
-        .toLowerCase()
-        .includes(q)
-    );
-  }, [pending, reviewQuery]);
+    const f = reviewFilters;
+    const q = f.query.trim().toLowerCase();
+    const filtered = pending.filter((r) => {
+      if (f.tag !== 'all' && !r.tags.includes(f.tag)) return false;
+      if (f.actor !== 'all' && !r.actors.includes(f.actor)) return false;
+      if (f.category !== 'all' && r.category !== f.category) return false;
+      if (f.uploader !== 'all' && r.uploader !== f.uploader) return false;
+      if (f.quality !== 'all' && r.quality !== f.quality) return false;
+      if (f.duration !== 'all') {
+        const bucket = DURATION_BUCKETS[f.duration];
+        if (!bucket || !bucket(r.durationSeconds)) return false;
+      }
+      const day = (r.date || '').slice(0, 10);
+      if (f.from && day && day < f.from) return false;
+      if (f.to && day && day > f.to) return false;
+      if (q) {
+        const haystack =
+          `${r.title} ${r.uploader} ${r.tags.join(' ')} ${r.actors.join(' ')} ${r.category}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    });
+
+    const sorted = [...filtered];
+    switch (f.sort) {
+      case 'oldest':
+        sorted.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+        break;
+      case 'title':
+        sorted.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case 'duration-desc':
+        sorted.sort((a, b) => b.durationSeconds - a.durationSeconds);
+        break;
+      case 'duration-asc':
+        sorted.sort((a, b) => a.durationSeconds - b.durationSeconds);
+        break;
+      default:
+        sorted.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    }
+    return sorted;
+  }, [pending, reviewFilters]);
 
   const reviewSelectedCount = useMemo(
     () => (pending ? pending.filter((r) => !excluded.has(recordKey(r))).length : 0),
     [pending, excluded]
   );
 
-  const visibleReviewRecords = reviewRecords.slice(0, REVIEW_PAGE_SIZE);
+  const reviewPageCount = Math.max(1, Math.ceil(reviewRecords.length / REVIEW_PAGE_SIZE));
+  const safeReviewPage = Math.min(reviewPage, reviewPageCount - 1);
+  const visibleReviewRecords = reviewRecords.slice(
+    safeReviewPage * REVIEW_PAGE_SIZE,
+    safeReviewPage * REVIEW_PAGE_SIZE + REVIEW_PAGE_SIZE
+  );
+
+  const setFilter = <K extends keyof ReviewFilters>(key: K, value: ReviewFilters[K]) => {
+    setReviewFilters((prev) => ({ ...prev, [key]: value }));
+    setReviewPage(0);
+  };
+
+  const allVisibleSelected =
+    visibleReviewRecords.length > 0 &&
+    visibleReviewRecords.every((r) => !excluded.has(recordKey(r)));
+
+  const setVisibleSelected = (selected: boolean) => {
+    setExcluded((prev) => {
+      const next = new Set(prev);
+      visibleReviewRecords.forEach((r) => {
+        const key = recordKey(r);
+        if (selected) next.delete(key);
+        else next.add(key);
+      });
+      return next;
+    });
+  };
+
+  /** Select/deselect every record matching the current filters, not just the page. */
+  const setAllMatchingSelected = (selected: boolean) => {
+    setExcluded((prev) => {
+      const next = new Set(prev);
+      reviewRecords.forEach((r) => {
+        const key = recordKey(r);
+        if (selected) next.delete(key);
+        else next.add(key);
+      });
+      return next;
+    });
+  };
+
+  const removeVisible = () => {
+    const keys = new Set(visibleReviewRecords.map(recordKey));
+    setPending((prev) => (prev ? prev.filter((r) => !keys.has(recordKey(r))) : prev));
+    setExcluded((prev) => {
+      const next = new Set(prev);
+      keys.forEach((key) => next.delete(key));
+      return next;
+    });
+  };
+
+  const removeAllMatching = () => {
+    const keys = new Set(reviewRecords.map(recordKey));
+    setPending((prev) => (prev ? prev.filter((r) => !keys.has(recordKey(r))) : prev));
+    setExcluded((prev) => {
+      const next = new Set(prev);
+      keys.forEach((key) => next.delete(key));
+      return next;
+    });
+  };
+
+  const clearReviewFilters = () => {
+    setReviewFilters(EMPTY_REVIEW_FILTERS);
+    setReviewPage(0);
+  };
+
+  const reviewFilterCount = useMemo(() => {
+    const f = reviewFilters;
+    return [
+      f.tag !== 'all',
+      f.actor !== 'all',
+      f.category !== 'all',
+      f.uploader !== 'all',
+      f.quality !== 'all',
+      f.duration !== 'all',
+      Boolean(f.from),
+      Boolean(f.to),
+    ].filter(Boolean).length;
+  }, [reviewFilters]);
 
   if (!confirmed) {
     return (
@@ -236,10 +417,6 @@ export const XvideosSourceView: React.FC<XvideosSourceViewProps> = ({
   }
 
   if (pending) {
-    const allVisibleSelected =
-      visibleReviewRecords.length > 0 &&
-      visibleReviewRecords.every((r) => !excluded.has(recordKey(r)));
-
     return (
       <div className="space-y-5 pb-12">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
@@ -249,8 +426,8 @@ export const XvideosSourceView: React.FC<XvideosSourceViewProps> = ({
               Review download before importing
             </h1>
             <p className="text-xs sm:text-sm text-slate-400">
-              Nothing has been saved yet. Uncheck or remove anything you do not want, then import
-              the rest. Newest videos are listed first.
+              Nothing has been saved yet. Uncheck, remove or bulk-edit anything you do not want,
+              then import the rest. Newest videos are listed first.
             </p>
           </div>
 
@@ -281,7 +458,7 @@ export const XvideosSourceView: React.FC<XvideosSourceViewProps> = ({
           </div>
         </div>
 
-        {/* Summary + selection controls */}
+        {/* Summary + bulk actions + filters */}
         <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
             <span>
@@ -294,49 +471,222 @@ export const XvideosSourceView: React.FC<XvideosSourceViewProps> = ({
               Excluded <span className="font-mono font-bold text-amber-300">{excluded.size.toLocaleString()}</span>
             </span>
             <span>
-              Showing <span className="font-mono font-bold text-slate-200">{visibleReviewRecords.length.toLocaleString()}</span>
+              Matching <span className="font-mono font-bold text-slate-200">{reviewRecords.length.toLocaleString()}</span>
+            </span>
+            <span>
+              Page <span className="font-mono font-bold text-slate-200">{safeReviewPage + 1}</span> /{' '}
+              {reviewPageCount}
             </span>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                value={reviewQuery}
-                onChange={(e) => setReviewQuery(e.target.value)}
-                placeholder="Filter the downloaded list by title, uploader, tag or category…"
-                className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-orange-500"
-              />
-            </div>
-            <div className="flex items-center gap-2">
+          {/* Bulk selection / removal, scoped to the page or to every match */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setVisibleSelected(!allVisibleSelected)}
+              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
+            >
+              {allVisibleSelected ? 'Deselect page' : 'Select page'}
+            </button>
+            <button
+              onClick={() => setAllMatchingSelected(true)}
+              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
+            >
+              Select all {reviewRecords.length.toLocaleString()} matching
+            </button>
+            <button
+              onClick={() => setAllMatchingSelected(false)}
+              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
+            >
+              Deselect all matching
+            </button>
+            <span className="w-px h-5 bg-slate-700 mx-1" />
+            <button
+              onClick={removeVisible}
+              disabled={visibleReviewRecords.length === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-950/50 hover:bg-red-900/60 disabled:opacity-40 text-red-200 text-xs font-semibold border border-red-900/60 transition"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Delete page
+            </button>
+            <button
+              onClick={removeAllMatching}
+              disabled={reviewRecords.length === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-950/50 hover:bg-red-900/60 disabled:opacity-40 text-red-200 text-xs font-semibold border border-red-900/60 transition"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Delete all {reviewRecords.length.toLocaleString()} matching
+            </button>
+            <span className="w-px h-5 bg-slate-700 mx-1" />
+            <button
+              onClick={() => setShowFilters((v) => !v)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition ${
+                showFilters || reviewFilterCount > 0
+                  ? 'bg-orange-600/20 border-orange-600/50 text-orange-200'
+                  : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+              }`}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" /> Filters
+              {reviewFilterCount > 0 && (
+                <span className="px-1.5 rounded-full bg-orange-600 text-white text-[10px] font-bold">
+                  {reviewFilterCount}
+                </span>
+              )}
+            </button>
+            {(reviewFilterCount > 0 || reviewFilters.query || reviewFilters.sort !== 'newest') && (
               <button
-                onClick={() =>
-                  setExcluded((prev) => {
-                    const next = new Set(prev);
-                    visibleReviewRecords.forEach((r) => {
-                      if (allVisibleSelected) next.add(recordKey(r));
-                      else next.delete(recordKey(r));
-                    });
-                    return next;
-                  })
-                }
-                className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
+                onClick={clearReviewFilters}
+                className="text-xs text-orange-400 hover:text-orange-300 font-semibold"
               >
-                {allVisibleSelected ? 'Deselect shown' : 'Select shown'}
+                Reset
               </button>
-              <button
-                onClick={() => setExcluded(new Set())}
-                className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
-              >
-                Select all
-              </button>
-            </div>
+            )}
           </div>
+
+          <div className="relative">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              value={reviewFilters.query}
+              onChange={(e) => setFilter('query', e.target.value)}
+              placeholder="Search the download by title, uploader, tag, actor or category…"
+              className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-orange-500"
+            />
+          </div>
+
+          {showFilters && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-1">
+              <label className="space-y-1">
+                <span className="text-[10px] uppercase tracking-wide text-slate-500">Sort</span>
+                <select
+                  value={reviewFilters.sort}
+                  onChange={(e) => setFilter('sort', e.target.value)}
+                  className="w-full px-2.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-hidden focus:border-orange-500"
+                >
+                  <option value="newest">Newest first</option>
+                  <option value="oldest">Oldest first</option>
+                  <option value="title">Title (A–Z)</option>
+                  <option value="duration-desc">Longest first</option>
+                  <option value="duration-asc">Shortest first</option>
+                </select>
+              </label>
+
+              <label className="space-y-1">
+                <span className="text-[10px] uppercase tracking-wide text-slate-500">Tag</span>
+                <select
+                  value={reviewFilters.tag}
+                  onChange={(e) => setFilter('tag', e.target.value)}
+                  className="w-full px-2.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-hidden focus:border-orange-500"
+                >
+                  <option value="all">All tags</option>
+                  {reviewFacets.tags.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.value} ({t.count})
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="space-y-1">
+                <span className="text-[10px] uppercase tracking-wide text-slate-500">Actor</span>
+                <select
+                  value={reviewFilters.actor}
+                  onChange={(e) => setFilter('actor', e.target.value)}
+                  className="w-full px-2.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-hidden focus:border-orange-500"
+                >
+                  <option value="all">All actors</option>
+                  {reviewFacets.actors.map((a) => (
+                    <option key={a.value} value={a.value}>
+                      {a.value} ({a.count})
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="space-y-1">
+                <span className="text-[10px] uppercase tracking-wide text-slate-500">Category</span>
+                <select
+                  value={reviewFilters.category}
+                  onChange={(e) => setFilter('category', e.target.value)}
+                  className="w-full px-2.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-hidden focus:border-orange-500"
+                >
+                  <option value="all">All categories</option>
+                  {reviewFacets.categories.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.value} ({c.count})
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="space-y-1">
+                <span className="text-[10px] uppercase tracking-wide text-slate-500">Uploader</span>
+                <select
+                  value={reviewFilters.uploader}
+                  onChange={(e) => setFilter('uploader', e.target.value)}
+                  className="w-full px-2.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-hidden focus:border-orange-500"
+                >
+                  <option value="all">All uploaders</option>
+                  {reviewFacets.uploaders.map((u) => (
+                    <option key={u.value} value={u.value}>
+                      {u.value} ({u.count})
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="space-y-1">
+                <span className="text-[10px] uppercase tracking-wide text-slate-500">Quality</span>
+                <select
+                  value={reviewFilters.quality}
+                  onChange={(e) => setFilter('quality', e.target.value)}
+                  className="w-full px-2.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-hidden focus:border-orange-500"
+                >
+                  <option value="all">Any quality</option>
+                  {reviewFacets.qualities.map((q) => (
+                    <option key={q.value} value={q.value}>
+                      {q.value} ({q.count})
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="space-y-1">
+                <span className="text-[10px] uppercase tracking-wide text-slate-500">Duration</span>
+                <select
+                  value={reviewFilters.duration}
+                  onChange={(e) => setFilter('duration', e.target.value)}
+                  className="w-full px-2.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-hidden focus:border-orange-500"
+                >
+                  <option value="all">Any length</option>
+                  <option value="short">Short (&lt; 5 min)</option>
+                  <option value="medium">Medium (5–20 min)</option>
+                  <option value="long">Long (&gt; 20 min)</option>
+                </select>
+              </label>
+
+              <div className="space-y-1">
+                <span className="text-[10px] uppercase tracking-wide text-slate-500">
+                  Published from / to
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="date"
+                    value={reviewFilters.from}
+                    onChange={(e) => setFilter('from', e.target.value)}
+                    className="w-full px-2 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-200 focus:outline-hidden focus:border-orange-500"
+                  />
+                  <input
+                    type="date"
+                    value={reviewFilters.to}
+                    onChange={(e) => setFilter('to', e.target.value)}
+                    className="w-full px-2 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-200 focus:outline-hidden focus:border-orange-500"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Thumbnail rows */}
-        <div className="max-h-[32rem] overflow-y-auto pr-1 space-y-2">
+        {/* Thumbnail grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
           {visibleReviewRecords.map((record) => {
             const key = recordKey(record);
             const isExcluded = excluded.has(key);
@@ -345,60 +695,109 @@ export const XvideosSourceView: React.FC<XvideosSourceViewProps> = ({
             return (
               <div
                 key={key}
-                className={`flex items-center gap-3 p-2.5 rounded-2xl border transition ${
+                className={`flex flex-col rounded-2xl border overflow-hidden transition ${
                   isExcluded
                     ? 'bg-slate-950/40 border-slate-800/60 opacity-55'
                     : 'bg-slate-900/70 border-slate-800'
                 }`}
               >
-                <input
-                  type="checkbox"
-                  checked={!isExcluded}
-                  onChange={() => toggleExcluded(key)}
-                  className="w-4 h-4 shrink-0 accent-orange-500 cursor-pointer"
-                  title={isExcluded ? 'Include this video' : 'Exclude this video'}
-                />
-
-                <div className="relative w-24 h-14 rounded-xl overflow-hidden bg-black shrink-0">
-                  <img src={thumb} alt={record.title} loading="lazy" className="w-full h-full object-cover" />
-                  <div className="absolute bottom-1 right-1 px-1 py-0.5 rounded bg-black/80 text-[9px] font-mono text-white">
+                <div className="relative aspect-video bg-black">
+                  {thumb ? (
+                    <img
+                      src={thumb}
+                      alt={record.title}
+                      loading="lazy"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-slate-600">
+                      <Play className="w-6 h-6" />
+                    </div>
+                  )}
+                  <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/80 text-[10px] font-mono text-white">
                     {Math.floor(record.durationSeconds / 60)}:
                     {String(record.durationSeconds % 60).padStart(2, '0')}
                   </div>
+                  <label className="absolute top-1.5 left-1.5 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-black/70 backdrop-blur-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!isExcluded}
+                      onChange={() => toggleExcluded(key)}
+                      className="w-4 h-4 accent-orange-500 cursor-pointer"
+                      title={isExcluded ? 'Include this video' : 'Exclude this video'}
+                    />
+                    <span className="text-[10px] font-semibold text-white">
+                      {isExcluded ? 'Skipped' : 'Included'}
+                    </span>
+                  </label>
+                  <button
+                    onClick={() => removeFromPending(key)}
+                    className="absolute top-1.5 right-1.5 p-1.5 rounded-lg bg-black/70 backdrop-blur-sm text-slate-300 hover:text-red-300 transition active:scale-95"
+                    title="Remove this video from the download"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
 
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-xs font-bold text-white truncate">{record.title}</h3>
-                  <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
-                    <span className="text-orange-400/90 truncate">{record.uploader || 'Unknown uploader'}</span>
+                <div className="p-3 space-y-1.5">
+                  <h3 className="text-xs font-bold text-white line-clamp-2 leading-snug">
+                    {record.title}
+                  </h3>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-400">
+                    <span className="text-orange-400/90 truncate">
+                      {record.uploader || 'Unknown uploader'}
+                    </span>
                     <span>·</span>
-                    <span className="shrink-0">{record.date || 'no date'}</span>
+                    <span>{record.date || 'no date'}</span>
                     {record.quality && (
                       <>
                         <span>·</span>
-                        <span className="shrink-0">{record.quality}</span>
+                        <span>{record.quality}</span>
+                      </>
+                    )}
+                    {record.category && (
+                      <>
+                        <span>·</span>
+                        <span>{record.category}</span>
                       </>
                     )}
                   </div>
+                  {(record.tags.length > 0 || record.actors.length > 0) && (
+                    <div className="flex flex-wrap gap-1 pt-0.5">
+                      {record.actors.slice(0, 2).map((actor) => (
+                        <span
+                          key={`a-${actor}`}
+                          className="px-1.5 py-0.5 rounded-md bg-slate-800 text-[10px] text-slate-300"
+                        >
+                          {actor}
+                        </span>
+                      ))}
+                      {record.tags.slice(0, 4).map((tag) => (
+                        <span
+                          key={`t-${tag}`}
+                          className="px-1.5 py-0.5 rounded-md bg-orange-950/50 text-[10px] text-orange-300/90"
+                        >
+                          #{tag}
+                        </span>
+                      ))}
+                      {record.tags.length > 4 && (
+                        <span className="px-1.5 py-0.5 text-[10px] text-slate-500">
+                          +{record.tags.length - 4} tags
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
-
-                <button
-                  onClick={() => removeFromPending(key)}
-                  className="p-1.5 rounded-xl bg-slate-800 hover:bg-red-900/50 text-slate-400 hover:text-red-300 border border-slate-700 transition active:scale-95 shrink-0"
-                  title="Remove this video from the download"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
               </div>
             );
           })}
 
           {visibleReviewRecords.length === 0 && (
-            <div className="py-12 text-center space-y-2">
+            <div className="col-span-full py-12 text-center space-y-2">
               <p className="text-xs text-slate-300">
                 {pending.length === 0
                   ? 'You removed every video from this download.'
-                  : 'No videos match that filter.'}
+                  : 'No videos match these filters.'}
               </p>
               {pending.length === 0 ? (
                 <button
@@ -409,22 +808,52 @@ export const XvideosSourceView: React.FC<XvideosSourceViewProps> = ({
                 </button>
               ) : (
                 <button
-                  onClick={() => setReviewQuery('')}
+                  onClick={clearReviewFilters}
                   className="text-xs text-orange-400 hover:text-orange-300 font-semibold"
                 >
-                  Clear filter
+                  Reset filters
                 </button>
               )}
             </div>
           )}
         </div>
 
-        {reviewRecords.length > REVIEW_PAGE_SIZE && (
-          <p className="text-[11px] text-slate-400 text-center">
-            Showing the first {REVIEW_PAGE_SIZE} of {reviewRecords.length.toLocaleString()} matching
-            videos. Use the filter to review the rest. All {reviewSelectedCount.toLocaleString()}{' '}
-            selected videos will be imported.
-          </p>
+        {/* Pagination */}
+        {reviewRecords.length > 0 && (
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+            <button
+              onClick={() => setReviewPage(0)}
+              disabled={safeReviewPage === 0}
+              className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 text-xs font-semibold border border-slate-700 transition"
+            >
+              « First
+            </button>
+            <button
+              onClick={() => setReviewPage(safeReviewPage - 1)}
+              disabled={safeReviewPage === 0}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 text-xs font-semibold border border-slate-700 transition"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" /> Prev
+            </button>
+            <span className="px-2 text-xs text-slate-400">
+              Page <span className="font-mono font-bold text-slate-200">{safeReviewPage + 1}</span>{' '}
+              of <span className="font-mono font-bold text-slate-200">{reviewPageCount}</span>
+            </span>
+            <button
+              onClick={() => setReviewPage(safeReviewPage + 1)}
+              disabled={safeReviewPage >= reviewPageCount - 1}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 text-xs font-semibold border border-slate-700 transition"
+            >
+              Next <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setReviewPage(reviewPageCount - 1)}
+              disabled={safeReviewPage >= reviewPageCount - 1}
+              className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 text-xs font-semibold border border-slate-700 transition"
+            >
+              Last »
+            </button>
+          </div>
         )}
       </div>
     );

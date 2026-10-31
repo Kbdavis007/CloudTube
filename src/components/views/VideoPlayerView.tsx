@@ -38,6 +38,9 @@ import { MarkdownSummary } from '../MarkdownSummary';
 import { GeminiAiService } from '../../services/geminiAi';
 import { sourceFlagLabel } from '../../data/sourceLabels';
 
+/** Cards per page in the library browser. */
+const LIBRARY_PAGE_SIZE = 24;
+
 interface VideoPlayerViewProps {
   currentVideo: VideoMetadata | null;
   allVideos: VideoMetadata[];
@@ -136,9 +139,12 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
   const [filterDuration, setFilterDuration] = useState<'all' | 'short' | 'medium' | 'long'>('all');
   const [filterPublishedFrom, setFilterPublishedFrom] = useState('');
   const [filterPublishedTo, setFilterPublishedTo] = useState('');
+  const [filterTag, setFilterTag] = useState<string>('ALL');
   const [sortBy, setSortBy] = useState<
     'score' | 'rating' | 'date_desc' | 'date_asc' | 'title' | 'channel' | 'duration'
   >('score');
+  const [libraryPage, setLibraryPage] = useState(0);
+  const [selectedLibraryIds, setSelectedLibraryIds] = useState<Set<string>>(new Set());
 
   const channelOptions = useMemo(() => {
     const seen = new Map<string, string>();
@@ -156,6 +162,19 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
     return [...counts.entries()].sort((a, b) => b[1] - a[1]);
   }, [allVideos]);
 
+  // Tags across the library, so a tag filter never hides a value that only
+  // appears outside the current page.
+  const tagOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const v of allVideos) {
+      for (const tag of [...v.tags, ...(v.personal?.userTags ?? [])]) {
+        const key = tag.trim();
+        if (key) counts.set(key, (counts.get(key) ?? 0) + 1);
+      }
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  }, [allVideos]);
+
   const filteredLibrary = useMemo(() => {
     const query = libraryQuery.trim().toLowerCase();
     const from = filterPublishedFrom ? new Date(filterPublishedFrom).getTime() : null;
@@ -168,6 +187,11 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
       }
       if (filterSource !== 'ALL' && !v.sourceFlags.includes(filterSource)) return false;
       if (filterChannel !== 'ALL' && v.channelId !== filterChannel) return false;
+
+      if (filterTag !== 'ALL') {
+        const videoTags = [...(v.tags || []), ...(v.personal?.userTags ?? [])];
+        if (!videoTags.some((t) => t.trim() === filterTag)) return false;
+      }
 
       const score = v.personal?.indexScore ?? 50;
       if (filterScore === 'elite' && score > 20) return false;
@@ -225,13 +249,79 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
     filterDuration,
     filterPublishedFrom,
     filterPublishedTo,
+    filterTag,
     sortBy,
   ]);
+
+  // Page the filtered list so a large library stays quick to scan.
+  const libraryPageCount = Math.max(1, Math.ceil(filteredLibrary.length / LIBRARY_PAGE_SIZE));
+  const safeLibraryPage = Math.min(libraryPage, libraryPageCount - 1);
+  const visibleLibrary = filteredLibrary.slice(
+    safeLibraryPage * LIBRARY_PAGE_SIZE,
+    safeLibraryPage * LIBRARY_PAGE_SIZE + LIBRARY_PAGE_SIZE
+  );
+
+  const allVisibleLibrarySelected =
+    visibleLibrary.length > 0 && visibleLibrary.every((v) => selectedLibraryIds.has(v.youtubeId));
+
+  const toggleLibrarySelected = (youtubeId: string) => {
+    setSelectedLibraryIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(youtubeId)) next.delete(youtubeId);
+      else next.add(youtubeId);
+      return next;
+    });
+  };
+
+  const setVisibleLibrarySelected = (selected: boolean) => {
+    setSelectedLibraryIds((prev) => {
+      const next = new Set(prev);
+      visibleLibrary.forEach((v) => {
+        if (selected) next.add(v.youtubeId);
+        else next.delete(v.youtubeId);
+      });
+      return next;
+    });
+  };
+
+  /** Select/deselect every video matching the current filters, not just the page. */
+  const setAllMatchingLibrarySelected = (selected: boolean) => {
+    setSelectedLibraryIds((prev) => {
+      const next = new Set(prev);
+      filteredLibrary.forEach((v) => {
+        if (selected) next.add(v.youtubeId);
+        else next.delete(v.youtubeId);
+      });
+      return next;
+    });
+  };
+
+  const removeSelectedFromLibrary = () => {
+    const ids = [...selectedLibraryIds];
+    if (ids.length === 0) return;
+    if (
+      !window.confirm(
+        `Remove ${ids.length} video${ids.length === 1 ? '' : 's'} from your library? Each one is recorded as "Not relevant to me" and can be restored later.`
+      )
+    ) {
+      return;
+    }
+    ids.forEach((id) => onRequestRemoval(id));
+    setSelectedLibraryIds(new Set());
+  };
+
+  const favoriteSelectedInLibrary = () => {
+    const ids = [...selectedLibraryIds];
+    if (ids.length === 0) return;
+    ids.forEach((id) => void onUpdatePersonal(id, { isFavorite: true }));
+    setSelectedLibraryIds(new Set());
+  };
 
   const hasActiveLibraryFilters =
     libraryQuery.trim().length > 0 ||
     filterSource !== 'ALL' ||
     filterChannel !== 'ALL' ||
+    filterTag !== 'ALL' ||
     filterScore !== 'all' ||
     filterRating !== 'all' ||
     filterDuration !== 'all' ||
@@ -243,13 +333,31 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
     setLibraryQuery('');
     setFilterSource('ALL');
     setFilterChannel('ALL');
+    setFilterTag('ALL');
     setFilterScore('all');
     setFilterRating('all');
     setFilterDuration('all');
     setFilterPublishedFrom('');
     setFilterPublishedTo('');
     setSortBy('score');
+    setLibraryPage(0);
   };
+
+  // Any filter or sort change invalidates the current page number.
+  useEffect(() => {
+    setLibraryPage(0);
+  }, [
+    libraryQuery,
+    filterSource,
+    filterChannel,
+    filterTag,
+    filterScore,
+    filterRating,
+    filterDuration,
+    filterPublishedFrom,
+    filterPublishedTo,
+    sortBy,
+  ]);
 
   const formatDuration = (seconds: number) => {
     if (!seconds) return '—';
@@ -303,6 +411,9 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
     LinkedIn: 'bg-blue-600/20 text-blue-300 border-blue-600/30',
     Playlist: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
     Xvideos: 'bg-orange-700/20 text-orange-300 border-orange-700/40',
+    ArchiveOrg: 'bg-teal-500/20 text-teal-300 border-teal-500/30',
+    PeerTube: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30',
+    Dailymotion: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
   };
 
   return (
@@ -794,6 +905,10 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
               <span className="font-mono font-bold text-slate-200">{filteredLibrary.length}</span> of{' '}
               <span className="font-mono font-bold text-slate-200">{allVideos.length}</span>
             </span>
+            <span className="text-xs text-slate-500">
+              Page <span className="font-mono font-bold text-slate-200">{safeLibraryPage + 1}</span>{' '}
+              / {libraryPageCount}
+            </span>
             {hasActiveLibraryFilters && (
               <button
                 onClick={clearLibraryFilters}
@@ -845,6 +960,22 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
               {channelOptions.map(([id, title]) => (
                 <option key={id} value={id}>
                   {title}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Tag</span>
+            <select
+              value={filterTag}
+              onChange={(e) => setFilterTag(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-hidden focus:border-orange-500"
+            >
+              <option value="ALL">All tags</option>
+              {tagOptions.map(([tag, count]) => (
+                <option key={tag} value={tag}>
+                  {tag} ({count})
                 </option>
               ))}
             </select>
@@ -932,51 +1063,127 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
           </label>
         </div>
 
-        {/* Scrollable list of every matching video */}
-        <div className="max-h-[28rem] overflow-y-auto pr-1 space-y-2">
-          {filteredLibrary.map((video) => {
+        {/* Bulk actions, scoped to the page or to every match */}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setVisibleLibrarySelected(!allVisibleLibrarySelected)}
+            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
+          >
+            {allVisibleLibrarySelected ? 'Deselect page' : 'Select page'}
+          </button>
+          <button
+            onClick={() => setAllMatchingLibrarySelected(true)}
+            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
+          >
+            Select all {filteredLibrary.length} matching
+          </button>
+          <button
+            onClick={() => setAllMatchingLibrarySelected(false)}
+            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
+          >
+            Deselect all matching
+          </button>
+          <span className="w-px h-5 bg-slate-700 mx-1" />
+          <span className="text-xs text-slate-400">
+            Selected <span className="font-mono font-bold text-emerald-300">{selectedLibraryIds.size}</span>
+          </span>
+          <button
+            onClick={favoriteSelectedInLibrary}
+            disabled={selectedLibraryIds.size === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-950/50 hover:bg-amber-900/60 disabled:opacity-40 text-amber-200 text-xs font-semibold border border-amber-900/60 transition"
+          >
+            <Star className="w-3.5 h-3.5" /> Add to favorites
+          </button>
+          <button
+            onClick={removeSelectedFromLibrary}
+            disabled={selectedLibraryIds.size === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-950/50 hover:bg-red-900/60 disabled:opacity-40 text-red-200 text-xs font-semibold border border-red-900/60 transition"
+          >
+            <Trash2 className="w-3.5 h-3.5" /> Delete selected
+          </button>
+        </div>
+
+        {/* Cards for the current page */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {visibleLibrary.map((video) => {
             const isCurrent = video.youtubeId === currentVideo.youtubeId;
+            const isSelected = selectedLibraryIds.has(video.youtubeId);
             const score = video.personal?.indexScore ?? 50;
             const rating = video.personal?.userRating ?? 0;
             const thumbnail =
               video.thumbnails?.medium || video.posterUrl || video.thumbnails?.default || '';
 
             return (
-              <button
+              <div
                 key={video.youtubeId}
-                onClick={() => onSelectVideo(video.youtubeId)}
-                className={`w-full text-left flex items-center gap-3 p-2.5 rounded-2xl border transition ${
+                className={`flex flex-col rounded-2xl border overflow-hidden transition ${
                   isCurrent
                     ? 'bg-orange-500/15 border-orange-500/40'
-                    : 'bg-slate-950/60 border-slate-800/80 hover:border-orange-500/40 hover:bg-slate-900/60'
+                    : isSelected
+                      ? 'bg-slate-900/80 border-orange-500/30'
+                      : 'bg-slate-950/60 border-slate-800/80'
                 }`}
               >
-                <div className="relative w-24 h-14 rounded-xl overflow-hidden bg-black shrink-0">
-                  <img
-                    src={thumbnail}
-                    alt={video.title}
-                    loading="lazy"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute bottom-1 right-1 px-1 py-0.5 rounded bg-black/80 text-[9px] font-mono text-white">
+                <div className="relative aspect-video bg-black">
+                  <button
+                    onClick={() => onSelectVideo(video.youtubeId)}
+                    className="block w-full h-full"
+                    title="Play this video"
+                  >
+                    {thumbnail ? (
+                      <img
+                        src={thumbnail}
+                        alt={video.title}
+                        loading="lazy"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-600">
+                        <Tv className="w-6 h-6" />
+                      </div>
+                    )}
+                  </button>
+                  <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/80 text-[10px] font-mono text-white">
                     {formatDuration(video.durationSeconds)}
                   </div>
+                  <label className="absolute top-1.5 left-1.5 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-black/70 backdrop-blur-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleLibrarySelected(video.youtubeId)}
+                      className="w-4 h-4 accent-orange-500 cursor-pointer"
+                      title={isSelected ? 'Deselect this video' : 'Select this video'}
+                    />
+                    <span className="text-[10px] font-semibold text-white">
+                      {isSelected ? 'Selected' : 'Select'}
+                    </span>
+                  </label>
+                  {isCurrent && (
+                    <span className="absolute top-1.5 right-1.5 text-[10px] font-bold px-2 py-1 rounded-lg bg-orange-600 text-white">
+                      Now Playing
+                    </span>
+                  )}
                 </div>
 
-                <div className="flex-1 min-w-0">
-                  <h3
-                    className={`text-xs font-bold truncate ${
-                      isCurrent ? 'text-orange-300' : 'text-white'
-                    }`}
+                <div className="p-3 space-y-1.5 flex-1 flex flex-col">
+                  <button
+                    onClick={() => onSelectVideo(video.youtubeId)}
+                    className="text-left"
                   >
-                    {video.title}
-                  </h3>
-                  <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                    <h3
+                      className={`text-xs font-bold line-clamp-2 leading-snug ${
+                        isCurrent ? 'text-orange-300' : 'text-white'
+                      }`}
+                    >
+                      {video.title}
+                    </h3>
+                  </button>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-400">
                     <span className="text-orange-400/90 truncate">{video.channelTitle}</span>
                     <span>·</span>
-                    <span className="shrink-0">{new Date(video.publishedAt).toLocaleDateString()}</span>
+                    <span>{new Date(video.publishedAt).toLocaleDateString()}</span>
                   </div>
-                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-300">
                       Score {score}
                     </span>
@@ -1000,18 +1207,12 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
                     ))}
                   </div>
                 </div>
-
-                {isCurrent && (
-                  <span className="shrink-0 text-[10px] font-bold px-2 py-1 rounded-lg bg-orange-600 text-white">
-                    Now Playing
-                  </span>
-                )}
-              </button>
+              </div>
             );
           })}
 
-          {filteredLibrary.length === 0 && (
-            <div className="py-10 text-center space-y-2">
+          {visibleLibrary.length === 0 && (
+            <div className="col-span-full py-10 text-center space-y-2">
               <p className="text-xs text-slate-300">No videos match your search or filters.</p>
               {hasActiveLibraryFilters && (
                 <button
@@ -1024,6 +1225,44 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
             </div>
           )}
         </div>
+
+        {/* Pagination */}
+        {filteredLibrary.length > 0 && (
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+            <button
+              onClick={() => setLibraryPage(0)}
+              disabled={safeLibraryPage === 0}
+              className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 text-xs font-semibold border border-slate-700 transition"
+            >
+              « First
+            </button>
+            <button
+              onClick={() => setLibraryPage(safeLibraryPage - 1)}
+              disabled={safeLibraryPage === 0}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 text-xs font-semibold border border-slate-700 transition"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" /> Prev
+            </button>
+            <span className="px-2 text-xs text-slate-400">
+              Page <span className="font-mono font-bold text-slate-200">{safeLibraryPage + 1}</span>{' '}
+              of <span className="font-mono font-bold text-slate-200">{libraryPageCount}</span>
+            </span>
+            <button
+              onClick={() => setLibraryPage(safeLibraryPage + 1)}
+              disabled={safeLibraryPage >= libraryPageCount - 1}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 text-xs font-semibold border border-slate-700 transition"
+            >
+              Next <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setLibraryPage(libraryPageCount - 1)}
+              disabled={safeLibraryPage >= libraryPageCount - 1}
+              className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 text-xs font-semibold border border-slate-700 transition"
+            >
+              Last »
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Comments for this Video */}

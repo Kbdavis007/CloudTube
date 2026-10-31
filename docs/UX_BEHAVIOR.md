@@ -25,8 +25,13 @@ strip and the whole page scrolls, which is the layout that fits a phone.
 
 Video playback happens in an embedded player (`<iframe>`) inside the player view.
 Nothing on the play, pause, seek or forward path calls `window.open` or changes the
-page location. Videos that ship their own embed URL (XVideos) load it in the same
-iframe; YouTube videos derive their embed URL from the video id.
+page location. Videos that ship their own embed URL load it in the same iframe:
+XVideos and the open sources (Archive.org, PeerTube, Dailymotion) set
+`playback.embedUrl`; YouTube videos derive their embed URL from the video id.
+
+The iframe is sandboxed without `allow-top-navigation`, `allow-popups` or
+`allow-popups-to-escape-sandbox`, so a tap on the embed can play, pause or seek but
+can never navigate the app away or open the source site.
 
 ## Go to Source Site
 
@@ -34,8 +39,8 @@ The only action that opens an external page is the **Go to Source Site** button 
 the video player.
 
 - It appears only when the video has a canonical source page
-  (`playback.externalUrl`), which is set for sources like XVideos and absent for
-  YouTube. No URL is guessed.
+  (`playback.externalUrl`), which is set for sources like XVideos, Archive.org,
+  PeerTube and Dailymotion, and absent for YouTube. No URL is guessed.
 - It opens in a new tab with `rel="noopener noreferrer"`.
 - Style: orange label (`#ff6600`), brighter on hover (`#ffaa33`), external-link icon.
 
