@@ -17,6 +17,27 @@ not_found_handling = "single-page-application"
 # exactly the failure this Worker exists to fix.
 run_worker_first = ["/api/*"]
 
+# Observability: Workers Logs, Traces, and real-time Issues. Mirrors the
+# dashboard settings so the local config and production stay in sync.
+[observability]
+enabled = false
+head_sampling_rate = 1
+redact_query_string = false
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+invocation_logs = true
+persist = true
+
+[observability.traces]
+enabled = true
+head_sampling_rate = 1
+persist = true
+
+[observability.issues]
+enabled = true
+
 # Required by `npx wrangler preview` (branch Previews). The block must exist even
 # when a Preview needs no settings of its own: assets, compatibility_date and
 # placement stay at the top level and are not inherited from here.
