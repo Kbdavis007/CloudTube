@@ -39,6 +39,8 @@ export const CLOUDFLARE_FREE_TIER_LIMITS = {
   d1RowsWrittenPerDay: 100_000,
   kvReadsPerDay: 100_000,
   kvWritesPerDay: 1_000,
+  kvDeletesPerDay: 1_000,
+  kvListsPerDay: 1_000,
   r2StorageGb: 10,
 } as const;
 
@@ -60,6 +62,8 @@ export interface CloudflareUsageMetric {
   used: number;
   limit: number;
   unit: string;
+  /** Optional clarification shown under the bar when the number needs context. */
+  note?: string;
 }
 
 export interface CloudflareUsageSnapshot {
@@ -727,15 +731,19 @@ export class CloudflareAdminClient {
     const d1RowsRead = sum(account.d1AnalyticsAdaptiveGroups, (r) => r?.sum?.rowsRead);
     const d1RowsWritten = sum(account.d1AnalyticsAdaptiveGroups, (r) => r?.sum?.rowsWritten);
 
+    // KV meters each operation type separately, and each has its own free-tier
+    // cap (reads 100k/day; writes, deletes and lists 1k/day each), so they are
+    // reported as separate metrics rather than collapsed into one total.
     const kvRows = account.kvOperationsAdaptiveGroups ?? [];
-    const kvReads = sum(
-      kvRows.filter((r: any) => r?.dimensions?.actionType === 'read'),
-      (r) => r?.sum?.requests
-    );
-    const kvWrites = sum(
-      kvRows.filter((r: any) => r?.dimensions?.actionType === 'write'),
-      (r) => r?.sum?.requests
-    );
+    const kvAction = (action: string) =>
+      sum(
+        kvRows.filter((r: any) => r?.dimensions?.actionType === action),
+        (r) => r?.sum?.requests
+      );
+    const kvReads = kvAction('read');
+    const kvWrites = kvAction('write');
+    const kvDeletes = kvAction('delete');
+    const kvLists = kvAction('list');
 
     // Each row is one bucket's storage snapshot at a point in time, so summing
     // every row would multiply real usage by the number of samples in the
@@ -794,11 +802,26 @@ export class CloudflareAdminClient {
         unit: 'writes / day',
       },
       {
+        key: 'kvDeletes',
+        label: 'KV Deletes',
+        used: kvDeletes,
+        limit: limits.kvDeletesPerDay,
+        unit: 'deletes / day',
+      },
+      {
+        key: 'kvLists',
+        label: 'KV Lists',
+        used: kvLists,
+        limit: limits.kvListsPerDay,
+        unit: 'lists / day',
+      },
+      {
         key: 'r2Storage',
         label: 'R2 Storage',
         used: Number(r2Gb.toFixed(3)),
         limit: limits.r2StorageGb,
         unit: 'GB',
+        note: 'Current stored bytes (payload + metadata), not the billed GB-month figure.',
       },
     ];
 

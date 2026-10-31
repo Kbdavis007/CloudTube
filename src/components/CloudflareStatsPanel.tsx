@@ -45,6 +45,7 @@ const MetricRow: React.FC<{ metric: CloudflareUsageMetric }> = ({ metric }) => {
       <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
         <div className={`h-full ${barColor(pct)}`} style={{ width: `${width}%` }} />
       </div>
+      {metric.note && <p className="text-[10px] text-slate-500 leading-snug">{metric.note}</p>}
     </div>
   );
 };
