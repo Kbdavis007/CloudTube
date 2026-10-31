@@ -266,11 +266,11 @@ export class IndexedDBService {
   }
 
   /**
-   * Replace the stored catalogue in one transaction. Records are written in
-   * chunks with `put`, so a refresh updates existing slugs and adds new ones
-   * without a window where the catalogue reads as empty.
+   * Insert or update the given catalogue records without clearing the store, so
+   * a reviewed subset can be imported while the rest of the stored catalogue is
+   * left alone. Records are written in chunks to keep each transaction small.
    */
-  async replaceXvideosCatalog(records: XvideosRecord[]): Promise<number> {
+  async addXvideosRecords(records: XvideosRecord[]): Promise<number> {
     const db = await this.init();
     const CHUNK = 1000;
 

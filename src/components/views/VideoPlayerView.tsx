@@ -337,7 +337,13 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
         {/* Left Column: Video Embed & Details (2 Cols) */}
         <div className="lg:col-span-2 space-y-4">
           {/* Responsive embed. Sources that ship their own player URL (XVideos)
-              use it directly; YouTube derives the URL from the video id. */}
+              use it directly; YouTube derives the URL from the video id.
+
+              The iframe is sandboxed without `allow-top-navigation`,
+              `allow-popups` or `allow-popups-to-escape-sandbox`, so a tap on the
+              embed can play/pause/seek but can never navigate this app away or
+              open the source site. Leaving the app is only possible through the
+              explicit "Go to Source Site" button below. */}
           <div className="relative aspect-video w-full rounded-3xl overflow-hidden bg-black shadow-2xl border border-slate-800">
             <iframe
               src={
@@ -346,6 +352,8 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
               }
               title={currentVideo.title}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              sandbox="allow-scripts allow-same-origin allow-presentation"
+              referrerPolicy="no-referrer"
               allowFullScreen
               className="absolute inset-0 w-full h-full border-0"
             />
