@@ -195,9 +195,12 @@ Video Description:
 ${description.slice(0, 1500)}
 
 Requirements:
-- Provide a concise 2 to 3 paragraph summary explaining the core topic, architectural mechanics, and practical takeaways.
-- Include 3 bullet points highlighting what a viewer or developer will learn.
-- Keep the tone professional, direct, and insightful.`;
+- Reply in markdown and nothing else. Do not wrap the whole answer in a code fence.
+- Start with a 2 to 3 sentence overview paragraph of the core topic and why it matters.
+- Then a "## Key Takeaways" section with 3 to 5 bullet points ("- ") covering what a viewer or developer will learn.
+- Then a "## Details" section with 1 to 2 short paragraphs on the mechanics, architecture or practical steps.
+- Use **bold** sparingly for key terms and \`inline code\` for tools, commands or identifiers.
+- Keep the tone professional, direct and insightful.`;
 
     try {
       const result = await this.getModel().generateContent(prompt);
@@ -205,9 +208,17 @@ Requirements:
       if (!text || text.trim().length === 0) {
         throw new Error('Gemini returned an empty summary.');
       }
-      return text.trim();
+      // Models sometimes wrap the whole answer in a fence despite the prompt;
+      // strip it so the renderer treats it as markdown rather than one code block.
+      return stripWrappingFence(text.trim());
     } catch (err) {
       this.rethrow(err);
     }
   }
+}
+
+/** Removes a single ```/```markdown fence that encloses the entire response. */
+function stripWrappingFence(text: string): string {
+  const match = text.match(/^```[a-zA-Z]*\n([\s\S]*?)\n?```$/);
+  return match ? match[1].trim() : text;
 }

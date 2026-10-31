@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { VideoMetadata, PersonalMetadata } from '../types';
 import { GeminiAiService, VideoAiAnalysis } from '../services/geminiAi';
 import { ApiErrorCard } from './ApiErrorCard';
+import { MarkdownSummary } from './MarkdownSummary';
 import {
   Sparkles,
   CheckCircle2,
@@ -108,7 +109,10 @@ export const AiAnalysisModal: React.FC<AiAnalysisModalProps> = ({
               <div className="text-xs font-bold text-orange-400 uppercase tracking-wider flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5" /> Executive Summary
               </div>
-              <p className="text-xs text-slate-300 leading-relaxed">{analysis.summary}</p>
+              <MarkdownSummary
+                markdown={analysis.summary}
+                className="text-xs text-slate-300 leading-relaxed"
+              />
             </div>
 
             {/* Key Takeaways */}

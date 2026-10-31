@@ -92,7 +92,24 @@ app's App Check provider. Confirm AI Logic is enabled, then retry.
   `getGenerativeModel`). Exposes `GEMINI_AI_SETUP_URL` used by the Setup Wizard,
   `GEMINI_MODEL_NAME` (default `gemini-3.8-flash`, overridable with
   `VITE_GEMINI_MODEL`) and `GEMINI_MODELS_URL`.
+- `src/components/MarkdownSummary.tsx` - dependency-free markdown renderer for the
+  summaries (see below).
 - `src/services/firebaseApp.ts` - the single Firebase app shared by Auth and AI Logic.
+
+## Rendering
+
+`generateConciseSummary` asks Gemini for markdown (an overview paragraph, a
+`## Key Takeaways` bullet list, a `## Details` section). The model occasionally
+wraps the whole answer in a ```` ``` ```` fence regardless; `stripWrappingFence`
+removes that so it is treated as markdown rather than one code block.
+
+`MarkdownSummary` renders the subset the prompts emit - ATX headings, bullet and
+ordered lists, bold/italic, inline code, fenced code, blockquotes, horizontal rules
+and links - styled as a Google-AI-overview card (accent-ruled headings, marker
+prefixes, generous spacing). It emits React nodes only, never
+`dangerouslySetInnerHTML`, so model output can never inject markup. It is a
+deliberate hand-rolled subset rather than a full markdown library: the app ships no
+markdown dependency and the prompt is constrained to this subset.
 
 If AI Logic has not been enabled, calls fail with a permission error; the service
 rewrites that into a message pointing at the setup link above. If the model name has
