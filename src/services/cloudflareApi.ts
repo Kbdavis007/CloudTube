@@ -661,9 +661,9 @@ export class CloudflareAdminClient {
     const now = new Date();
     const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
     const dateOnly = dayStart.toISOString().slice(0, 10);
-    // R2 storage is sampled at a daily granularity, so the current day alone can
-    // be empty until the day's sample lands. A 48h window always contains the
-    // most recent snapshot.
+    // R2 storage rows are per-bucket daily snapshots, so the current day alone
+    // can be empty until the day's sample lands. A 48h window always contains
+    // the most recent snapshot for every bucket.
     const r2Start = new Date(now.getTime() - 48 * 60 * 60 * 1000);
 
     const query = `query CloudTubeUsage($accountTag: string!, $day: Date, $dayStart: Time, $dayEnd: Time, $r2Start: Time) {
@@ -679,8 +679,9 @@ export class CloudflareAdminClient {
             sum { requests }
             dimensions { actionType }
           }
-          r2StorageAdaptiveGroups(limit: 1000, filter: { datetime_geq: $r2Start, datetime_leq: $dayEnd }) {
+          r2StorageAdaptiveGroups(limit: 1000, filter: { datetime_geq: $r2Start, datetime_leq: $dayEnd }, orderBy: [datetime_DESC]) {
             max { payloadSize metadataSize }
+            dimensions { bucketName datetime }
           }
         }
       }
@@ -736,8 +737,21 @@ export class CloudflareAdminClient {
       (r) => r?.sum?.requests
     );
 
-    const r2Bytes = (account.r2StorageAdaptiveGroups ?? []).reduce(
-      (acc: number, row: any) => acc + (row?.max?.payloadSize || 0) + (row?.max?.metadataSize || 0),
+    // Each row is one bucket's storage snapshot at a point in time, so summing
+    // every row would multiply real usage by the number of samples in the
+    // window. Keep only the newest sample per bucket and sum those.
+    const r2Rows: any[] = account.r2StorageAdaptiveGroups ?? [];
+    const latestR2ByBucket = new Map<string, any>();
+    for (const row of r2Rows) {
+      const bucket = row?.dimensions?.bucketName ?? '__account';
+      const at = String(row?.dimensions?.datetime ?? '');
+      const seen = latestR2ByBucket.get(bucket);
+      if (!seen || at >= String(seen?.dimensions?.datetime ?? '')) {
+        latestR2ByBucket.set(bucket, row);
+      }
+    }
+    const r2Bytes = Array.from(latestR2ByBucket.values()).reduce(
+      (acc, row) => acc + (row?.max?.payloadSize || 0) + (row?.max?.metadataSize || 0),
       0
     );
     const r2Gb = r2Bytes / 1024 ** 3;
