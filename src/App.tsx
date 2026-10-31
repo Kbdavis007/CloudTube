@@ -41,6 +41,8 @@ export default function App() {
   const [selectedVideoId, setSelectedVideoId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'info' } | null>(null);
+  // When set, the wizard opens on this step (used by Settings to replace a token).
+  const [wizardStep, setWizardStep] = useState<number | undefined>(undefined);
 
   // Google OAuth & YouTube user state
   const [user, setUser] = useState<User | null>(null);
@@ -300,6 +302,19 @@ export default function App() {
     setCurrentTab('player');
   };
 
+  // Open the Setup Wizard, optionally forcing the step it starts on. Leaving the
+  // wizard clears the forced step, otherwise a later visit would resume on
+  // whatever step the last token replacement used.
+  const openWizard = (step?: number) => {
+    setWizardStep(step);
+    setCurrentTab('wizard');
+  };
+
+  const navigate = (tab: PageTab) => {
+    if (tab !== 'wizard') setWizardStep(undefined);
+    setCurrentTab(tab);
+  };
+
   // 5b. Play a video that may not be in the library yet: index it first so the
   // player has metadata to render, then select it.
   const handleIndexAndPlay = async (video: VideoMetadata) => {
@@ -390,7 +405,7 @@ export default function App() {
     <div className="min-h-screen bg-[#050811] text-slate-100 flex flex-col selection:bg-orange-500/30 selection:text-orange-200">
       {/* Top Navbar */}
       <Header
-        onOpenWizard={() => setCurrentTab('wizard')}
+        onOpenWizard={() => openWizard()}
         onOpenSearch={() => setCurrentTab('search')}
         videoCount={videos.length}
         user={user}
@@ -406,7 +421,7 @@ export default function App() {
       <div className="flex-1 flex flex-col md:flex-row">
         <Sidebar
           currentTab={currentTab}
-          onSelectTab={setCurrentTab}
+          onSelectTab={navigate}
           videoCount={videos.length}
           channelCount={channels.length}
           commentCount={comments.length}
@@ -516,7 +531,9 @@ export default function App() {
 
               {currentTab === 'wizard' && (
                 <SetupWizardView
+                  initialStep={wizardStep}
                   onComplete={() => {
+                    setWizardStep(undefined);
                     setCurrentTab('dashboard');
                     showToast('Cloudflare Free Tier infrastructure successfully configured!');
                   }}
@@ -529,7 +546,9 @@ export default function App() {
                 <SettingsView
                   onRefreshData={refreshLibraryData}
                   videoCount={videos.length}
-                  onNavigate={setCurrentTab}
+                  onNavigate={navigate}
+                  onUpdateToken={() => openWizard(1)}
+                  onOpenWizardStep={(step) => openWizard(step)}
                 />
               )}
             </>

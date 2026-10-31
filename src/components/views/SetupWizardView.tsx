@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { WizardState, WizardStepId } from '../../types';
 import {
+  Activity,
   Sparkles,
   ShieldCheck,
   CheckCircle2,
@@ -33,6 +34,7 @@ import {
   buildTokenTemplateUrl,
 } from '../../services/cloudflareApi';
 import { buildGuide, CF_LINKS } from '../../services/provisioningGuide';
+import { HealthCheckPanel } from '../HealthCheckPanel';
 import { GEMINI_AI_SETUP_URL } from '../../services/geminiAi';
 import { APP_CHECK_SETUP_URL, RECAPTCHA_KEYS_URL } from '../../services/firebaseApp';
 import { encryptAndSaveCredentials, loadAndDecryptCredentials, isVaultConfigured } from '../../services/crypto';
@@ -46,15 +48,21 @@ import {
 
 interface SetupWizardViewProps {
   onComplete: () => void;
+  /**
+   * Force the wizard to open on a specific step. Used by the Settings usage
+   * panel so "paste the new token" lands on the credentials step instead of
+   * wherever the last session left off.
+   */
+  initialStep?: number;
 }
 
-export const SetupWizardView: React.FC<SetupWizardViewProps> = ({ onComplete }) => {
+export const SetupWizardView: React.FC<SetupWizardViewProps> = ({ onComplete, initialStep }) => {
   // Loaded once before the first render so a reload resumes where it left off.
   // Provisioning creates real Cloudflare resources, so redoing it is costly.
   const [restoredProgress] = useState(() => loadWizardProgress());
 
   const [wizardState, setWizardState] = useState<WizardState>(() => ({
-    step: restoredProgress?.lastStep ?? 1,
+    step: initialStep ?? restoredProgress?.lastStep ?? 1,
     accountId: '',
     apiToken: '',
     status: {
@@ -126,13 +134,24 @@ export const SetupWizardView: React.FC<SetupWizardViewProps> = ({ onComplete }) 
   // Mirror of wizardState so async handlers always read the latest credentials/mode,
   // even when they run from a callback created before a setWizardState re-render.
   const wizardStateRef = useRef(wizardState);
+
+  // The furthest setup step the user actually reached. Step 7 is a diagnostic
+  // tool, not a phase, so visiting it must not be recorded as setup progress.
+  const furthestStepRef = useRef<number>(
+    Math.min(initialStep ?? restoredProgress?.lastStep ?? 1, 6)
+  );
+
   useEffect(() => {
     wizardStateRef.current = wizardState;
+    if (wizardState.step <= 6) {
+      furthestStepRef.current = Math.max(furthestStepRef.current, wizardState.step);
+    }
   }, [wizardState]);
 
   // Restore saved provisioning results once on mount. Credentials come from the
   // encrypted vault rather than progress storage, so they are loaded separately.
   const didRestoreRef = useRef(false);
+
   useEffect(() => {
     if (didRestoreRef.current) return;
     didRestoreRef.current = true;
@@ -184,7 +203,7 @@ export const SetupWizardView: React.FC<SetupWizardViewProps> = ({ onComplete }) 
   // the wizard does not create a misleading "resumed" record.
   useEffect(() => {
     if (!hydrated) return;
-    const progress = deriveProgress(wizardState.step, wizardState, aiConfigured);
+    const progress = deriveProgress(furthestStepRef.current, wizardState, aiConfigured);
     if (isMeaningfulProgress(progress)) {
       saveWizardProgress(progress);
     } else {
@@ -584,9 +603,11 @@ ${durableObjects}
     5: aiConfigured,
     6: aiConfigured,
   };
-  // A step is reachable once the previous one is done, or by going back.
+  // A step is reachable once the previous one is done, or by going back. Step 7
+  // (diagnostics) is deliberately exempt: the whole point is to be able to check
+  // the system's health at any time, including before setup is finished.
   const canOpenStep = (n: number): boolean =>
-    n === wizardState.step || n < wizardState.step || Boolean(stepDone[n - 1]);
+    n === 7 || n === wizardState.step || n < wizardState.step || Boolean(stepDone[n - 1]);
 
   const filteredLogs = logs.filter((entry) => {
     if (logFilter === 'all') return true;
@@ -630,19 +651,23 @@ ${durableObjects}
           </div>
         )}
 
-        {/* Step Indicator */}
+        {/* Step Indicator. Step 7 is a tool, so it sits on its own row. */}
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-6">
           {[
             { num: 1, label: 'Auth & Profile' },
             { num: 2, label: 'Auto-Provision' },
             { num: 3, label: 'AES Encryption' },
-            { num: 4, label: 'Health Check' },
+            { num: 4, label: 'Verify Resources' },
             { num: 5, label: 'AI Summaries' },
             { num: 6, label: 'Ready to Run' },
+            { num: 7, label: 'Health & Diagnostics' },
           ].map((st) => {
             const done = Boolean(stepDone[st.num]);
             const active = wizardState.step === st.num;
             const reachable = canOpenStep(st.num);
+            // The diagnostics step is a tool rather than a phase, so it is
+            // marked with an icon instead of a progress tick.
+            const isTool = st.num === 7;
             return (
               <button
                 key={st.num}
@@ -650,6 +675,8 @@ ${durableObjects}
                 disabled={!reachable}
                 onClick={() => reachable && goToStep(st.num)}
                 className={`p-2.5 rounded-xl border text-center transition ${
+                  isTool ? 'col-span-3 sm:col-span-6 mt-1 border-dashed' : ''
+                } ${
                   active
                     ? 'bg-orange-500/20 border-orange-500 text-orange-300 font-bold'
                     : done
@@ -658,8 +685,12 @@ ${durableObjects}
                 } ${reachable ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
               >
                 <div className="flex items-center justify-center gap-1 text-[10px] font-mono">
-                  {done && !active && <CheckCircle2 className="w-3 h-3" />}
-                  STEP {st.num}
+                  {isTool ? (
+                    <Activity className="w-3 h-3" />
+                  ) : (
+                    done && !active && <CheckCircle2 className="w-3 h-3" />
+                  )}
+                  {isTool ? 'TOOL' : `STEP ${st.num}`}
                 </div>
                 <div className="text-xs truncate">{st.label}</div>
               </button>
@@ -715,7 +746,7 @@ ${durableObjects}
                 className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-white focus:outline-hidden focus:border-orange-500"
               />
               <p className="text-[11px] text-slate-500">
-                Requires standard Free-Tier permissions: D1 (Edit), R2 (Edit), KV (Edit), Queues (Edit), Workers (Edit).
+                Requires standard Free-Tier permissions: D1 (Edit), R2 (Edit), KV (Edit), Queues (Edit), Workers (Edit), plus Account Analytics (Read) for the usage gauges in Settings.
               </p>
               <a
                 href={buildTokenTemplateUrl()}
@@ -1576,6 +1607,23 @@ ${durableObjects}
               Launch YouTube Library & Player
             </button>
           </div>
+        </div>
+      )}
+
+      {/* STEP 7 (TOOL): ALWAYS-AVAILABLE HEALTH & DIAGNOSTICS */}
+      {wizardState.step === 7 && (
+        <div className="space-y-4">
+          <div className="p-6 sm:p-8 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-2">
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <Activity className="w-4 h-4 text-orange-400" />
+              Step 7: Health &amp; Diagnostics
+            </h2>
+            <p className="text-xs text-slate-400">
+              Available at any time, at any stage of setup. Checks every permission, resource, and
+              setting this app depends on, and gives you a button to fix anything that is missing.
+            </p>
+          </div>
+          <HealthCheckPanel autoRun onFixNavigate={(step) => goToStep(step)} compact />
         </div>
       )}
     </div>

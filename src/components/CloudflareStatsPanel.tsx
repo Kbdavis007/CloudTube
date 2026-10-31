@@ -1,15 +1,19 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Activity, AlertTriangle, HardDrive, RefreshCw, ShieldCheck, Loader2 } from 'lucide-react';
+import { Activity, AlertTriangle, HardDrive, RefreshCw, ShieldCheck, Loader2, ExternalLink, KeyRound } from 'lucide-react';
 import {
   cfClient,
   CloudflareUsageSnapshot,
   CloudflareUsageMetric,
+  buildAnalyticsTokenUrl,
+  isAnalyticsPermissionError,
 } from '../services/cloudflareApi';
 import { loadAndDecryptCredentials } from '../services/crypto';
 
 interface CloudflareStatsPanelProps {
   /** Opens the Setup Wizard so an unconfigured account can be connected. */
   onOpenWizard?: () => void;
+  /** Opens the Setup Wizard on the credentials step so a new token can be pasted. */
+  onUpdateToken?: () => void;
 }
 
 const formatValue = (value: number, unit: string): string => {
@@ -45,15 +49,20 @@ const MetricRow: React.FC<{ metric: CloudflareUsageMetric }> = ({ metric }) => {
   );
 };
 
-export const CloudflareStatsPanel: React.FC<CloudflareStatsPanelProps> = ({ onOpenWizard }) => {
+export const CloudflareStatsPanel: React.FC<CloudflareStatsPanelProps> = ({
+  onOpenWizard,
+  onUpdateToken,
+}) => {
   const [snapshot, setSnapshot] = useState<CloudflareUsageSnapshot | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [needsPermission, setNeedsPermission] = useState(false);
   const [notConfigured, setNotConfigured] = useState(false);
 
   const loadUsage = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    setNeedsPermission(false);
     setNotConfigured(false);
 
     try {
@@ -67,7 +76,13 @@ export const CloudflareStatsPanel: React.FC<CloudflareStatsPanelProps> = ({ onOp
       cfClient.setCredentials(creds.accountId, creds.apiToken, creds.accountEmail, creds.authMode);
       setSnapshot(await cfClient.fetchUsageSnapshot());
     } catch (err: any) {
-      setError(err?.message || 'Failed to read Cloudflare usage analytics.');
+      const message = err?.message || 'Failed to read Cloudflare usage analytics.';
+      setError(message);
+      // A missing scope is the one failure the user can fix from here, so it
+      // gets a button rather than just an explanation.
+      setNeedsPermission(
+        Boolean(err?.needsAnalyticsPermission) || isAnalyticsPermissionError(message)
+      );
       setSnapshot(null);
     } finally {
       setIsLoading(false);
@@ -147,16 +162,60 @@ export const CloudflareStatsPanel: React.FC<CloudflareStatsPanelProps> = ({ onOp
       )}
 
       {error && !isLoading && (
-        <div className="p-3.5 rounded-2xl bg-amber-950/30 border border-amber-800/50 space-y-2">
+        <div className="p-3.5 rounded-2xl bg-amber-950/30 border border-amber-800/50 space-y-3">
           <div className="flex items-center gap-2 text-amber-300 text-xs font-bold">
             <AlertTriangle className="w-4 h-4" />
-            <span>Usage analytics unavailable</span>
+            <span>{needsPermission ? 'Analytics permission missing' : 'Usage analytics unavailable'}</span>
           </div>
           <p className="text-[11px] text-amber-200/80 leading-relaxed">{error}</p>
-          <p className="text-[11px] text-slate-400 leading-relaxed">
-            The API token needs the <span className="font-mono">Account Analytics: Read</span>{' '}
-            permission to serve these numbers.
-          </p>
+
+          {needsPermission ? (
+            <>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                Cloudflare cannot add a scope to an existing token, so this needs a replacement
+                token that includes{' '}
+                <span className="font-mono text-slate-200">Account Analytics: Read</span>. Your
+                other permissions are unchanged.
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <a
+                  href={buildAnalyticsTokenUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-[11px] font-bold transition active:scale-95"
+                >
+                  <KeyRound className="w-3.5 h-3.5" />
+                  <span>Create a token with this scope</span>
+                  <ExternalLink className="w-3 h-3 opacity-70" />
+                </a>
+                {onUpdateToken && (
+                  <button
+                    onClick={onUpdateToken}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-[11px] font-semibold transition active:scale-95"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-orange-400" />
+                    <span>Paste the new token</span>
+                  </button>
+                )}
+                <button
+                  onClick={loadUsage}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-[11px] font-semibold transition active:scale-95"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Retry</span>
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                The form opens with the scope pre-selected; you still review and create the token in
+                the Cloudflare dashboard.
+              </p>
+            </>
+          ) : (
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              This is usually a transient Cloudflare API problem. Retry, or check the token has{' '}
+              <span className="font-mono">Account Analytics: Read</span> if it keeps failing.
+            </p>
+          )}
         </div>
       )}
 

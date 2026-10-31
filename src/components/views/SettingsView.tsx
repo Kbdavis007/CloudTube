@@ -19,6 +19,7 @@ import {
 import { isVaultConfigured, clearCredentialsVault } from '../../services/crypto';
 import { idbService } from '../../services/indexedDB';
 import { CloudflareStatsPanel } from '../CloudflareStatsPanel';
+import { HealthCheckPanel } from '../HealthCheckPanel';
 import type { PageTab } from '../Sidebar';
 import {
   VERSION_LABEL,
@@ -34,12 +35,18 @@ interface SettingsViewProps {
   videoCount: number;
   /** Opens another page (wizard, scaffolding) from the admin shortcuts. */
   onNavigate?: (tab: PageTab) => void;
+  /** Opens the Setup Wizard at the credentials step so a token can be replaced. */
+  onUpdateToken?: () => void;
+  /** Opens the Setup Wizard at a specific step, used by the health-check fixes. */
+  onOpenWizardStep?: (step: number) => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
   onRefreshData,
   videoCount,
   onNavigate,
+  onUpdateToken,
+  onOpenWizardStep,
 }) => {
   const [vaultStatus, setVaultStatus] = useState<boolean>(isVaultConfigured());
   const [importStatus, setImportStatus] = useState<string | null>(null);
@@ -112,7 +119,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       )}
 
       {/* Live Cloudflare Free Tier Usage (top of settings) */}
-      <CloudflareStatsPanel onOpenWizard={() => onNavigate?.('wizard')} />
+      <CloudflareStatsPanel
+        onOpenWizard={() => onNavigate?.('wizard')}
+        onUpdateToken={onUpdateToken}
+      />
+
+      {/* Always-available diagnostics: the same check the wizard runs, but
+          reachable without going through setup. */}
+      <HealthCheckPanel onFixNavigate={(step) => (onOpenWizardStep ?? onUpdateToken ?? (() => {}))(step)} />
 
       {/* Cloudflare Encrypted Storage Status */}
       <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-4">

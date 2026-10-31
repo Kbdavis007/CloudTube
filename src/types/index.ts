@@ -228,6 +228,43 @@ export interface WizardState {
 /** The wizard's own steps, which the AI-summaries step extends beyond provisioning. */
 export type WizardStepId = 'auth' | 'provision' | 'encryption' | 'health' | 'ai' | 'complete';
 
+/** Outcome of a single health-check item. */
+export type HealthCheckStatus = 'pass' | 'fail' | 'warn';
+
+/**
+ * One verified requirement: a permission, a provisioned resource, or a setting.
+ * `fix` is populated when there is something the user can actually do about a
+ * failure, which is what turns a red row into a button.
+ */
+export interface HealthCheckItem {
+  id: string;
+  label: string;
+  /** What this unlocks, shown under the label. */
+  detail: string;
+  status: HealthCheckStatus;
+  /** Why it failed, verbatim from the API where possible. */
+  message?: string;
+  /** Present when the user can act on the failure. */
+  fix?: {
+    /** Button text, e.g. "Create a token with this scope". */
+    label: string;
+    kind: 'token' | 'dashboard' | 'credentials' | 'retry';
+    url?: string;
+    /** Forces the wizard to a step, e.g. 1 for the credentials step. */
+    step?: number;
+  };
+}
+
+/** Full result of a health run, grouped so the UI can render sections. */
+export interface HealthReport {
+  ranAt: string;
+  ok: boolean;
+  groups: { title: string; items: HealthCheckItem[] }[];
+  passed: number;
+  failed: number;
+  warned: number;
+}
+
 /**
  * What the wizard remembers across reloads. Cloudflare provisioning is the
  * expensive part (real API calls that create resources), so the completed flags

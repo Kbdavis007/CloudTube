@@ -42,6 +42,18 @@ export const CLOUDFLARE_FREE_TIER_LIMITS = {
   r2StorageGb: 10,
 } as const;
 
+/**
+ * Names of the resources the wizard provisions. Kept here so the health check,
+ * the provisioning calls, and the on-screen descriptions all refer to the same
+ * identifiers.
+ */
+export const CLOUDFLARE_RESOURCES = {
+  d1Database: 'youtube_library_db',
+  kvNamespace: 'YOUTUBE_CACHE_KV',
+  r2Bucket: 'youtube-library-media-vault',
+  queue: 'youtube-crawler-queue',
+} as const;
+
 export interface CloudflareUsageMetric {
   key: string;
   label: string;
@@ -57,6 +69,20 @@ export interface CloudflareUsageSnapshot {
   metrics: CloudflareUsageMetric[];
   /** Per-dataset failures; usage can be partially available. */
   errors: string[];
+}
+
+/**
+ * Marks a usage-analytics failure that the user can fix by creating a token
+ * with the `Account Analytics: Read` scope. The UI turns this into a button,
+ * so it must be distinguishable from a transient network error.
+ */
+export class AnalyticsPermissionError extends Error {
+  readonly needsAnalyticsPermission = true;
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'AnalyticsPermissionError';
+  }
 }
 
 /**
@@ -86,29 +112,65 @@ export const looksLikeGlobalApiKey = (value: string): boolean =>
   /^[0-9a-f]{37}$/i.test(sanitizeToken(value));
 
 /**
+ * Permission groups the CloudTube token needs, kept in one list so the template
+ * URL and the on-screen scope description cannot drift apart.
+ *
+ * `account_analytics: read` is required by the Settings usage gauges (GraphQL
+ * Analytics API); the rest are required by the provisioning pipeline.
+ */
+export const CLOUDFLARE_TOKEN_PERMISSIONS = [
+  { key: 'workers_r2', type: 'edit' },
+  { key: 'd1', type: 'edit' },
+  { key: 'workers_kv_storage', type: 'edit' },
+  { key: 'queues', type: 'edit' },
+  { key: 'workers_scripts', type: 'edit' },
+  { key: 'account_analytics', type: 'read' },
+] as const;
+
+/** The single permission the Settings usage gauges need on their own. */
+export const ANALYTICS_PERMISSION = { key: 'account_analytics', type: 'read' } as const;
+
+/**
  * Builds a Cloudflare dashboard URL that pre-fills the token creation form with
  * exactly the permissions the provisioning pipeline needs. Template URLs only
  * pre-fill the form: the user still confirms creation in the dashboard, so this
  * cannot mint a credential on the user's behalf.
  */
 export const buildTokenTemplateUrl = (name = 'CloudTube Provisioning'): string => {
-  const permissions = [
-    { key: 'workers_r2', type: 'edit' },
-    { key: 'd1', type: 'edit' },
-    { key: 'workers_kv_storage', type: 'edit' },
-    { key: 'queues', type: 'edit' },
-    { key: 'workers_scripts', type: 'edit' },
-  ];
   // Encode once, and only once: URLSearchParams would re-encode the percent
   // signs, leaving the dashboard with a literal "%5B%7B..." string instead of
   // the JSON array it expects.
-  const encoded = encodeURIComponent(JSON.stringify(permissions));
+  const encoded = encodeURIComponent(JSON.stringify(CLOUDFLARE_TOKEN_PERMISSIONS));
   return (
     `https://dash.cloudflare.com/profile/api-tokens` +
     `?permissionGroupKeys=${encoded}` +
     `&accountId=*&zoneId=all&name=${encodeURIComponent(name)}`
   );
 };
+
+/**
+ * Dashboard URL that pre-fills only the analytics permission.
+ *
+ * Cloudflare cannot add a scope to an existing token, so the only fix for a
+ * token missing `Account Analytics: Read` is to create a replacement token with
+ * the scope. This is the narrowest such template.
+ */
+export const buildAnalyticsTokenUrl = (name = 'CloudTube Analytics'): string => {
+  const encoded = encodeURIComponent(JSON.stringify([ANALYTICS_PERMISSION]));
+  return (
+    `https://dash.cloudflare.com/profile/api-tokens` +
+    `?permissionGroupKeys=${encoded}` +
+    `&accountId=*&zoneId=all&name=${encodeURIComponent(name)}`
+  );
+};
+
+/**
+ * True when a failure is explained by a token that lacks analytics read access.
+ * Cloudflare reports this as a GraphQL authorization error rather than a status
+ * code, so the wording is matched instead.
+ */
+export const isAnalyticsPermissionError = (message: string): boolean =>
+  /account analytics|not authorized|unauthorized|forbidden|permission|403/i.test(message || '');
 
 export class CloudflareAdminClient {
   private apiToken: string;
@@ -410,6 +472,41 @@ export class CloudflareAdminClient {
     }
   }
 
+  /**
+   * Runs a call without throwing, reporting the outcome as data.
+   *
+   * The health check needs to test many endpoints and report every failure at
+   * once, so it cannot use the throwing callers. Errors are classified here so
+   * the UI knows which ones a new token would fix.
+   */
+  async probe(
+    actionName: string,
+    endpoint: string,
+    hasResource?: (result: any) => boolean
+  ): Promise<{ ok: boolean; present: boolean; error?: string; code?: number; status?: number }> {
+    try {
+      const data = await this.cfFetch(endpoint, { actionName });
+      const result = data?.result;
+      const present = hasResource ? hasResource(result) : true;
+      return { ok: true, present };
+    } catch (e: any) {
+      const status = e?.cfStatus as number | undefined;
+      const code = e?.cfCode as number | undefined;
+      // A 403 / 9109 is a scope problem: a token with the right permission
+      // fixes it. Anything else is configuration or connectivity.
+      const isPermission = status === 403 || code === 9109;
+      return {
+        ok: false,
+        present: false,
+        error: isPermission
+          ? `Missing permission for ${endpoint}.`
+          : e?.message || `Request to ${endpoint} failed.`,
+        code,
+        status,
+      };
+    }
+  }
+
   // 2. Fetch Accounts
   async getAccounts(): Promise<CloudflareAccount[]> {
     this.emitLog('info', 'GET_ACCOUNTS', `Retrieving Cloudflare account memberships...`);
@@ -606,10 +703,15 @@ export class CloudflareAdminClient {
 
     const account = data?.data?.viewer?.accounts?.[0];
     if (!account) {
-      throw new Error(
-        errors[0] ||
-          'Cloudflare returned no analytics for this account. The token needs Account Analytics: Read.'
-      );
+      // Distinguish "the token cannot read analytics" (fixable with a new
+      // scope, so the UI offers a button) from a transient API problem.
+      const detail = errors.join(' ') || `Cloudflare returned no analytics for this account.`;
+      if (errors.length === 0 || isAnalyticsPermissionError(detail)) {
+        throw new AnalyticsPermissionError(
+          `This token cannot read Cloudflare account analytics. ${detail}`.trim()
+        );
+      }
+      throw new Error(detail);
     }
 
     const sum = (rows: any[] | undefined, pick: (row: any) => number) =>
