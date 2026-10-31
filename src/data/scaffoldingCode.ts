@@ -2,65 +2,77 @@ import { ScaffoldFile } from '../types';
 
 export const SCAFFOLDING_FILES: ScaffoldFile[] = [
   {
-    path: 'wrangler.toml',
+    path: 'wrangler.jsonc',
     category: 'wrangler',
     description: 'Cloudflare Worker configuration binding D1, R2, KV, Queues, Durable Objects & Cron Triggers on 100% Free Tier',
-    language: 'toml',
-    code: `name = "cloudtube-edge-api"
-main = "src/worker/index.ts"
-compatibility_date = "2026-03-01"
-compatibility_flags = ["nodejs_compat"]
+    language: 'jsonc',
+    code: `{
+  "name": "cloudtube-edge-api",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-03-01",
+  "compatibility_flags": ["nodejs_compat"],
 
-# 1. Cloudflare D1 SQLite Database Binding
-[[d1_databases]]
-binding = "DB"
-database_name = "youtube_library_db"
-database_id = "a7c93e41-0f2d-4b9e-9d22-10f892bc0d81"
-migrations_dir = "migrations"
+  // 1. Cloudflare D1 SQLite Database Binding
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "youtube_library_db",
+      "database_id": "a7c93e41-0f2d-4b9e-9d22-10f892bc0d81",
+      "migrations_dir": "migrations"
+    }
+  ],
 
-# 2. Cloudflare KV Fast-Lookup Cache
-[[kv_namespaces]]
-binding = "CACHE_KV"
-id = "kv_ns_9942a77f98e0"
+  // 2. Cloudflare KV Fast-Lookup Cache
+  "kv_namespaces": [
+    { "binding": "CACHE_KV", "id": "kv_ns_9942a77f98e0" }
+  ],
 
-# 3. Cloudflare R2 Object Storage (Thumbnails, Transcripts, Comments Vault)
-[[r2_buckets]]
-binding = "MEDIA_VAULT"
-bucket_name = "youtube-library-media-vault"
+  // 3. Cloudflare R2 Object Storage (Thumbnails, Transcripts, Comments Vault)
+  "r2_buckets": [
+    { "binding": "MEDIA_VAULT", "bucket_name": "youtube-library-media-vault" }
+  ],
 
-# 4. Cloudflare Queues Producer & Consumer
-[[queues.producers]]
-binding = "CRAWLER_QUEUE"
-queue = "youtube-crawler-queue"
+  // 4. Cloudflare Queues Producer & Consumer
+  "queues": {
+    "producers": [
+      { "binding": "CRAWLER_QUEUE", "queue": "youtube-crawler-queue" }
+    ],
+    "consumers": [
+      {
+        "queue": "youtube-crawler-queue",
+        "max_batch_size": 10,
+        "max_batch_timeout": 30,
+        "max_retries": 3,
+        "dead_letter_queue": "youtube-crawler-dlq"
+      }
+    ]
+  },
 
-[[queues.consumers]]
-queue = "youtube-crawler-queue"
-max_batch_size = 10
-max_batch_timeout = 30
-max_retries = 3
-dead_letter_queue = "youtube-crawler-dlq"
+  // 5. Cloudflare Durable Objects (Stateful Job Orchestration & YouTube Quota Limiter)
+  "durable_objects": {
+    "bindings": [
+      { "name": "QUOTA_DO", "class_name": "QuotaManagerDO" },
+      { "name": "ORCHESTRATOR_DO", "class_name": "CrawlOrchestratorDO" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_classes": ["QuotaManagerDO", "CrawlOrchestratorDO"] }
+  ],
 
-# 5. Cloudflare Durable Objects (Stateful Job Orchestration & YouTube Quota Limiter)
-[durable_objects]
-bindings = [
-  { name = "QUOTA_DO", class_name = "QuotaManagerDO" },
-  { name = "ORCHESTRATOR_DO", class_name = "CrawlOrchestratorDO" }
-]
+  // 6. Scheduled Cron Triggers (Periodic metadata refresh within Free Tier)
+  "triggers": {
+    // Executes every 6 hours to refresh top 100 videos
+    "crons": ["0 */6 * * *"]
+  },
 
-[[migrations]]
-tag = "v1"
-new_classes = ["QuotaManagerDO", "CrawlOrchestratorDO"]
-
-# 6. Scheduled Cron Triggers (Periodic metadata refresh within Free Tier)
-[triggers]
-crons = ["0 */6 * * *"] # Executes every 6 hours to refresh top 100 videos
-
-# 7. Environment Variables
-[vars]
-ENVIRONMENT = "production"
-MAX_FREE_DAILY_YOUTUBE_QUOTA = "10000"
-CACHE_DEFAULT_TTL = "86400"
-CORS_ORIGIN = "https://cloudtube.pages.dev"
+  // 7. Environment Variables
+  "vars": {
+    "ENVIRONMENT": "production",
+    "MAX_FREE_DAILY_YOUTUBE_QUOTA": "10000",
+    "CACHE_DEFAULT_TTL": "86400",
+    "CORS_ORIGIN": "https://cloudtube.pages.dev"
+  }
+}
 `,
   },
   {
@@ -979,7 +991,7 @@ export class GcpRedisKeyValueProvider implements IKeyValueProvider {
     language: 'typescript',
     code: `/**
  * Automated Cloudflare Setup Script (Runs in CLI or via Browser Setup Wizard)
- * Creates D1, R2, KV, Queues, and writes wrangler.toml bindings in under 5 minutes.
+ * Creates D1, R2, KV, Queues, and writes wrangler.jsonc bindings in under 5 minutes.
  */
 
 import { CloudflareAdminClient } from '../services/cloudflareApi';

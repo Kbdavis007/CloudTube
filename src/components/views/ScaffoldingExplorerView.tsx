@@ -363,7 +363,7 @@ export const ScaffoldingExplorerView: React.FC = () => {
 
           <pre className="p-5 rounded-2xl bg-slate-950 border border-slate-800 font-mono text-xs text-orange-200 leading-loose overflow-x-auto">
 {`cloudtube/
-├── wrangler.toml                           # Cloudflare Worker configuration & Free Tier bindings
+├── wrangler.jsonc                          # Cloudflare Worker configuration & Free Tier bindings
 ├── package.json                            # TypeScript, Cloudflare Workers & React dependencies
 ├── tsconfig.json                           # Strict TS configuration
 ├── db/

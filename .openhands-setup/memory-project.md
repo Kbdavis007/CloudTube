@@ -3,9 +3,9 @@
 ## What this is
 - CloudTube: a YouTube-like app on Cloudflare (Vite + React + TS, Firebase auth, AI summary).
   Repo root: `/workspace/project`.
-- Production is a Cloudflare **Worker** named "cloudtube" (NOT Pages): `wrangler.toml`
-  (`main = worker/index.ts`, `[assets]` binding ASSETS -> ./dist, SPA fallback,
-  `run_worker_first = ["/api/*"]`). Deploy/release scripts in `scripts/`.
+- Production is a Cloudflare **Worker** named "cloudtube" (NOT Pages): `wrangler.jsonc`
+  (`main: worker/index.ts`, `assets` binding ASSETS -> ./dist, SPA fallback,
+  `run_worker_first: ["/api/*"]`). Deploy/release scripts in `scripts/`.
 - Package manager is **bun** (`bun.lock`); use `bun install --frozen-lockfile` then
   `bun run build` (= `vite build`). `npm install` FAILS here (ERESOLVE esbuild/vite peer
   conflict) even on unmodified main — do not use npm.

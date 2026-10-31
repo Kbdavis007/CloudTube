@@ -103,7 +103,7 @@ never ran and `POST /api/cloudflare/proxy` kept returning 405.
 | `GET /api/health` | version / commit / branch provenance |
 | `POST /api/cloudflare/proxy` | server-side relay to the Cloudflare API |
 
-`wrangler.toml` sets `run_worker_first = ["/api/*"]` so API calls reach the
+`wrangler.jsonc` sets `run_worker_first: ["/api/*"]` so API calls reach the
 Worker before the asset layer (otherwise the asset handler answers POST with 405).
 
 Build settings for Workers Builds:
