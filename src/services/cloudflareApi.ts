@@ -661,8 +661,12 @@ export class CloudflareAdminClient {
     const now = new Date();
     const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
     const dateOnly = dayStart.toISOString().slice(0, 10);
+    // R2 storage is sampled at a daily granularity, so the current day alone can
+    // be empty until the day's sample lands. A 48h window always contains the
+    // most recent snapshot.
+    const r2Start = new Date(now.getTime() - 48 * 60 * 60 * 1000);
 
-    const query = `query CloudTubeUsage($accountTag: string!, $day: Date, $dayStart: Time, $dayEnd: Time) {
+    const query = `query CloudTubeUsage($accountTag: string!, $day: Date, $dayStart: Time, $dayEnd: Time, $r2Start: Time) {
       viewer {
         accounts(filter: { accountTag: $accountTag }) {
           workersInvocationsAdaptive(limit: 1000, filter: { datetime_geq: $dayStart, datetime_leq: $dayEnd }) {
@@ -675,7 +679,7 @@ export class CloudflareAdminClient {
             sum { requests }
             dimensions { actionType }
           }
-          r2StorageAdaptiveGroups(limit: 1000) {
+          r2StorageAdaptiveGroups(limit: 1000, filter: { datetime_geq: $r2Start, datetime_leq: $dayEnd }) {
             max { payloadSize metadataSize }
           }
         }
@@ -691,6 +695,7 @@ export class CloudflareAdminClient {
           day: dateOnly,
           dayStart: dayStart.toISOString(),
           dayEnd: now.toISOString(),
+          r2Start: r2Start.toISOString(),
         },
       },
       actionName: 'USAGE_ANALYTICS',
