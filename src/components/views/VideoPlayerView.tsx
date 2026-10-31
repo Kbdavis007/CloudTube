@@ -19,6 +19,7 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
+  ExternalLink,
   Sparkles,
   Save,
   CheckCircle2,
@@ -115,6 +116,11 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
   const currentIndex = allVideos.findIndex((v) => v.youtubeId === currentVideo.youtubeId);
   const prevVideo = currentIndex > 0 ? allVideos[currentIndex - 1] : null;
   const nextVideo = currentIndex < allVideos.length - 1 ? allVideos[currentIndex + 1] : null;
+
+  // Only sources that ship their own page (XVideos) can be opened outside the
+  // app. YouTube videos have no canonical source-site page in this library, so
+  // the button is hidden rather than pointing at a guessed URL.
+  const sourceUrl = currentVideo.playback?.externalUrl;
 
   const handleSavePersonal = async () => {
     await onUpdatePersonal(currentVideo.youtubeId, {
@@ -231,8 +237,23 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
                 ))}
               </div>
 
-              {/* Favorite & AI Analysis */}
+              {/* Favorite & AI Analysis. Playback stays in the app; opening the
+                  original page is the only action that leaves it, and it is
+                  explicit via "Go to Source Site". */}
               <div className="flex items-center gap-2">
+                {sourceUrl && (
+                  <a
+                    href={sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 text-[#ff6600] border border-slate-700 text-xs font-semibold transition hover:text-[#ffaa33] hover:border-orange-500/50 active:scale-95"
+                    title="Open this video on its original source site"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Go to Source Site</span>
+                  </a>
+                )}
+
                 <button
                   onClick={() => setShowAiModal(true)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white text-xs font-semibold shadow-sm transition active:scale-95"

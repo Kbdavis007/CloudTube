@@ -95,7 +95,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   return (
-    <aside className="w-full md:w-64 border-r border-slate-800/80 bg-slate-950/60 p-3 flex md:flex-col justify-between shrink-0 overflow-x-auto md:overflow-x-visible">
+    <aside className="w-full md:w-64 border-r border-slate-800/80 bg-slate-950/60 p-3 flex md:flex-col justify-between shrink-0 overflow-x-auto md:overflow-x-visible md:sticky md:top-0 md:z-[1000] md:self-start md:max-h-screen md:overflow-y-auto">
       <div className="flex md:flex-col gap-1 w-full">
         <div className="hidden md:flex items-center justify-between px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-300">
           <span>{isLoggedIn ? 'Your Library' : 'Navigation Locked'}</span>

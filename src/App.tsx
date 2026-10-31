@@ -402,7 +402,7 @@ export default function App() {
   const tasteProfile: TasteProfile = React.useMemo(() => buildTasteProfile(removals), [removals]);
 
   return (
-    <div className="min-h-screen ct-app-bg text-slate-100 flex flex-col selection:bg-orange-500/30 selection:text-orange-200">
+    <div className="h-screen ct-app-bg text-slate-100 flex flex-col selection:bg-orange-500/30 selection:text-orange-200">
       {/* Top Navbar */}
       <Header
         onOpenWizard={() => openWizard()}
@@ -417,8 +417,11 @@ export default function App() {
         isImporting={isImportingChannel}
       />
 
-      {/* Main Layout: Sidebar + Content Area */}
-      <div className="flex-1 flex flex-col md:flex-row">
+      {/* Main Layout: Sidebar + Content Area.
+          On desktop the shell is a fixed-height app frame (h-screen above) and
+          only <main> scrolls, so the sidebar stays put and scrolls on its own.
+          On mobile the wrapper keeps its natural height and the page scrolls. */}
+      <div className="flex-1 flex flex-col md:flex-row md:overflow-hidden md:min-h-0">
         <Sidebar
           currentTab={currentTab}
           onSelectTab={navigate}
@@ -429,7 +432,7 @@ export default function App() {
           isLoggedIn={isLoggedIn}
         />
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto md:min-h-0">
           {isLoading ? (
             <div className="flex items-center justify-center h-64">
               <div className="text-center space-y-3">
