@@ -9,13 +9,11 @@ import {
   Settings,
   Lock,
   Trash2,
-  Film,
 } from 'lucide-react';
 
 export type PageTab =
   | 'dashboard'
   | 'search'
-  | 'sources'
   | 'xvideos'
   | 'player'
   | 'channels'
@@ -51,64 +49,48 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'Dashboard',
       icon: LayoutDashboard,
       badge: null,
-      deprecated: false,
     },
     {
       id: 'search' as PageTab,
       label: 'Search & Collect',
       icon: Search,
       badge: 'Live',
-      deprecated: false,
-    },
-    {
-      // Kept for backward compatibility; the sources panel now lives in Settings.
-      id: 'sources' as PageTab,
-      label: 'Video Sources',
-      icon: Film,
-      badge: null,
-      deprecated: true,
     },
     {
       id: 'player' as PageTab,
       label: 'Videos',
       icon: PlaySquare,
       badge: videoCount > 0 ? String(videoCount) : null,
-      deprecated: false,
     },
     {
       id: 'channels' as PageTab,
       label: 'Channels',
       icon: Tv,
       badge: channelCount > 0 ? String(channelCount) : null,
-      deprecated: false,
     },
     {
       id: 'comments' as PageTab,
       label: 'Comments',
       icon: MessageSquare,
       badge: commentCount > 0 ? String(commentCount) : null,
-      deprecated: false,
     },
     {
       id: 'ratings' as PageTab,
       label: 'Ratings & Notes',
       icon: Star,
       badge: null,
-      deprecated: false,
     },
     {
       id: 'removals' as PageTab,
       label: 'Removed & Taste',
       icon: Trash2,
       badge: removalCount > 0 ? String(removalCount) : null,
-      deprecated: false,
     },
     {
       id: 'settings' as PageTab,
       label: 'Settings',
       icon: Settings,
       badge: null,
-      deprecated: false,
     },
   ];
 
@@ -141,12 +123,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 key={item.id}
                 onClick={() => onSelectTab(item.id)}
-                title={item.deprecated ? 'Deprecated — moved to Settings' : undefined}
                 className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition group whitespace-nowrap active:scale-[0.98] ${
                   isActive
                     ? 'bg-orange-500/15 text-orange-400 border border-orange-500/30 shadow-sm'
-                    : item.deprecated
-                    ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent'
                     : 'text-slate-300 hover:text-white hover:bg-slate-900 border border-transparent'
                 }`}
               >
@@ -157,11 +136,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     }`}
                   />
                   <span>{item.label}</span>
-                  {item.deprecated && (
-                    <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400/90 border border-amber-500/20">
-                      Deprecated
-                    </span>
-                  )}
                 </div>
 
                 {item.badge && (
