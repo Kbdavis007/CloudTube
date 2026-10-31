@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   VideoMetadata,
   VideoComment,
@@ -27,6 +27,10 @@ import {
   FileText,
   RefreshCw,
   Loader2,
+  Search,
+  ListFilter,
+  X,
+  ArrowUpDown,
 } from 'lucide-react';
 import { AiAnalysisModal } from '../AiAnalysisModal';
 import { ApiErrorCard } from '../ApiErrorCard';
@@ -121,6 +125,138 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
   // app. YouTube videos have no canonical source-site page in this library, so
   // the button is hidden rather than pointing at a guessed URL.
   const sourceUrl = currentVideo.playback?.externalUrl;
+
+  // Library browser state: search, filters and sort over every video in the
+  // library, so a large collection can be narrowed without leaving the player.
+  const [libraryQuery, setLibraryQuery] = useState('');
+  const [filterSource, setFilterSource] = useState<SourceFlag | 'ALL'>('ALL');
+  const [filterChannel, setFilterChannel] = useState<string>('ALL');
+  const [filterScore, setFilterScore] = useState<'all' | 'elite' | 'good' | 'low'>('all');
+  const [filterRating, setFilterRating] = useState<'all' | 'rated' | 'unrated' | 'favorites'>('all');
+  const [filterDuration, setFilterDuration] = useState<'all' | 'short' | 'medium' | 'long'>('all');
+  const [filterPublishedFrom, setFilterPublishedFrom] = useState('');
+  const [filterPublishedTo, setFilterPublishedTo] = useState('');
+  const [sortBy, setSortBy] = useState<
+    'score' | 'rating' | 'date_desc' | 'date_asc' | 'title' | 'channel' | 'duration'
+  >('score');
+
+  const channelOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const v of allVideos) {
+      if (!seen.has(v.channelId)) seen.set(v.channelId, v.channelTitle);
+    }
+    return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  }, [allVideos]);
+
+  const sourceOptions = useMemo(() => {
+    const counts = new Map<SourceFlag, number>();
+    for (const v of allVideos) {
+      for (const flag of v.sourceFlags) counts.set(flag, (counts.get(flag) ?? 0) + 1);
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  }, [allVideos]);
+
+  const filteredLibrary = useMemo(() => {
+    const query = libraryQuery.trim().toLowerCase();
+    const from = filterPublishedFrom ? new Date(filterPublishedFrom).getTime() : null;
+    const to = filterPublishedTo ? new Date(filterPublishedTo).getTime() : null;
+
+    const matching = allVideos.filter((v) => {
+      if (query) {
+        const haystack = `${v.title} ${v.channelTitle} ${v.description} ${(v.tags || []).join(' ')}`.toLowerCase();
+        if (!haystack.includes(query)) return false;
+      }
+      if (filterSource !== 'ALL' && !v.sourceFlags.includes(filterSource)) return false;
+      if (filterChannel !== 'ALL' && v.channelId !== filterChannel) return false;
+
+      const score = v.personal?.indexScore ?? 50;
+      if (filterScore === 'elite' && score > 20) return false;
+      if (filterScore === 'good' && score > 50) return false;
+      if (filterScore === 'low' && score < 70) return false;
+
+      const rating = v.personal?.userRating ?? 0;
+      if (filterRating === 'rated' && rating <= 0) return false;
+      if (filterRating === 'unrated' && rating > 0) return false;
+      if (filterRating === 'favorites' && !v.personal?.isFavorite) return false;
+
+      const seconds = v.durationSeconds || 0;
+      if (filterDuration === 'short' && seconds >= 300) return false;
+      if (filterDuration === 'medium' && (seconds < 300 || seconds > 1200)) return false;
+      if (filterDuration === 'long' && seconds <= 1200) return false;
+
+      if (from !== null || to !== null) {
+        const published = new Date(v.publishedAt).getTime();
+        if (from !== null && published < from) return false;
+        if (to !== null && published > to) return false;
+      }
+      return true;
+    });
+
+    const sorted = [...matching];
+    sorted.sort((a, b) => {
+      const aScore = a.personal?.indexScore ?? 50;
+      const bScore = b.personal?.indexScore ?? 50;
+      switch (sortBy) {
+        case 'rating':
+          return (b.personal?.userRating ?? 0) - (a.personal?.userRating ?? 0);
+        case 'date_desc':
+          return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
+        case 'date_asc':
+          return new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime();
+        case 'title':
+          return a.title.localeCompare(b.title);
+        case 'channel':
+          return a.channelTitle.localeCompare(b.channelTitle);
+        case 'duration':
+          return (b.durationSeconds || 0) - (a.durationSeconds || 0);
+        case 'score':
+        default:
+          return aScore - bScore;
+      }
+    });
+    return sorted;
+  }, [
+    allVideos,
+    libraryQuery,
+    filterSource,
+    filterChannel,
+    filterScore,
+    filterRating,
+    filterDuration,
+    filterPublishedFrom,
+    filterPublishedTo,
+    sortBy,
+  ]);
+
+  const hasActiveLibraryFilters =
+    libraryQuery.trim().length > 0 ||
+    filterSource !== 'ALL' ||
+    filterChannel !== 'ALL' ||
+    filterScore !== 'all' ||
+    filterRating !== 'all' ||
+    filterDuration !== 'all' ||
+    filterPublishedFrom !== '' ||
+    filterPublishedTo !== '' ||
+    sortBy !== 'score';
+
+  const clearLibraryFilters = () => {
+    setLibraryQuery('');
+    setFilterSource('ALL');
+    setFilterChannel('ALL');
+    setFilterScore('all');
+    setFilterRating('all');
+    setFilterDuration('all');
+    setFilterPublishedFrom('');
+    setFilterPublishedTo('');
+    setSortBy('score');
+  };
+
+  const formatDuration = (seconds: number) => {
+    if (!seconds) return '—';
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${String(s).padStart(2, '0')}`;
+  };
 
   const handleSavePersonal = async () => {
     await onUpdatePersonal(currentVideo.youtubeId, {
@@ -634,6 +770,251 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
               Save Notes
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Library Browser: search, filters, sort and the full scrollable list */}
+      <div className="p-4 sm:p-5 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-base font-bold text-white flex items-center gap-2">
+            <ListFilter className="w-4 h-4 text-orange-500" />
+            All Library Videos
+          </h2>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400">
+              Showing{' '}
+              <span className="font-mono font-bold text-slate-200">{filteredLibrary.length}</span> of{' '}
+              <span className="font-mono font-bold text-slate-200">{allVideos.length}</span>
+            </span>
+            {hasActiveLibraryFilters && (
+              <button
+                onClick={clearLibraryFilters}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold transition border border-slate-700"
+              >
+                <X className="w-3 h-3" /> Clear
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Search + filter controls */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="relative sm:col-span-2 lg:col-span-4">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              value={libraryQuery}
+              onChange={(e) => setLibraryQuery(e.target.value)}
+              placeholder="Search your library by title, channel, description or tag..."
+              className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-orange-500"
+            />
+          </div>
+
+          <label className="space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Source</span>
+            <select
+              value={filterSource}
+              onChange={(e) => setFilterSource(e.target.value as SourceFlag | 'ALL')}
+              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-hidden focus:border-orange-500"
+            >
+              <option value="ALL">All sources</option>
+              {sourceOptions.map(([flag, count]) => (
+                <option key={flag} value={flag}>
+                  {sourceFlagLabel(flag)} ({count})
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Channel</span>
+            <select
+              value={filterChannel}
+              onChange={(e) => setFilterChannel(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-hidden focus:border-orange-500"
+            >
+              <option value="ALL">All channels</option>
+              {channelOptions.map(([id, title]) => (
+                <option key={id} value={id}>
+                  {title}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Score</span>
+            <select
+              value={filterScore}
+              onChange={(e) => setFilterScore(e.target.value as typeof filterScore)}
+              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-hidden focus:border-orange-500"
+            >
+              <option value="all">Any score</option>
+              <option value="elite">Top tier (≤ 20)</option>
+              <option value="good">Good (≤ 50)</option>
+              <option value="low">Low priority (≥ 70)</option>
+            </select>
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Rating</span>
+            <select
+              value={filterRating}
+              onChange={(e) => setFilterRating(e.target.value as typeof filterRating)}
+              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-hidden focus:border-orange-500"
+            >
+              <option value="all">Any rating</option>
+              <option value="rated">Rated</option>
+              <option value="unrated">Unrated</option>
+              <option value="favorites">Favorites</option>
+            </select>
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Duration</span>
+            <select
+              value={filterDuration}
+              onChange={(e) => setFilterDuration(e.target.value as typeof filterDuration)}
+              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-hidden focus:border-orange-500"
+            >
+              <option value="all">Any length</option>
+              <option value="short">Short (&lt; 5 min)</option>
+              <option value="medium">Medium (5–20 min)</option>
+              <option value="long">Long (&gt; 20 min)</option>
+            </select>
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Published from</span>
+            <input
+              type="date"
+              value={filterPublishedFrom}
+              onChange={(e) => setFilterPublishedFrom(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-hidden focus:border-orange-500"
+            />
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Published to</span>
+            <input
+              type="date"
+              value={filterPublishedTo}
+              onChange={(e) => setFilterPublishedTo(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-hidden focus:border-orange-500"
+            />
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+              <ArrowUpDown className="w-3 h-3" /> Sort by
+            </span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-hidden focus:border-orange-500"
+            >
+              <option value="score">Score (best first)</option>
+              <option value="rating">Rating (highest)</option>
+              <option value="date_desc">Published (newest)</option>
+              <option value="date_asc">Published (oldest)</option>
+              <option value="title">Title (A–Z)</option>
+              <option value="channel">Channel (A–Z)</option>
+              <option value="duration">Duration (longest)</option>
+            </select>
+          </label>
+        </div>
+
+        {/* Scrollable list of every matching video */}
+        <div className="max-h-[28rem] overflow-y-auto pr-1 space-y-2">
+          {filteredLibrary.map((video) => {
+            const isCurrent = video.youtubeId === currentVideo.youtubeId;
+            const score = video.personal?.indexScore ?? 50;
+            const rating = video.personal?.userRating ?? 0;
+            const thumbnail =
+              video.thumbnails?.medium || video.posterUrl || video.thumbnails?.default || '';
+
+            return (
+              <button
+                key={video.youtubeId}
+                onClick={() => onSelectVideo(video.youtubeId)}
+                className={`w-full text-left flex items-center gap-3 p-2.5 rounded-2xl border transition ${
+                  isCurrent
+                    ? 'bg-orange-500/15 border-orange-500/40'
+                    : 'bg-slate-950/60 border-slate-800/80 hover:border-orange-500/40 hover:bg-slate-900/60'
+                }`}
+              >
+                <div className="relative w-24 h-14 rounded-xl overflow-hidden bg-black shrink-0">
+                  <img
+                    src={thumbnail}
+                    alt={video.title}
+                    loading="lazy"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute bottom-1 right-1 px-1 py-0.5 rounded bg-black/80 text-[9px] font-mono text-white">
+                    {formatDuration(video.durationSeconds)}
+                  </div>
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <h3
+                    className={`text-xs font-bold truncate ${
+                      isCurrent ? 'text-orange-300' : 'text-white'
+                    }`}
+                  >
+                    {video.title}
+                  </h3>
+                  <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                    <span className="text-orange-400/90 truncate">{video.channelTitle}</span>
+                    <span>·</span>
+                    <span className="shrink-0">{new Date(video.publishedAt).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-300">
+                      Score {score}
+                    </span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">
+                      {rating}%
+                    </span>
+                    {video.personal?.isFavorite && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 flex items-center gap-0.5">
+                        <Star className="w-2.5 h-2.5 fill-current" /> Fav
+                      </span>
+                    )}
+                    {video.sourceFlags.slice(0, 2).map((flag) => (
+                      <span
+                        key={flag}
+                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                          sourceFlagColors[flag] || 'bg-slate-800 text-slate-300'
+                        }`}
+                      >
+                        {sourceFlagLabel(flag)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {isCurrent && (
+                  <span className="shrink-0 text-[10px] font-bold px-2 py-1 rounded-lg bg-orange-600 text-white">
+                    Now Playing
+                  </span>
+                )}
+              </button>
+            );
+          })}
+
+          {filteredLibrary.length === 0 && (
+            <div className="py-10 text-center space-y-2">
+              <p className="text-xs text-slate-300">No videos match your search or filters.</p>
+              {hasActiveLibraryFilters && (
+                <button
+                  onClick={clearLibraryFilters}
+                  className="text-xs text-orange-400 hover:text-orange-300 font-semibold"
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
