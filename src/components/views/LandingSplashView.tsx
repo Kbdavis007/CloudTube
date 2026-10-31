@@ -83,7 +83,7 @@ export const LandingSplashView: React.FC<LandingSplashViewProps> = ({ onAuthSucc
           <button
             onClick={handleGoogleSignIn}
             disabled={isLoading}
-            className="w-full flex items-center justify-center gap-3 py-3.5 px-6 rounded-2xl bg-white hover:bg-slate-100 disabled:opacity-60 text-slate-900 font-bold text-sm shadow-xl hover:shadow-2xl transition duration-200 active:scale-[0.98] group"
+            className="w-full flex items-center justify-center gap-3 py-3.5 px-6 rounded-2xl bg-[#ffffff] hover:bg-[#f2f2f2] disabled:opacity-60 text-[#1a1a1a] font-bold text-sm shadow-xl hover:shadow-2xl transition duration-200 active:scale-[0.98] group"
           >
             {isLoading ? (
               <Loader2 className="w-5 h-5 text-orange-600 animate-spin" />

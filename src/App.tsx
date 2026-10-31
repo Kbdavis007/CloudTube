@@ -402,7 +402,7 @@ export default function App() {
   const tasteProfile: TasteProfile = React.useMemo(() => buildTasteProfile(removals), [removals]);
 
   return (
-    <div className="min-h-screen bg-[#050811] text-slate-100 flex flex-col selection:bg-orange-500/30 selection:text-orange-200">
+    <div className="min-h-screen ct-app-bg text-slate-100 flex flex-col selection:bg-orange-500/30 selection:text-orange-200">
       {/* Top Navbar */}
       <Header
         onOpenWizard={() => openWizard()}

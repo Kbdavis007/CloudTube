@@ -1,14 +1,122 @@
 @import "tailwindcss";
 
+/*
+ * Theme system.
+ *
+ * Tailwind v4 emits its palette as custom properties on :root and every colour
+ * utility compiles to var(--color-*), so a theme only has to remap those tokens
+ * for the whole UI to follow. Overrides live in @layer base, which Tailwind
+ * orders after @layer theme, so they win without specificity tricks.
+ *
+ * Dark (the default) is intentionally absent: it uses Tailwind's stock palette,
+ * so dark rendering stays identical to before this feature existed.
+ */
 @layer base {
+  :root {
+    --ct-app-bg: #050811;
+    --ct-code-bg: #090d16;
+    --ct-scrollbar-track: #090d16;
+    --ct-scrollbar-thumb: #1e293b;
+  }
+
+  [data-theme="light"] {
+    --ct-app-bg: #ffffff;
+    --ct-code-bg: #f2f2f2;
+    --ct-scrollbar-track: #f2f2f2;
+    --ct-scrollbar-thumb: #cbd5e1;
+
+    /* text-white -> dark text; bg-white is never used for surfaces. */
+    --color-white: #1a1a1a;
+
+    --color-slate-100: #1a1a1a;
+    --color-slate-200: #27272a;
+    --color-slate-300: #3f3f46;
+    --color-slate-400: #52525b;
+    --color-slate-500: #71717a;
+    --color-slate-600: #a1a1aa;
+    --color-slate-700: #d4d4d8;
+    --color-slate-800: #e4e4e7;
+    --color-slate-900: #f2f2f2;
+    --color-slate-950: #ffffff;
+
+    --color-orange-200: #7c2d12;
+    --color-orange-300: #9a3412;
+    --color-orange-400: #ea580c;
+    --color-orange-500: #f97316;
+    --color-orange-600: #ea580c;
+    --color-orange-700: #c2410c;
+    --color-orange-950: #fff7ed;
+  }
+
+  [data-theme="medium"] {
+    --ct-app-bg: #1e1e1e;
+    --ct-code-bg: #171717;
+    --ct-scrollbar-track: #1e1e1e;
+    --ct-scrollbar-thumb: #3a3a3a;
+
+    --color-white: #e0e0e0;
+
+    --color-slate-100: #e0e0e0;
+    --color-slate-200: #d4d4d4;
+    --color-slate-300: #c4c4c4;
+    --color-slate-400: #9a9a9a;
+    --color-slate-500: #7a7a7a;
+    --color-slate-600: #5a5a5a;
+    --color-slate-700: #3a3a3a;
+    --color-slate-800: #2e2e2e;
+    --color-slate-900: #242424;
+    --color-slate-950: #1e1e1e;
+
+    /* Slightly desaturated orange for softer contrast against slate gray. */
+    --color-orange-200: #e8c9a8;
+    --color-orange-300: #e0b183;
+    --color-orange-400: #d97f3a;
+    --color-orange-500: #c97a3f;
+    --color-orange-600: #b36b34;
+    --color-orange-700: #96562a;
+    --color-orange-950: #2a211a;
+  }
+
   body {
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    background-color: #050811;
+    background-color: var(--ct-app-bg);
     color: #f1f5f9;
+  }
+
+  [data-theme="light"] body {
+    color: #1a1a1a;
+  }
+
+  [data-theme="medium"] body {
+    color: #e0e0e0;
   }
 
   code, pre, .font-mono {
     font-family: 'JetBrains Mono', monospace;
+  }
+
+  /*
+   * Applied only for the duration of a user-initiated switch (see theme.ts), so
+   * colours ease over 0.4s without paying a permanent transition cost on every
+   * element.
+   */
+  .ct-theme-transition *,
+  .ct-theme-transition *::before,
+  .ct-theme-transition *::after {
+    transition:
+      background-color 0.4s ease,
+      border-color 0.4s ease,
+      color 0.4s ease,
+      fill 0.4s ease,
+      stroke 0.4s ease !important;
+  }
+
+  .ct-app-bg {
+    background-color: var(--ct-app-bg);
+  }
+
+  .ct-code-bg {
+    background-color: var(--ct-code-bg);
   }
 }
 
@@ -18,13 +126,12 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #090d16;
+  background: var(--ct-scrollbar-track);
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: var(--ct-scrollbar-thumb);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #f97316;
 }
-

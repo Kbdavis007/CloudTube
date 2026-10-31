@@ -337,7 +337,7 @@ export const ScaffoldingExplorerView: React.FC = () => {
             </div>
 
             {/* Code Block with Syntax Style */}
-            <div className="relative rounded-2xl overflow-hidden border border-slate-800 bg-[#090d16]">
+            <div className="relative rounded-2xl overflow-hidden border border-slate-800 ct-code-bg">
               <div className="px-4 py-2 border-b border-slate-800/80 bg-slate-950 flex items-center justify-between text-xs text-slate-400 font-mono">
                 <span>{selectedFile.language.toUpperCase()} · {selectedFile.code.split('\n').length} lines</span>
                 <span className="text-[10px] text-emerald-400 font-semibold">100% Free-Tier Compatible</span>

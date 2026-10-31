@@ -20,6 +20,7 @@ import { idbService } from '../../services/indexedDB';
 import { CloudflareStatsPanel } from '../CloudflareStatsPanel';
 import { HealthCheckPanel } from '../HealthCheckPanel';
 import { VideoSourcesPanel } from '../VideoSourcesPanel';
+import { ThemeVisualOptionsPanel } from '../ThemeVisualOptionsPanel';
 import type { PageTab } from '../Sidebar';
 import {
   VERSION_LABEL,
@@ -163,6 +164,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* Theme & visual options */}
+      <ThemeVisualOptionsPanel />
 
       {/* Video sources: relocated here from the sidebar, collapsed by default */}
       <VideoSourcesPanel

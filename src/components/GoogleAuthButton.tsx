@@ -147,7 +147,7 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
       <button
         onClick={handleSignIn}
         disabled={isLoading}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 disabled:opacity-50 text-slate-800 text-xs font-semibold transition shadow-md active:scale-95"
+        className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#ffffff] hover:bg-[#f2f2f2] disabled:opacity-50 text-[#1a1a1a] text-xs font-semibold transition shadow-md active:scale-95"
         title="Sign in with Google to connect your YouTube library"
       >
         {isLoading ? (
