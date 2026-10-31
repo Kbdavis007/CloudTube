@@ -2,9 +2,7 @@ import React from 'react';
 import {
   VideoMetadata,
   ChannelMetadata,
-  CrawlJob,
 } from '../../types';
-import { jobTypeLabel } from '../../data/sourceLabels';
 import {
   PlaySquare,
   Tv,
@@ -18,7 +16,6 @@ import {
   Clock,
   Eye,
   Star,
-  Activity,
   Trash2,
 } from 'lucide-react';
 
@@ -26,7 +23,6 @@ interface DashboardViewProps {
   videos: VideoMetadata[];
   channels: ChannelMetadata[];
   commentCount: number;
-  jobs: CrawlJob[];
   onSelectVideo: (videoId: string) => void;
   onNavigate: (tab: any) => void;
   onRequestRemoval: (youtubeId: string) => void;
@@ -36,7 +32,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   videos,
   channels,
   commentCount,
-  jobs,
   onSelectVideo,
   onNavigate,
   onRequestRemoval,
@@ -204,9 +199,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* Two Columns: Recent Videos & Active Crawler Jobs */}
+      {/* Two Columns: Highest Ranked Videos & Channel Collector */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Videos in Library (2 Cols) */}
+        {/* Highest Ranked Videos in Library (2 Cols) */}
         <div className="lg:col-span-2 space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold text-white flex items-center gap-2">
@@ -284,55 +279,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-        {/* Recent Activity (1 Col) */}
+        {/* Channel Collector (1 Col) */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <Activity className="w-4 h-4 text-orange-500" />
-              Recent Activity
-            </h2>
-            <span className="text-xs text-slate-400">{jobs.length} recent</span>
-          </div>
-
-          <div className="space-y-2.5">
-            {jobs.slice(0, 4).map((job) => (
-              <div
-                key={job.id}
-                className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-white">{jobTypeLabel(job.type)}</span>
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      job.status === 'completed'
-                        ? 'bg-emerald-500/20 text-emerald-400'
-                        : job.status === 'processing'
-                        ? 'bg-blue-500/20 text-blue-400 animate-pulse'
-                        : 'bg-amber-500/20 text-amber-400'
-                    }`}
-                  >
-                    {job.status}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-400 font-mono truncate">{job.queryOrTarget}</p>
-                <div className="flex items-center justify-between text-[11px] text-slate-500">
-                  <span>Found: {job.itemsFound} items</span>
-                  <span>{new Date(job.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
-              </div>
-            ))}
-
-            <div className="p-4 rounded-2xl bg-orange-950/20 border border-orange-500/20 text-center space-y-2">
-              <p className="text-xs text-orange-300 font-medium">
-                Want to collect an entire YouTube channel?
-              </p>
-              <button
-                onClick={() => onNavigate('channels')}
-                className="w-full py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition shadow-sm active:scale-95"
-              >
-                Open Channel Collector
-              </button>
-            </div>
+          <div className="p-4 rounded-2xl bg-orange-950/20 border border-orange-500/20 text-center space-y-2">
+            <p className="text-xs text-orange-300 font-medium">
+              Want to collect an entire YouTube channel?
+            </p>
+            <button
+              onClick={() => onNavigate('channels')}
+              className="w-full py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition shadow-sm active:scale-95"
+            >
+              Open Channel Collector
+            </button>
           </div>
         </div>
       </div>

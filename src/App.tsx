@@ -35,7 +35,6 @@ export default function App() {
   const [videos, setVideos] = useState<VideoMetadata[]>([]);
   const [channels, setChannels] = useState<ChannelMetadata[]>([]);
   const [comments, setComments] = useState<VideoComment[]>([]);
-  const [jobs, setJobs] = useState<CrawlJob[]>([]);
   const [removals, setRemovals] = useState<VideoRemoval[]>([]);
   const [videoPendingRemoval, setVideoPendingRemoval] = useState<VideoMetadata | null>(null);
   const [selectedVideoId, setSelectedVideoId] = useState<string>('');
@@ -84,18 +83,16 @@ export default function App() {
   // Load all library data from IndexedDB
   const refreshLibraryData = async () => {
     try {
-      const [vList, cList, commList, jList, rList] = await Promise.all([
+      const [vList, cList, commList, rList] = await Promise.all([
         idbService.getAllVideos(),
         idbService.getAllChannels(),
         idbService.getAllComments(),
-        idbService.getCrawlJobs(),
         idbService.getRemovals(),
       ]);
 
       setVideos(vList);
       setChannels(cList);
       setComments(commList);
-      setJobs(jList);
       setRemovals(rList);
 
       if (vList.length > 0 && !selectedVideoId) {
@@ -449,7 +446,6 @@ export default function App() {
                   videos={videos}
                   channels={channels}
                   commentCount={comments.length}
-                  jobs={jobs}
                   onSelectVideo={handleSelectVideo}
                   onNavigate={setCurrentTab}
                   onRequestRemoval={handleRequestRemoval}
