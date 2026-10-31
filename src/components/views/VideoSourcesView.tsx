@@ -33,11 +33,10 @@ const SOURCES: SourceOption[] = [
     name: 'XVideos',
     tagline: 'Webmaster catalogue',
     description:
-      'Import the XVideos webmaster catalogue and search it offline. Adult content — 18+ only.',
+      'Import the XVideos webmaster catalogue and search it offline.',
     icon: ShieldAlert,
     accent: 'hover:border-orange-500/50',
     iconClass: 'bg-orange-500/10 border-orange-500/20 text-orange-400',
-    badge: '18+',
   },
 ];
 

@@ -62,7 +62,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'sources' as PageTab,
       label: 'Video Sources',
       icon: Film,
-      badge: '2',
+      badge: null,
     },
     {
       id: 'player' as PageTab,
