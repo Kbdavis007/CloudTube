@@ -466,7 +466,12 @@ export default function App() {
                 />
               )}
 
-              {currentTab === 'sources' && <VideoSourcesView onSelectSource={setCurrentTab} />}
+              {currentTab === 'sources' && (
+                <VideoSourcesView
+                  onSelectSource={setCurrentTab}
+                  onOpenSettings={() => navigate('settings')}
+                />
+              )}
 
               {currentTab === 'xvideos' && (
                 <XvideosSourceView
@@ -552,6 +557,7 @@ export default function App() {
                   onNavigate={navigate}
                   onUpdateToken={() => openWizard(1)}
                   onOpenWizardStep={(step) => openWizard(step)}
+                  isYouTubeConnected={!!accessToken}
                 />
               )}
             </>

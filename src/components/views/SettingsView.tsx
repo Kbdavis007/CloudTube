@@ -19,6 +19,7 @@ import { isVaultConfigured, clearCredentialsVault } from '../../services/crypto'
 import { idbService } from '../../services/indexedDB';
 import { CloudflareStatsPanel } from '../CloudflareStatsPanel';
 import { HealthCheckPanel } from '../HealthCheckPanel';
+import { VideoSourcesPanel } from '../VideoSourcesPanel';
 import type { PageTab } from '../Sidebar';
 import {
   VERSION_LABEL,
@@ -38,6 +39,8 @@ interface SettingsViewProps {
   onUpdateToken?: () => void;
   /** Opens the Setup Wizard at a specific step, used by the health-check fixes. */
   onOpenWizardStep?: (step: number) => void;
+  /** Whether the Google account is connected, used for the YouTube source status. */
+  isYouTubeConnected?: boolean;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -46,6 +49,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onNavigate,
   onUpdateToken,
   onOpenWizardStep,
+  isYouTubeConnected = false,
 }) => {
   const [vaultStatus, setVaultStatus] = useState<boolean>(isVaultConfigured());
   const [importStatus, setImportStatus] = useState<string | null>(null);
@@ -159,6 +163,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* Video sources: relocated here from the sidebar, collapsed by default */}
+      <VideoSourcesPanel
+        onSelectSource={(tab) => onNavigate?.(tab)}
+        isYouTubeConnected={isYouTubeConnected}
+      />
 
       {/* YouTube access */}
       <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-3">
