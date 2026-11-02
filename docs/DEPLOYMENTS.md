@@ -18,3 +18,4 @@ npm run deploy:log -- --env production --url https://your-app.example --notes "w
 | 2026-11-02 19:48 UTC | `v0.2.2` | `435aecb` | production | https://ct.devmatrix.top | local | release tooling: version stamp regenerated before deploy log |
 | 2026-11-02 19:56 UTC | `v0.2.3` | `d4d806f` | production | https://ct.devmatrix.top | local | version policy: patch bumps only, 1.0.0 gated |
 | 2026-11-02 22:45 UTC | `v0.2.4` | `bc9fa5d` | production | https://ct.devmatrix.top | local | Videos page shows the listing only; selecting a video opens a dedicated details+comments page |
+| 2026-11-02 22:57 UTC | `v0.2.5` | `bd27e2d` | production | https://ct.devmatrix.top | local | Add Eporner as a key-free open video source on the Search page |

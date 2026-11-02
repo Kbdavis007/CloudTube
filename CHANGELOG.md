@@ -16,7 +16,7 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 ## [0.2.5] - 2026-11-02
 
-**Tag:** `v0.2.5` · **Branch:** `main` · **Deployed:** pending
+**Tag:** `v0.2.5` · **Branch:** `main` · **Deployed:** 2026-11-02 22:57 UTC (production)
 
 ### Features
 - add Eporner as a key-free open video source (d028b1f)
