@@ -13,6 +13,17 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 
 
+
+## [0.2.5] - 2026-11-02
+
+**Tag:** `v0.2.5` · **Branch:** `main` · **Deployed:** pending
+
+### Features
+- add Eporner as a key-free open video source (d028b1f)
+
+### Fixes
+- add Eporner to the VideosPage source flag colors (773264e)
+
 ## [0.2.4] - 2026-11-02
 
 **Tag:** `v0.2.4` · **Branch:** `main` · **Deployed:** 2026-11-02 22:45 UTC (production)
