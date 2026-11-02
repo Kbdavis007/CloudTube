@@ -8,6 +8,22 @@ The version shown in the app header comes from the most recent git tag. When the
 working tree has uncommitted changes the badge turns amber and shows the
 `-dirty` suffix, so what you see running always matches a real commit.
 
+
+## [0.2.0] - 2026-11-02
+
+**Tag:** `v0.2.0` · **Branch:** `main` · **Deployed:** pending
+
+### Features
+- search Archive.org, PeerTube and Dailymotion without sign-in (e803bd4)
+- browse all library videos with search, filters and sort (b929be3)
+- remove the Recent Activity panel (be3c65c)
+- keep sidebar sticky and confine playback to the app (146b9de)
+- add Theme & Visual Options panel with Light/Medium/Dark (c791932)
+
+### Fixes
+- stop YouTube embeds failing with error 153 (5de76a0)
+- stop the embed navigating the app away; review downloads first (d8297aa)
+
 ## [0.1.0] - 2026-10-30
 
 **Tag:** `v0.1.0` · **Branch:** `main` · **Deployed:** 2026-10-30 02:08 UTC (production)
