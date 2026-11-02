@@ -14,8 +14,15 @@
   4. `git push origin main`
 - **Never force-push.** If a rebase conflicts in files you did not touch, resolve it or report it —
   do not clobber upstream work.
-- Copy-only, docs and config changes are pushed the same way. `npm run release:*` tagging is only for
-  real versioned releases (it refuses a dirty tree).
+- **Every push is a release.** `main` auto-deploys, so no push may land without a `CHANGELOG.md`
+  entry. After landing work, cut a release in the same session:
+  1. `npm run release:patch -- --push` (use `minor` for new features, `major` for breaking changes;
+     `--push` pushes the release commit and the `vX.Y.Z` tag). The script refuses a dirty tree.
+  2. Wait for the deploy, then record it so the entry flips from "pending" to a timestamp:
+     `npm run deploy:log -- --env production --url https://ct.devmatrix.top --notes "<what shipped>"`
+  3. `git add docs/DEPLOYMENTS.md CHANGELOG.md && git commit -m "chore(deploy): record <tag> ship" && git push origin main`
+- Copy-only and config changes are released the same way. See `docs/VERSIONING.md` for the full flow;
+  `chore(release):` and `chore(deploy):` commits are excluded from the generated changelog body.
 
 ## Verification
 
