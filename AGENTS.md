@@ -16,11 +16,16 @@
   do not clobber upstream work.
 - **Every push is a release.** `main` auto-deploys, so no push may land without a `CHANGELOG.md`
   entry. After landing work, cut a release in the same session:
-  1. `npm run release:patch -- --push` (use `minor` for new features, `major` for breaking changes;
-     `--push` pushes the release commit and the `vX.Y.Z` tag). The script refuses a dirty tree.
+  1. `npm run release:patch -- --push` — the standing flow bumps the patch by one (0.2.3, 0.2.4,
+     ...). `--push` pushes the release commit and the `vX.Y.Z` tag. The script refuses a dirty tree.
   2. Wait for the deploy, then record it so the entry flips from "pending" to a timestamp:
      `npm run deploy:log -- --env production --url https://ct.devmatrix.top --notes "<what shipped>"`
   3. `git add docs/DEPLOYMENTS.md CHANGELOG.md && git commit -m "chore(deploy): record <tag> ship" && git push origin main`
+- **Never bump to `1.0.0` on your own.** `1.0.0` means "ready to go public" and is a manual,
+  owner-approved bump. The owner announces it with **"lets make this public"**; only then, and
+  after confirming the app is genuinely release-ready, run
+  `node scripts/release.mjs major --public --push`. `release.mjs` refuses any version `>= 1.0.0`
+  without `--public`.
 - Copy-only and config changes are released the same way. See `docs/VERSIONING.md` for the full flow;
   `chore(release):` and `chore(deploy):` commits are excluded from the generated changelog body.
 

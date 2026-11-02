@@ -8,9 +8,10 @@
  *   5. Creates an annotated git tag and (optionally) commits the bump + pushes.
  *
  * Usage:
- *   node scripts/release.mjs patch
+ *   node scripts/release.mjs                          # patch bump (the standing flow)
+ *   node scripts/release.mjs patch --push
  *   node scripts/release.mjs minor --push
- *   node scripts/release.mjs --version 1.2.3 --push
+ *   node scripts/release.mjs major --public --push    # v1.0.0, owner-approved only
  */
 import { execSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -40,15 +41,13 @@ const gitOut = (args, fallback = '') => {
 
 const args = process.argv.slice(2);
 const push = args.includes('--push');
-const bumpArg = args.find((a) => ['patch', 'minor', 'major'].includes(a));
+// Crossing into 1.0.0 ("going public") is a deliberate human decision, never an
+// automatic bump. It requires the explicit --public flag.
+const publicRelease = args.includes('--public') || process.env.CLOUDTUBE_PUBLIC === '1';
+// Default to a patch bump: the standing flow is "bump by one on every push".
+const bumpArg = args.find((a) => ['patch', 'minor', 'major'].includes(a)) || 'patch';
 const versionIdx = args.indexOf('--version');
 const explicitVersion = versionIdx !== -1 ? args[versionIdx + 1] : null;
-
-if (!bumpArg && !explicitVersion) {
-  console.error('Usage: node scripts/release.mjs <patch|minor|major> [--push]');
-  console.error('   or: node scripts/release.mjs --version <x.y.z> [--push]');
-  process.exit(1);
-}
 
 // --- Preconditions -----------------------------------------------------------
 const dirty = gitOut('status --porcelain');
@@ -82,6 +81,23 @@ if (!/^\d+\.\d+\.\d+$/.test(next)) {
   console.error(`[release] Invalid version "${next}". Expected MAJOR.MINOR.PATCH.`);
   process.exit(1);
 }
+
+// 1.0.0 means "ready to go public" and is the owner's decision alone. Refuse to
+// cross that line by accident — the owner announces it with "lets make this
+// public" and then runs the release with --public.
+const nextMajor = Number.parseInt(next.split('.')[0], 10);
+if (nextMajor >= 1 && !publicRelease) {
+  console.error(
+    `[release] Refusing to cut ${next}: 1.0.0 means "ready to go public" and is a manual,\n` +
+      '          owner-approved bump. The standing flow is a patch bump (0.2.3, 0.2.4, ...).\n' +
+      '          To go public on purpose: node scripts/release.mjs major --public --push'
+  );
+  process.exit(1);
+}
+if (publicRelease) {
+  console.log('[release] --public given: cutting the first public release (v1.0.0).');
+}
+
 if (gitOut(`tag -l v${next}`)) {
   console.error(`[release] Tag v${next} already exists.`);
   process.exit(1);

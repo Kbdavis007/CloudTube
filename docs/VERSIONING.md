@@ -74,15 +74,28 @@ without a changelog entry. Land the work, then cut a release in the same session
 git add -A && git commit -m "feat: something"
 
 # 2. Cut a release (tags + changelog + version bump) and push it
-npm run release:patch -- --push
+npm run release:patch -- --push      # the standing flow: 0.2.3, 0.2.4, 0.2.5, ...
 
 # 3. Record the deploy so CHANGELOG.md flips from "pending" to a timestamp
 npm run deploy:log -- --env production --url https://ct.devmatrix.top --notes "shipped"
 git add docs/DEPLOYMENTS.md CHANGELOG.md && git commit -m "chore(deploy): record ship" && git push origin main
 ```
 
-Pick the bump from what changed since the last tag: `patch` for fixes and
-copy/docs tweaks, `minor` for new features, `major` for breaking changes.
+### Version policy
+
+- **Bump the patch by one on every release** — `0.2.3`, `0.2.4`, `0.2.5`, and so on.
+  This is the standing flow while the app is private.
+- **Do not reach `1.0.0` until the owner says so.** `1.0.0` means "ready to go
+  public", and it is a manual, owner-approved bump. The owner signals it with the
+  phrase **"lets make this public"**; only then does an agent run the major bump
+  (and confirm the app really is release-ready first):
+
+  ```bash
+  node scripts/release.mjs major --public --push
+  ```
+
+  `release.mjs` **refuses** to cut any version `>= 1.0.0` without `--public`, so the
+  line cannot be crossed by accident or by an agent guessing.
 
 `chore(release):` and `chore(deploy):` commits are skipped when building the
 changelog body — they describe the release itself, not the change it carries.
