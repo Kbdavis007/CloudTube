@@ -110,12 +110,26 @@ async function handleRedGifsSearch(request: Request): Promise<Response> {
     return json({ success: false, errors: [{ message: 'Missing "q" parameter' }] }, 400);
   }
 
+  // RedGifs rate-limits by IP, and a Worker egresses from shared Cloudflare
+  // addresses, so repeated searches can hit a 429. Serve identical searches from
+  // the edge cache for a short window to cut the upstream call rate.
+  // `caches.default` is Workers-only, so it is cast off the DOM CacheStorage type.
+  const cache = (caches as unknown as { default: Cache }).default;
+  const cacheKey = new Request(
+    `https://redgifs.cache.internal/search?q=${encodeURIComponent(query.trim())}&count=${count}`,
+    { method: 'GET' }
+  );
+  const cached = await cache.match(cacheKey);
+  if (cached) return cached;
+
   try {
     const result = await searchRedGifsGifs(query, count);
-    return new Response(JSON.stringify(result), {
+    const response = new Response(JSON.stringify(result), {
       status: 200,
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=60' },
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=300' },
     });
+    await cache.put(cacheKey, response.clone());
+    return response;
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     return json({ success: false, errors: [{ message }] }, 502);

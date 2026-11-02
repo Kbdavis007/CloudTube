@@ -56,21 +56,33 @@ export async function searchRedGifsGifs(
     `${API_ROOT}/gifs/search?search_text=${encodeURIComponent(trimmed)}` +
     `&order=top&type=g&count=${safeCount}`;
 
-  const res = await fetch(url, {
-    headers: {
-      'User-Agent': USER_AGENT,
-      Accept: 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  // RedGifs rate-limits by IP and returns 429 under bursts. Retry a couple of
+  // times with a short backoff before giving up.
+  let lastStatus = 0;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': USER_AGENT,
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-  // A stale token yields 401; drop it so the next call re-authenticates.
-  if (res.status === 401) {
-    cachedToken = null;
-    throw new Error('RedGifs rejected the temporary token');
+    // A stale token yields 401; drop it so the next call re-authenticates.
+    if (res.status === 401) {
+      cachedToken = null;
+      throw new Error('RedGifs rejected the temporary token');
+    }
+    if (res.status === 429) {
+      lastStatus = 429;
+      await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+      continue;
+    }
+    if (!res.ok) throw new Error(`RedGifs search responded ${res.status}`);
+
+    const data = (await res.json()) as { gifs?: any[]; total?: number };
+    return { gifs: data.gifs ?? [], total: data.total ?? 0 };
   }
-  if (!res.ok) throw new Error(`RedGifs search responded ${res.status}`);
 
-  const data = (await res.json()) as { gifs?: any[]; total?: number };
-  return { gifs: data.gifs ?? [], total: data.total ?? 0 };
+  throw new Error(`RedGifs search responded ${lastStatus}`);
 }
