@@ -52,7 +52,7 @@ configuration error"**. Both places therefore use
 `strict-origin-when-cross-origin`, which sends only this site's origin:
 
 - `index.html` — `<meta name="referrer" content="strict-origin-when-cross-origin" />`
-- `src/components/views/VideoPlayerView.tsx` — `referrerPolicy` on the `<iframe>`
+- `src/components/views/SelectedVideoPage.tsx` — `referrerPolicy` on the `<iframe>`
 
 The iframe attribute wins over the document default for that frame, so setting
 either one alone is enough for the player; both are set so the correct policy is
@@ -64,9 +64,12 @@ headless Chromium with the CDP `Network` domain enabled: the request to
 ## Verifying a change here
 
 - `npx tsc --noEmit` and `npx vite build` must both pass.
-- Render `Sidebar` and `VideoPlayerView` with `react-dom/server`'s
+- Render `Sidebar` and `SelectedVideoPage` with `react-dom/server`'s
   `renderToStaticMarkup` and assert on the HTML: the sidebar carries
   `md:sticky`/`md:z-[1000]`; a YouTube video has no source button; a video with
   `playback.externalUrl` has one pointing at that exact URL.
 - For the sticky check, serve the built CSS and confirm in a browser that the
   sidebar's viewport position is unchanged after scrolling the content area.
+- For the Videos split, render `VideosPage` with `selectedVideo={null}` and
+  assert the listing HTML has no `<h1>`, no `views`/`likes` counts, no notes and
+  no comments, then render `SelectedVideoPage` and assert it has all of them.

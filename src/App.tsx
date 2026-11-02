@@ -15,7 +15,7 @@ import { OfflineIndicator } from './components/OfflineIndicator';
 import { DashboardView } from './components/views/DashboardView';
 import { SearchView } from './components/views/SearchView';
 import { XvideosSourceView } from './components/views/XvideosSourceView';
-import { VideoPlayerView } from './components/views/VideoPlayerView';
+import { VideosPage } from './components/views/VideosPage';
 import { ChannelView } from './components/views/ChannelView';
 import { CommentsView } from './components/views/CommentsView';
 import { RatingsNotesView } from './components/views/RatingsNotesView';
@@ -293,10 +293,16 @@ export default function App() {
     }
   };
 
-  // 5. Select video to play
+  // 5. Select video to play. Selecting opens the dedicated video page; the
+  // Videos listing is shown when nothing is selected.
   const handleSelectVideo = (youtubeId: string) => {
     setSelectedVideoId(youtubeId);
     setCurrentTab('player');
+  };
+
+  // Leave the dedicated video page and return to the Videos listing.
+  const handleBackToVideos = () => {
+    setSelectedVideoId('');
   };
 
   // Open the Setup Wizard, optionally forcing the step it starts on. Leaving the
@@ -309,6 +315,8 @@ export default function App() {
 
   const navigate = (tab: PageTab) => {
     if (tab !== 'wizard') setWizardStep(undefined);
+    // Opening Videos from the nav shows the listing, not the last video.
+    if (tab === 'player') setSelectedVideoId('');
     setCurrentTab(tab);
   };
 
@@ -390,7 +398,9 @@ export default function App() {
     }
   };
 
-  const currentVideo = videos.find((v) => v.youtubeId === selectedVideoId) || videos[0] || null;
+  // A video is only "selected" when the user picked one. The Videos page shows
+  // its listing while this is null; the dedicated page renders when it is set.
+  const currentVideo = videos.find((v) => v.youtubeId === selectedVideoId) || null;
   const currentVideoComments = comments.filter((c) => c.videoId === selectedVideoId);
   const indexedVideoIds = new Set(videos.map((v) => v.youtubeId));
 
@@ -473,8 +483,8 @@ export default function App() {
               )}
 
               {currentTab === 'player' && (
-                <VideoPlayerView
-                  currentVideo={currentVideo}
+                <VideosPage
+                  selectedVideo={currentVideo}
                   allVideos={videos}
                   comments={currentVideoComments}
                   onSelectVideo={handleSelectVideo}
@@ -482,6 +492,7 @@ export default function App() {
                   onHarvestComments={handleHarvestComments}
                   onUpdateAiSummary={handleUpdateAiSummary}
                   onRequestRemoval={handleRequestRemoval}
+                  onBackToVideos={handleBackToVideos}
                 />
               )}
 
@@ -505,7 +516,8 @@ export default function App() {
                   videos={videos}
                   onSelectVideo={handleSelectVideo}
                   onHarvestMore={() => {
-                    if (currentVideo) handleHarvestComments(currentVideo.youtubeId);
+                    const target = currentVideo ?? videos[0] ?? null;
+                    if (target) handleHarvestComments(target.youtubeId);
                   }}
                 />
               )}
