@@ -10,6 +10,14 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 
 
+
+## [0.2.2] - 2026-11-02
+
+**Tag:** `v0.2.2` · **Branch:** `main` · **Deployed:** pending
+
+### Fixes
+- regenerate version stamp before recording a deploy (1441835)
+
 ## [0.2.1] - 2026-11-02
 
 **Tag:** `v0.2.1` · **Branch:** `main` · **Deployed:** 2026-11-02 19:46 UTC (production)
