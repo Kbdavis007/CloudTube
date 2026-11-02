@@ -9,6 +9,14 @@ working tree has uncommitted changes the badge turns amber and shows the
 `-dirty` suffix, so what you see running always matches a real commit.
 
 
+
+## [0.2.1] - 2026-11-02
+
+**Tag:** `v0.2.1` · **Branch:** `main` · **Deployed:** pending
+
+### Documentation
+- require a release and changelog entry on every push (1e4c66f)
+
 ## [0.2.0] - 2026-11-02
 
 **Tag:** `v0.2.0` · **Branch:** `main` · **Deployed:** 2026-11-02 19:44 UTC (production)
