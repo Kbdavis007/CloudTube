@@ -16,3 +16,4 @@ npm run deploy:log -- --env production --url https://your-app.example --notes "w
 | 2026-11-02 19:44 UTC | `v0.2.0` | `8e3bfce` | production | https://ct.devmatrix.top | local | multi-source search, library browser, sidebar, error 153 fix |
 | 2026-11-02 19:46 UTC | `v0.2.1` | `71144f7` | production | https://ct.devmatrix.top | local | changelog-on-every-push policy |
 | 2026-11-02 19:48 UTC | `v0.2.2` | `435aecb` | production | https://ct.devmatrix.top | local | release tooling: version stamp regenerated before deploy log |
+| 2026-11-02 19:56 UTC | `v0.2.3` | `d4d806f` | production | https://ct.devmatrix.top | local | version policy: patch bumps only, 1.0.0 gated |
