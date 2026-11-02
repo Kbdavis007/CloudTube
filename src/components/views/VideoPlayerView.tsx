@@ -454,7 +454,12 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
               `allow-popups` or `allow-popups-to-escape-sandbox`, so a tap on the
               embed can play/pause/seek but can never navigate this app away or
               open the source site. Leaving the app is only possible through the
-              explicit "Go to Source Site" button below. */}
+              explicit "Go to Source Site" button below.
+
+              The referrer policy must NOT be `no-referrer`: YouTube's player
+              needs a Referer to configure itself and returns "Error 153: Video
+              player configuration error" without one. `strict-origin-when-cross-origin`
+              sends only this site's origin, which is what YouTube expects. */}
           <div className="relative aspect-video w-full rounded-3xl overflow-hidden bg-black shadow-2xl border border-slate-800">
             <iframe
               src={
@@ -464,7 +469,7 @@ export const VideoPlayerView: React.FC<VideoPlayerViewProps> = ({
               title={currentVideo.title}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               sandbox="allow-scripts allow-same-origin allow-presentation"
-              referrerPolicy="no-referrer"
+              referrerPolicy="strict-origin-when-cross-origin"
               allowFullScreen
               className="absolute inset-0 w-full h-full border-0"
             />

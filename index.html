@@ -3,6 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- YouTube's embed player needs a Referer to configure itself; with no
+         referrer at all it fails with "Error 153: Video player configuration
+         error". strict-origin-when-cross-origin sends only this site's origin
+         cross-origin, which is what the player expects. -->
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
     <title>CloudTube — Your Personal YouTube Library</title>
     <meta name="app-version" content="%APP_VERSION%" />
     <meta name="app-commit" content="%APP_COMMIT%" />

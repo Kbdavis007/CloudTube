@@ -44,6 +44,23 @@ the video player.
 - It opens in a new tab with `rel="noopener noreferrer"`.
 - Style: orange label (`#ff6600`), brighter on hover (`#ffaa33`), external-link icon.
 
+## Referrer policy (do not set `no-referrer`)
+
+YouTube's embed player needs a `Referer` header to configure itself. With no
+referrer at all it refuses to load and shows **"Error 153: Video player
+configuration error"**. Both places therefore use
+`strict-origin-when-cross-origin`, which sends only this site's origin:
+
+- `index.html` — `<meta name="referrer" content="strict-origin-when-cross-origin" />`
+- `src/components/views/VideoPlayerView.tsx` — `referrerPolicy` on the `<iframe>`
+
+The iframe attribute wins over the document default for that frame, so setting
+either one alone is enough for the player; both are set so the correct policy is
+inherited by anything else added later. Verify a change by loading the player in
+headless Chromium with the CDP `Network` domain enabled: the request to
+`youtube-nocookie.com/embed/...` must carry a `Referer` (an iframe with
+`referrerpolicy="no-referrer"` sends none — that is the bug).
+
 ## Verifying a change here
 
 - `npx tsc --noEmit` and `npx vite build` must both pass.
