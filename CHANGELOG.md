@@ -15,7 +15,7 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 ## [0.2.4] - 2026-11-02
 
-**Tag:** `v0.2.4` · **Branch:** `main` · **Deployed:** pending
+**Tag:** `v0.2.4` · **Branch:** `main` · **Deployed:** 2026-11-02 22:45 UTC (production)
 
 ### Features
 - separate listing from the selected video page (3c8f1f6)
