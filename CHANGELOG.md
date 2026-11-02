@@ -11,7 +11,7 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 ## [0.2.0] - 2026-11-02
 
-**Tag:** `v0.2.0` · **Branch:** `main` · **Deployed:** pending
+**Tag:** `v0.2.0` · **Branch:** `main` · **Deployed:** 2026-11-02 19:44 UTC (production)
 
 ### Features
 - search Archive.org, PeerTube and Dailymotion without sign-in (e803bd4)
