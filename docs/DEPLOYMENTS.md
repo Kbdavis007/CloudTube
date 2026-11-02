@@ -20,3 +20,4 @@ npm run deploy:log -- --env production --url https://your-app.example --notes "w
 | 2026-11-02 22:45 UTC | `v0.2.4` | `bc9fa5d` | production | https://ct.devmatrix.top | local | Videos page shows the listing only; selecting a video opens a dedicated details+comments page |
 | 2026-11-02 22:57 UTC | `v0.2.5` | `bd27e2d` | production | https://ct.devmatrix.top | local | Add Eporner as a key-free open video source on the Search page |
 | 2026-11-02 23:16 UTC | `v0.2.6` | `9b63a4d` | production | https://ct.devmatrix.top | local | AdultEmbed + RedGifs search sources; Settings source picker |
+| 2026-11-02 23:26 UTC | `v0.2.7` | `483ea5d` | production | https://ct.devmatrix.top | local | RedGifs edge cache + retry for shared-IP 429s |

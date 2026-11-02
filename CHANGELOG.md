@@ -18,7 +18,7 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 ## [0.2.7] - 2026-11-02
 
-**Tag:** `v0.2.7` · **Branch:** `main` · **Deployed:** pending
+**Tag:** `v0.2.7` · **Branch:** `main` · **Deployed:** 2026-11-02 23:26 UTC (production)
 
 ### Fixes
 - cache and retry RedGifs to survive shared-IP 429s (6444c3d)
