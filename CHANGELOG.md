@@ -11,6 +11,17 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 
 
+
+## [0.2.3] - 2026-11-02
+
+**Tag:** `v0.2.3` · **Branch:** `main` · **Deployed:** pending
+
+### Fixes
+- only skip generated bookkeeping commits from the changelog (ffd676c)
+
+### Maintenance
+- pin version policy and gate 1.0.0 (e5386a6)
+
 ## [0.2.2] - 2026-11-02
 
 **Tag:** `v0.2.2` · **Branch:** `main` · **Deployed:** 2026-11-02 19:48 UTC (production)
