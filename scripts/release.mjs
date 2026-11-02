@@ -122,8 +122,11 @@ if (commits.length === 0) {
 
 // Release/deploy housekeeping commits are noise in the changelog: they describe
 // the release itself, not the change the release is for. They still count as
-// commits (so the tree is not "empty"), they just do not get an entry.
-const releasable = commits.filter((c) => !/^chore\((release|deploy)\):/.test(c.subject));
+// commits (so the tree is not "empty"), they just do not get an entry. Match only
+// the generated forms — `chore(release): vX.Y.Z` and `chore(deploy): ...` — so a
+// hand-written `chore(release): <description>` is still listed.
+const BOOKKEEPING = /^(chore\(deploy\):|chore\(release\):\s*v\d+\.\d+\.\d+\b)/;
+const releasable = commits.filter((c) => !BOOKKEEPING.test(c.subject));
 
 // --- Bump package.json + regenerate version file -----------------------------
 pkg.version = next;
