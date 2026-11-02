@@ -104,6 +104,11 @@ if (commits.length === 0) {
   process.exit(1);
 }
 
+// Release/deploy housekeeping commits are noise in the changelog: they describe
+// the release itself, not the change the release is for. They still count as
+// commits (so the tree is not "empty"), they just do not get an entry.
+const releasable = commits.filter((c) => !/^chore\((release|deploy)\):/.test(c.subject));
+
 // --- Bump package.json + regenerate version file -----------------------------
 pkg.version = next;
 writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`, 'utf8');
@@ -113,7 +118,7 @@ sh(`node scripts/version.mjs`);
 const date = new Date().toISOString().slice(0, 10);
 
 const sections = { feat: [], fix: [], perf: [], refactor: [], docs: [], chore: [], other: [] };
-for (const c of commits) {
+for (const c of releasable) {
   const m = c.subject.match(/^(\w+)(\(.+\))?!?:\s*(.+)$/);
   const type = m ? m[1] : 'other';
   const text = m ? m[3] : c.subject;

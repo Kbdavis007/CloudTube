@@ -66,16 +66,26 @@ node scripts/release.mjs --version 1.2.3 --push
 
 ## Recommended loop
 
+**Every push is a release.** `main` auto-deploys, so no change reaches production
+without a changelog entry. Land the work, then cut a release in the same session.
+
 ```bash
 # 1. Land your work on main
 git add -A && git commit -m "feat: something"
 
-# 2. Cut a release (tags + changelog + version bump)
+# 2. Cut a release (tags + changelog + version bump) and push it
 npm run release:patch -- --push
 
-# 3. Deploy, then record it
-npm run deploy:log -- --env production --url https://your-app.example --notes "shipped"
+# 3. Record the deploy so CHANGELOG.md flips from "pending" to a timestamp
+npm run deploy:log -- --env production --url https://ct.devmatrix.top --notes "shipped"
+git add docs/DEPLOYMENTS.md CHANGELOG.md && git commit -m "chore(deploy): record ship" && git push origin main
 ```
+
+Pick the bump from what changed since the last tag: `patch` for fixes and
+copy/docs tweaks, `minor` for new features, `major` for breaking changes.
+
+`chore(release):` and `chore(deploy):` commits are skipped when building the
+changelog body — they describe the release itself, not the change it carries.
 
 ## CI sketch (optional)
 
