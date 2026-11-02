@@ -17,7 +17,7 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 ## [0.2.6] - 2026-11-02
 
-**Tag:** `v0.2.6` · **Branch:** `main` · **Deployed:** pending
+**Tag:** `v0.2.6` · **Branch:** `main` · **Deployed:** 2026-11-02 23:16 UTC (production)
 
 ### Features
 - add AdultEmbed and RedGifs sources, plus source picker (a7fa8a8)
