@@ -14,4 +14,4 @@ npm run deploy:log -- --env production --url https://your-app.example --notes "w
 | 2026-10-30 02:08 UTC | `v0.1.0` | `c3c5eea` | production | https://work-1-rqotlvzedjcalkcx.prod-runtime.all-hands.dev | local | Semver + deployment tracking; CF 405 proxy fix |
 | 2026-10-30 02:34 UTC | `v0.1.0` | `4a670a1` | production | https://ct.devmatrix.top | local | Edge Worker serves SPA + /api/cloudflare/proxy (fixes 405) |
 | 2026-11-02 19:44 UTC | `v0.2.0` | `8e3bfce` | production | https://ct.devmatrix.top | local | multi-source search, library browser, sidebar, error 153 fix |
-| 2026-11-02 19:46 UTC | `v0.2.0` | `1e4c66f` | production | https://ct.devmatrix.top | local | changelog-on-every-push policy |
+| 2026-11-02 19:46 UTC | `v0.2.1` | `71144f7` | production | https://ct.devmatrix.top | local | changelog-on-every-push policy |

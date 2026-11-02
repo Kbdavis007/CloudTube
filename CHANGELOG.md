@@ -12,7 +12,7 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 ## [0.2.1] - 2026-11-02
 
-**Tag:** `v0.2.1` · **Branch:** `main` · **Deployed:** pending
+**Tag:** `v0.2.1` · **Branch:** `main` · **Deployed:** 2026-11-02 19:46 UTC (production)
 
 ### Documentation
 - require a release and changelog entry on every push (1e4c66f)

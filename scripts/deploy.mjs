@@ -32,6 +32,11 @@ const notes = arg('--notes', '');
 const actor = arg('--actor', process.env.GITHUB_ACTOR || 'local');
 
 // Pull the build's identity straight from the generated module (single source).
+// Regenerate it first: the file is derived from git, and a stale copy (e.g. one
+// written before the release commit, or before the release tag existed) would
+// attribute this deployment to the wrong tag and commit.
+execSync('node scripts/version.mjs', { cwd: root, stdio: ['ignore', 'ignore', 'inherit'] });
+
 const versionSrc = readFileSync(resolve(root, 'src/generated/version.ts'), 'utf8');
 const pick = (key) => versionSrc.match(new RegExp(`export const ${key} = "([^"]*)"`))?.[1] ?? 'unknown';
 const version = pick('VERSION');
