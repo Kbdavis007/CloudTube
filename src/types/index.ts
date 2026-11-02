@@ -9,7 +9,8 @@ export type SourceFlag =
   | 'Xvideos'
   | 'ArchiveOrg'
   | 'PeerTube'
-  | 'Dailymotion';
+  | 'Dailymotion'
+  | 'Eporner';
 
 /**
  * Where a video can be played. YouTube videos derive their embed URL from

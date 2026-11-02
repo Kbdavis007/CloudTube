@@ -88,6 +88,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
     ArchiveOrg: 'bg-teal-500/20 text-teal-300 border-teal-500/30',
     PeerTube: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30',
     Dailymotion: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
+    Eporner: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
   };
 
   const toggleOpenSource = (id: OpenSourceId) => {
@@ -194,8 +195,8 @@ export const SearchView: React.FC<SearchViewProps> = ({
               Search & Collect
             </h1>
             <p className="text-xs sm:text-sm text-slate-400">
-              Search YouTube with your Google sign-in, and Archive.org, PeerTube and
-              Dailymotion with no sign-in. Save anything worth keeping.
+              Search YouTube with your Google sign-in, and Archive.org, PeerTube,
+              Dailymotion and Eporner with no sign-in. Save anything worth keeping.
             </p>
           </div>
 
@@ -315,6 +316,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
                 'ArchiveOrg',
                 'PeerTube',
                 'Dailymotion',
+                'Eporner',
               ] as SourceFlag[]
             ).map((flag) => {
               const count = combinedResults.filter((r) => r.sourceFlags.includes(flag)).length;
@@ -545,9 +547,9 @@ export const SearchView: React.FC<SearchViewProps> = ({
           </div>
           <h2 className="text-base font-bold text-white">Search YouTube & Discover Videos Worth Saving</h2>
           <p className="text-xs text-slate-400 max-w-md mx-auto">
-            Search YouTube with your Google sign-in, or Archive.org, PeerTube and Dailymotion
-            with no sign-in. Type any topic or click a suggested search to find videos, score
-            them, and save them to your library.
+            Search YouTube with your Google sign-in, or Archive.org, PeerTube, Dailymotion
+            and Eporner with no sign-in. Type any topic or click a suggested search to find
+            videos, score them, and save them to your library.
           </p>
           <button
             onClick={() => handleSearch('System Design Explained')}

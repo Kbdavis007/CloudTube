@@ -8,7 +8,7 @@ import type { SourceFlag, VideoMetadata } from '../types';
  * player changes: playback stays inside the app and the only way out is the
  * explicit "Go to Source Site" link built from `playback.externalUrl`.
  */
-export type OpenSourceId = 'archive' | 'peertube' | 'dailymotion';
+export type OpenSourceId = 'archive' | 'peertube' | 'dailymotion' | 'eporner';
 
 export interface OpenSourceDefinition {
   id: OpenSourceId;
@@ -40,6 +40,13 @@ export const OPEN_SOURCES: OpenSourceDefinition[] = [
     tagline: 'Dailymotion public catalogue',
     flag: 'Dailymotion',
     accent: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
+  },
+  {
+    id: 'eporner',
+    name: 'Eporner',
+    tagline: 'Eporner public catalogue',
+    flag: 'Eporner',
+    accent: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
   },
 ];
 
@@ -220,6 +227,46 @@ async function searchDailymotion(query: string, signal?: AbortSignal): Promise<V
     );
 }
 
+async function searchEporner(query: string, signal?: AbortSignal): Promise<VideoMetadata[]> {
+  const url =
+    'https://www.eporner.com/api/v2/video/search/?query=' +
+    encodeURIComponent(query) +
+    '&per_page=24&page=1&thumbsize=big&order=top-weekly&gay=0&lq=1&format=json';
+  const data = await fetchJson(url, signal);
+  const items: any[] = data?.videos ?? [];
+
+  return items
+    .filter((v) => v?.id && v?.embed)
+    .map((v) =>
+      toVideoMetadata(openSourceById('eporner'), {
+        sourceVideoId: String(v.id),
+        title: String(v.title ?? 'Untitled'),
+        // Eporner search returns keywords rather than a description; those map
+        // onto tags below, so the card's description stays empty.
+        description: '',
+        channelId: 'eporner',
+        channelTitle: 'Eporner',
+        publishedAt: toIsoOrEmpty(v.added),
+        durationSeconds: Number(v.length_sec) || 0,
+        thumbnail: String(v.default_thumb?.src ?? v.thumbs?.[0]?.src ?? ''),
+        tags: String(v.keywords ?? '')
+          .split(',')
+          .map((t: string) => t.trim())
+          .filter(Boolean)
+          .slice(0, 8),
+        embedUrl: String(v.embed),
+        externalUrl: String(v.url ?? ''),
+      })
+    );
+}
+
+/** Convert Eporner's `YYYY-MM-DD HH:MM:SS` timestamp to ISO, or '' if unparseable. */
+function toIsoOrEmpty(value: unknown): string {
+  if (!value) return '';
+  const date = new Date(String(value).replace(' ', 'T'));
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString();
+}
+
 /**
  * Search one open source. Failures are surfaced to the caller so a single
  * unreachable source never blocks the others.
@@ -238,6 +285,8 @@ export async function searchOpenSource(
       return searchPeerTube(trimmed, signal);
     case 'dailymotion':
       return searchDailymotion(trimmed, signal);
+    case 'eporner':
+      return searchEporner(trimmed, signal);
     default:
       return [];
   }
