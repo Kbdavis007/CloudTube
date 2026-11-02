@@ -163,6 +163,8 @@ export const SelectedVideoPage: React.FC<SelectedVideoPageProps> = ({
     PeerTube: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30',
     Dailymotion: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
     Eporner: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
+    AdultEmbed: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
+    RedGifs: 'bg-red-500/20 text-red-300 border-red-500/30',
   };
 
   return (

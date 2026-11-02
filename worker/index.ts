@@ -9,6 +9,7 @@
  *   GET  /api/health            -> build/version provenance
  *   POST /api/cloudflare/proxy  -> server-side relay to the Cloudflare API
  *   GET  /api/xvideos/export    -> streams the XVideos catalogue export
+ *   GET  /api/redgifs/search    -> RedGifs search (CORS + temporary token)
  *
  * The proxy exists because api.cloudflare.com sends no CORS headers, so a
  * browser cannot call it directly. /api/xvideos/export exists for the same
@@ -25,6 +26,7 @@ import {
   VERSION_LABEL,
 } from '../src/generated/version';
 import { XVIDEOS_EXPORT_RANGES } from '../src/services/xvideosApi';
+import { searchRedGifsGifs } from '../src/services/redgifsApi';
 
 interface Env {
   ASSETS: { fetch: (request: Request) => Promise<Response> };
@@ -96,6 +98,27 @@ async function handleXvideosExport(request: Request): Promise<Response> {
       { success: false, errors: [{ message: `Failed to reach XVideos export CDN: ${message}` }] },
       502
     );
+  }
+}
+
+async function handleRedGifsSearch(request: Request): Promise<Response> {
+  const params = new URL(request.url).searchParams;
+  const query = params.get('q') ?? '';
+  const count = Number(params.get('count')) || 24;
+
+  if (!query.trim()) {
+    return json({ success: false, errors: [{ message: 'Missing "q" parameter' }] }, 400);
+  }
+
+  try {
+    const result = await searchRedGifsGifs(query, count);
+    return new Response(JSON.stringify(result), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=60' },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return json({ success: false, errors: [{ message }] }, 502);
   }
 }
 
@@ -210,6 +233,26 @@ export default {
         );
       }
       return handleXvideosExport(request);
+    }
+
+    if (pathname === '/api/redgifs/search') {
+      if (request.method === 'OPTIONS') {
+        return new Response(null, {
+          status: 204,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+          },
+        });
+      }
+      if (request.method !== 'GET') {
+        return json(
+          { status: 405, ok: false, errors: [{ message: 'Use GET for /api/redgifs/search' }] },
+          405
+        );
+      }
+      return handleRedGifsSearch(request);
     }
 
     // Unknown API paths must not fall through to the SPA (which would answer

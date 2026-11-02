@@ -12,6 +12,7 @@ import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { XVIDEOS_EXPORT_RANGES as XVideosExportRanges } from './src/services/xvideosApi';
+import { searchRedGifsGifs } from './src/services/redgifsApi';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -153,6 +154,32 @@ async function startServer() {
       } else {
         res.end();
       }
+    }
+  });
+
+  // RedGifs search proxy.
+  //
+  // RedGifs locks CORS to redgifs.com and needs a temporary token, so the
+  // browser cannot call its search API directly. This same-origin route handles
+  // the token (cached in redgifsApi.ts) and relays the JSON.
+  app.get('/api/redgifs/search', async (req, res) => {
+    const query = String(req.query.q ?? '');
+    const count = Number(req.query.count) || 24;
+
+    if (!query.trim()) {
+      return res.status(400).json({
+        success: false,
+        errors: [{ message: 'Missing "q" parameter' }],
+      });
+    }
+
+    try {
+      const result = await searchRedGifsGifs(query, count);
+      res.setHeader('Cache-Control', 'public, max-age=60');
+      return res.json(result);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      return res.status(502).json({ success: false, errors: [{ message }] });
     }
   });
 

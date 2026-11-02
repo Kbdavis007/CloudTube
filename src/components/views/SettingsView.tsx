@@ -20,6 +20,7 @@ import { idbService } from '../../services/indexedDB';
 import { CloudflareStatsPanel } from '../CloudflareStatsPanel';
 import { HealthCheckPanel } from '../HealthCheckPanel';
 import { VideoSourcesPanel } from '../VideoSourcesPanel';
+import { SearchSourcesPanel } from '../SearchSourcesPanel';
 import { ThemeVisualOptionsPanel } from '../ThemeVisualOptionsPanel';
 import type { PageTab } from '../Sidebar';
 import {
@@ -173,6 +174,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         onSelectSource={(tab) => onNavigate?.(tab)}
         isYouTubeConnected={isYouTubeConnected}
       />
+
+      {/* Which key-free catalogues a search should query */}
+      <SearchSourcesPanel />
 
       {/* YouTube access */}
       <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-3">

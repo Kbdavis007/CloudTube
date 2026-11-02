@@ -8,7 +8,13 @@ import type { SourceFlag, VideoMetadata } from '../types';
  * player changes: playback stays inside the app and the only way out is the
  * explicit "Go to Source Site" link built from `playback.externalUrl`.
  */
-export type OpenSourceId = 'archive' | 'peertube' | 'dailymotion' | 'eporner';
+export type OpenSourceId =
+  | 'archive'
+  | 'peertube'
+  | 'dailymotion'
+  | 'eporner'
+  | 'adultembed'
+  | 'redgifs';
 
 export interface OpenSourceDefinition {
   id: OpenSourceId;
@@ -47,6 +53,20 @@ export const OPEN_SOURCES: OpenSourceDefinition[] = [
     tagline: 'Eporner public catalogue',
     flag: 'Eporner',
     accent: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
+  },
+  {
+    id: 'adultembed',
+    name: 'AdultEmbed',
+    tagline: 'AdultEmbed open video database',
+    flag: 'AdultEmbed',
+    accent: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
+  },
+  {
+    id: 'redgifs',
+    name: 'RedGifs',
+    tagline: 'RedGifs short clips (via CloudTube proxy)',
+    flag: 'RedGifs',
+    accent: 'bg-red-500/20 text-red-300 border-red-500/30',
   },
 ];
 
@@ -267,6 +287,75 @@ function toIsoOrEmpty(value: unknown): string {
   return Number.isNaN(date.getTime()) ? '' : date.toISOString();
 }
 
+/** AdultEmbed returns categories/tags/performers as `{ name }` objects. */
+function namesOf(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => (typeof item === 'string' ? item : item?.name))
+    .filter((n): n is string => typeof n === 'string' && n.length > 0)
+    .slice(0, 8);
+}
+
+async function searchAdultEmbed(query: string, signal?: AbortSignal): Promise<VideoMetadata[]> {
+  const url =
+    'https://adultembed.com/api/database/browse/?search=' +
+    encodeURIComponent(query) +
+    '&limit=24&page=1';
+  const data = await fetchJson(url, signal);
+  const items: any[] = data?.results ?? [];
+
+  return items
+    .filter((v) => v?.id)
+    .map((v) =>
+      toVideoMetadata(openSourceById('adultembed'), {
+        sourceVideoId: String(v.id),
+        title: String(v.title ?? 'Untitled'),
+        description: String(v.description ?? '').replace(/<[^>]+>/g, '').slice(0, 400),
+        channelId: `adultembed:${v.studio?.slug ?? 'unknown'}`,
+        channelTitle: String(v.studio?.name ?? 'AdultEmbed'),
+        publishedAt: v.published_at ?? '',
+        durationSeconds: Number(v.duration_seconds) || 0,
+        thumbnail: String(v.thumbnail ?? ''),
+        // Categories carry the useful labels; tags/performers are often empty.
+        tags: [...namesOf(v.categories), ...namesOf(v.tags), ...namesOf(v.performers)].slice(0, 8),
+        // The database API exposes no public watch page, so the player embed is
+        // both the play target and the only exit link.
+        embedUrl: `https://adultembed.com/player/embed/${v.id}/`,
+        externalUrl: `https://adultembed.com/player/embed/${v.id}/`,
+      })
+    );
+}
+
+/**
+ * RedGifs search. The API locks `access-control-allow-origin` to redgifs.com, so
+ * the browser cannot call it directly: this goes through the same-origin
+ * `/api/redgifs/search` proxy, which also handles the temporary token.
+ */
+async function searchRedGifs(query: string, signal?: AbortSignal): Promise<VideoMetadata[]> {
+  const url = `/api/redgifs/search?q=${encodeURIComponent(query)}&count=24`;
+  const data = await fetchJson(url, signal);
+  const items: any[] = data?.gifs ?? [];
+
+  return items
+    .filter((v) => v?.id && v?.urls)
+    .map((v) =>
+      toVideoMetadata(openSourceById('redgifs'), {
+        sourceVideoId: String(v.id),
+        title: String(v.description ?? v.userName ?? 'RedGifs clip'),
+        description: String(v.description ?? ''),
+        channelId: `redgifs:${v.userName ?? 'unknown'}`,
+        channelTitle: String(v.userName ?? 'RedGifs'),
+        publishedAt: v.createDate ? new Date(Number(v.createDate) * 1000).toISOString() : '',
+        durationSeconds: Number(v.duration) || 0,
+        thumbnail: String(v.urls?.poster ?? v.urls?.thumbnail ?? ''),
+        tags: Array.isArray(v.tags) ? v.tags.slice(0, 8).map(String) : [],
+        // `urls.html` is the dedicated framable embed page; the watch page is not.
+        embedUrl: String(v.urls?.html ?? `https://www.redgifs.com/ifr/${v.id}`),
+        externalUrl: `https://www.redgifs.com/watch/${v.id}`,
+      })
+    );
+}
+
 /**
  * Search one open source. Failures are surfaced to the caller so a single
  * unreachable source never blocks the others.
@@ -287,6 +376,10 @@ export async function searchOpenSource(
       return searchDailymotion(trimmed, signal);
     case 'eporner':
       return searchEporner(trimmed, signal);
+    case 'adultembed':
+      return searchAdultEmbed(trimmed, signal);
+    case 'redgifs':
+      return searchRedGifs(trimmed, signal);
     default:
       return [];
   }

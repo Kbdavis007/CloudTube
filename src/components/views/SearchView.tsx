@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   VideoMetadata,
   SourceFlag,
@@ -28,6 +28,11 @@ import {
   openSourceById,
   type OpenSourceId,
 } from '../../services/openSourcesApi';
+import {
+  readEnabledOpenSources,
+  saveEnabledOpenSources,
+  subscribeSearchSources,
+} from '../../services/searchSources';
 import { rankCandidates } from '../../services/tasteProfile';
 import { sourceFlagLabel } from '../../data/sourceLabels';
 import { ApiErrorCard } from '../ApiErrorCard';
@@ -58,9 +63,11 @@ export const SearchView: React.FC<SearchViewProps> = ({
   const [results, setResults] = useState<VideoMetadata[]>([]);
   const [openResults, setOpenResults] = useState<VideoMetadata[]>([]);
   const [openSearchErrors, setOpenSearchErrors] = useState<Partial<Record<OpenSourceId, string>>>({});
-  // Open sources work without a sign-in, so they default to on.
+  // Which open sources to query. This is a user preference set in Settings and
+  // persisted, so the quick toggles here and the Settings checkboxes stay in
+  // sync through one source of truth.
   const [selectedOpenSources, setSelectedOpenSources] = useState<Set<OpenSourceId>>(
-    new Set(OPEN_SOURCES.map((s) => s.id))
+    () => new Set(readEnabledOpenSources())
   );
   const [hasSearched, setHasSearched] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -89,13 +96,22 @@ export const SearchView: React.FC<SearchViewProps> = ({
     PeerTube: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30',
     Dailymotion: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
     Eporner: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
+    AdultEmbed: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
+    RedGifs: 'bg-red-500/20 text-red-300 border-red-500/30',
   };
+
+  // Reflect changes made in Settings (or another tab) without a reload.
+  useEffect(
+    () => subscribeSearchSources((ids) => setSelectedOpenSources(new Set(ids))),
+    []
+  );
 
   const toggleOpenSource = (id: OpenSourceId) => {
     setSelectedOpenSources((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      saveEnabledOpenSources([...next]);
       return next;
     });
   };
@@ -195,8 +211,8 @@ export const SearchView: React.FC<SearchViewProps> = ({
               Search & Collect
             </h1>
             <p className="text-xs sm:text-sm text-slate-400">
-              Search YouTube with your Google sign-in, and Archive.org, PeerTube,
-              Dailymotion and Eporner with no sign-in. Save anything worth keeping.
+              Search YouTube with your Google sign-in, and the key-free catalogues you enable
+              in Settings with no sign-in. Save anything worth keeping.
             </p>
           </div>
 
@@ -317,6 +333,8 @@ export const SearchView: React.FC<SearchViewProps> = ({
                 'PeerTube',
                 'Dailymotion',
                 'Eporner',
+                'AdultEmbed',
+                'RedGifs',
               ] as SourceFlag[]
             ).map((flag) => {
               const count = combinedResults.filter((r) => r.sourceFlags.includes(flag)).length;

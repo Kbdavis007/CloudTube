@@ -17,6 +17,8 @@ export const SOURCE_FLAG_LABELS: Record<SourceFlag, string> = {
   PeerTube: 'PeerTube',
   Dailymotion: 'Dailymotion',
   Eporner: 'Eporner',
+  AdultEmbed: 'AdultEmbed',
+  RedGifs: 'RedGifs',
 };
 
 export const sourceFlagLabel = (flag: SourceFlag): string =>
