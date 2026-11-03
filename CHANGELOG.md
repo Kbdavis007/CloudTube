@@ -23,7 +23,7 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 ## [0.2.12] - 2026-11-03
 
-**Tag:** `v0.2.12` · **Branch:** `main` · **Deployed:** pending
+**Tag:** `v0.2.12` · **Branch:** `main` · **Deployed:** 2026-11-03 02:48 UTC (production)
 
 ### Fixes
 - keep Eporner browser-direct; cache partial results (03ae1c1)

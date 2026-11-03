@@ -24,3 +24,4 @@ npm run deploy:log -- --env production --url https://your-app.example --notes "w
 | 2026-11-03 02:08 UTC | `v0.2.8` | `3f4d17e` | production | https://ct.devmatrix.top | local | Pornhub source via RapidAPI with in-app key |
 | 2026-11-03 02:15 UTC | `v0.2.9` | `055e5ad` | production | https://ct.devmatrix.top | local | xHamster and RedTube sources via multi-site RapidAPI |
 | 2026-11-03 02:32 UTC | `v0.2.10` | `caed445` | production | https://ct.devmatrix.top | local | Hover previews on search result thumbnails; adult source names aliased (Vista/Aurora/Ember/Flicker/Nova/Comet/Crimson); key-gated sources added to filter chips |
+| 2026-11-03 02:48 UTC | `v0.2.12` | `2a1a2e4` | production | https://ct.devmatrix.top | local | cached multi-source search API (D1 + edge + SW), Eporner browser-direct |
