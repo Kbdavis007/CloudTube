@@ -17,6 +17,14 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 
 
+
+## [0.2.9] - 2026-11-03
+
+**Tag:** `v0.2.9` · **Branch:** `main` · **Deployed:** pending
+
+### Features
+- add xHamster and RedTube sources via multi-site RapidAPI (b4c945c)
+
 ## [0.2.8] - 2026-11-03
 
 **Tag:** `v0.2.8` · **Branch:** `main` · **Deployed:** 2026-11-03 02:08 UTC (production)
