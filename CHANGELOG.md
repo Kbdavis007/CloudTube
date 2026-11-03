@@ -19,6 +19,14 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 
 
+
+## [0.2.11] - 2026-11-03
+
+**Tag:** `v0.2.11` · **Branch:** `main` · **Deployed:** pending
+
+### Features
+- cached multi-source search API (D1 + edge + SW) (e439c07)
+
 ## [0.2.10] - 2026-11-03
 
 **Tag:** `v0.2.10` · **Branch:** `main` · **Deployed:** 2026-11-03 02:32 UTC (production)
