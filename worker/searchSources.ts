@@ -40,13 +40,6 @@ function parseRuntime(runtime: unknown): number {
   return Number.isFinite(seconds) ? seconds : 0;
 }
 
-/** Convert Eporner's `YYYY-MM-DD HH:MM:SS` timestamp to ISO, or '' if unparseable. */
-function toIsoOrEmpty(value: unknown): string {
-  if (!value) return '';
-  const date = new Date(String(value).replace(' ', 'T'));
-  return Number.isNaN(date.getTime()) ? '' : date.toISOString();
-}
-
 /** AdultEmbed returns categories/tags/performers as `{ name }` objects. */
 function namesOf(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
@@ -54,38 +47,6 @@ function namesOf(value: unknown): string[] {
     .map((item) => (typeof item === 'string' ? item : item?.name))
     .filter((n): n is string => typeof n === 'string' && n.length > 0)
     .slice(0, 8);
-}
-
-function parseClock(value: unknown): number {
-  if (typeof value !== 'string' || !value.includes(':')) return 0;
-  return value
-    .split(':')
-    .map((part) => Number(part) || 0)
-    .reduce((acc, part) => acc * 60 + part, 0);
-}
-
-/** Durations here are "MM:SS", "H:MM:SS" or "2min"; parse to seconds. */
-function dureeToSeconds(value: unknown): number {
-  if (typeof value !== 'string') return 0;
-  const text = value.trim().toLowerCase();
-  if (text.includes(':')) return parseClock(text);
-  const minutes = text.match(/(\d+(?:[.,]\d+)?)\s*(?:min|m)\b/);
-  if (minutes) return Math.round(parseFloat(minutes[1].replace(',', '.')) * 60);
-  const seconds = text.match(/(\d+)\s*s/);
-  return seconds ? Number(seconds[1]) : 0;
-}
-
-/** The id each site's embed URL needs, taken from the result link's last segment. */
-function embedIdFromLink(link: string): string {
-  const path = link.split('?')[0].replace(/\/+$/, '');
-  return path.split('/').pop() ?? '';
-}
-
-function embedUrlFor(site: 'xhamster' | 'redtube', id: string): string {
-  if (!id) return '';
-  return site === 'redtube'
-    ? `https://embed.redtube.com/?id=${encodeURIComponent(id)}`
-    : `https://xhamster.com/embed/${encodeURIComponent(id)}`;
 }
 
 async function searchArchive(query: string, signal?: AbortSignal): Promise<VideoMetadata[]> {
@@ -170,41 +131,6 @@ async function searchDailymotion(query: string, signal?: AbortSignal): Promise<V
     );
 }
 
-async function searchEporner(query: string, signal?: AbortSignal): Promise<VideoMetadata[]> {
-  const url =
-    'https://www.eporner.com/api/v2/video/search/?query=' +
-    encodeURIComponent(query) +
-    '&per_page=24&page=1&thumbsize=big&order=top-weekly&gay=0&lq=1&format=json';
-  const data = await fetchJson(url, signal);
-  const items: any[] = data?.videos ?? [];
-
-  return items
-    .filter((v) => v?.id && v?.embed)
-    .map((v) =>
-      toVideoMetadata(openSource('eporner'), {
-        sourceVideoId: String(v.id),
-        title: String(v.title ?? 'Untitled'),
-        description: '',
-        channelId: 'eporner',
-        channelTitle: ADULT_SOURCE_ALIASES.Eporner!,
-        publishedAt: toIsoOrEmpty(v.added),
-        durationSeconds: Number(v.length_sec) || 0,
-        thumbnail: String(v.default_thumb?.src ?? v.thumbs?.[0]?.src ?? ''),
-        previewFrames: (Array.isArray(v.thumbs) ? v.thumbs : [])
-          .map((t: any) => String(t?.src ?? ''))
-          .filter(Boolean)
-          .slice(0, 12),
-        tags: String(v.keywords ?? '')
-          .split(',')
-          .map((t: string) => t.trim())
-          .filter(Boolean)
-          .slice(0, 8),
-        embedUrl: String(v.embed),
-        externalUrl: String(v.url ?? ''),
-      })
-    );
-}
-
 async function searchAdultEmbed(query: string, signal?: AbortSignal): Promise<VideoMetadata[]> {
   const url =
     'https://adultembed.com/api/database/browse/?search=' +
@@ -259,12 +185,16 @@ async function searchRedGifs(query: string, signal?: AbortSignal): Promise<Video
 /**
  * The key-free sources the Worker caches. Every id here is safe to call from a
  * shared Worker IP and needs no user credential.
+ *
+ * Eporner is deliberately absent: it serves its search API to the browser but
+ * returns an HTML block page to Cloudflare's egress IPs, so it stays
+ * browser-direct (the client searches it itself). Everything else is verified
+ * reachable from the Worker.
  */
 const WORKER_SOURCES: Record<string, (q: string, s?: AbortSignal) => Promise<VideoMetadata[]>> = {
   archive: searchArchive,
   peertube: searchPeerTube,
   dailymotion: searchDailymotion,
-  eporner: searchEporner,
   adultembed: searchAdultEmbed,
   redgifs: searchRedGifs,
 };

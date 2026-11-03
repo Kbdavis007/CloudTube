@@ -68,6 +68,8 @@ const SOURCE_TTL_MS: Record<string, number> = {
 
 /** Edge-cache TTL for the whole response: short, so new upstream videos appear. */
 const EDGE_TTL_SECONDS = 300;
+/** Shorter TTL when at least one source failed, so the miss is retried soon. */
+const PARTIAL_TTL_SECONDS = 30;
 
 const DEFAULT_TTL_MS = 6 * 60 * 60 * 1000;
 export const ttlForSource = (id: string): number => SOURCE_TTL_MS[id] ?? DEFAULT_TTL_MS;
@@ -244,7 +246,7 @@ export async function handleSearch(request: Request, deps: SearchApiDeps): Promi
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
-  const ids = (requested.length ? requested : ['archive', 'peertube', 'dailymotion', 'eporner', 'adultembed', 'redgifs']).filter(
+  const ids = (requested.length ? requested : ['archive', 'peertube', 'dailymotion', 'adultembed', 'redgifs']).filter(
     (id) => isOpenSourceId(id) && isWorkerSource(id)
   );
 
@@ -289,18 +291,19 @@ export async function handleSearch(request: Request, deps: SearchApiDeps): Promi
   const response = jsonResponse(body);
 
   if (cache && !forceFresh) {
-    // Only cache a fully-successful fan-out, so an upstream blip is not frozen in.
+    // Cache a fully-successful fan-out for the full window. A partial failure is
+    // still cached, but only briefly, so one flaky source cannot disable caching
+    // for the term while also not freezing a transient error in for long.
     const allOk = entries.every(([, r]) => !r.error);
-    if (allOk) {
-      const toStore = new Response(JSON.stringify(body), {
-        headers: {
-          ...JSON_HEADERS,
-          'Cache-Control': `public, max-age=${EDGE_TTL_SECONDS}`,
-        },
-      });
-      const put = cache.put(edgeKey, toStore);
-      (deps.waitUntil ?? ((p: Promise<unknown>) => void p))(put);
-    }
+    const ttl = allOk ? EDGE_TTL_SECONDS : PARTIAL_TTL_SECONDS;
+    const toStore = new Response(JSON.stringify(body), {
+      headers: {
+        ...JSON_HEADERS,
+        'Cache-Control': `public, max-age=${ttl}`,
+      },
+    });
+    const put = cache.put(edgeKey, toStore);
+    (deps.waitUntil ?? ((p: Promise<unknown>) => void p))(put);
   }
 
   return response;

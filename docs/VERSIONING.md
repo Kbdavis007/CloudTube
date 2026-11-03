@@ -146,8 +146,11 @@ upstream fetch serves every repeat of a term. Two cache layers, cheapest first:
    still avoids the upstream call until the row goes stale.
 
 Only key-free sources are cached here; the user's key-gated sources stay
-browser-direct so the RapidAPI key is never uploaded. The client
-(`src/services/searchApi.ts`) falls back to calling each source directly when
+browser-direct so the RapidAPI key is never uploaded. Eporner is key-free but
+also stays browser-direct: it returns an HTML block page to Cloudflare's egress
+IPs, so the Worker cannot fetch it. The client (`src/services/searchApi.ts`)
+fills in every source the API did not return — key-gated and Eporner alike — by
+searching them directly, and falls back to direct calls for all sources when
 `/api/search` is unreachable, so search never breaks.
 
 **Enabling the D1 layer** (optional — the edge cache and service worker work

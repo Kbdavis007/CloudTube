@@ -78,7 +78,8 @@ Two rules hold this together:
 
 - **Key-gated sources never reach the Worker.** Pornhub, Xhamster and Redtube
   need the user's RapidAPI key, so they stay browser-direct; the API caches only
-  the key-free sources and the client fills the rest in itself.
+  the key-free sources and the client fills the rest in itself. Eporner is
+  key-free but also browser-direct, because it blocks Cloudflare's egress IPs.
 - **A failed API call degrades, it does not break.** If `/api/search` is
   unreachable (offline, or a dev server without the route), the client calls each
   source directly, exactly as it did before this feature.
