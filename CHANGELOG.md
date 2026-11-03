@@ -27,7 +27,7 @@ working tree has uncommitted changes the badge turns amber and shows the
 **Tag:** `v0.2.13` · **Branch:** `main` · **Deployed:** 2026-11-03 03:06 UTC (production)
 
 ### Refactoring
-- drop the word "adult" from the codebase (c56687d)
+- neutralise source naming: rename open-source id and its flag to embedhub/EmbedHub (c56687d)
 
 ## [0.2.12] - 2026-11-03
 
