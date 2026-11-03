@@ -25,7 +25,7 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 ## [0.2.14] - 2026-11-03
 
-**Tag:** `v0.2.14` · **Branch:** `main` · **Deployed:** pending
+**Tag:** `v0.2.14` · **Branch:** `main` · **Deployed:** 2026-11-03 03:09 UTC (production)
 
 ### Documentation
 - neutralise source naming in the release records (be60e5b)

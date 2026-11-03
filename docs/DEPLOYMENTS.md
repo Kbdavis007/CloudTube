@@ -26,3 +26,4 @@ npm run deploy:log -- --env production --url https://your-app.example --notes "w
 | 2026-11-03 02:32 UTC | `v0.2.10` | `caed445` | production | https://ct.devmatrix.top | local | Hover previews on search result thumbnails; source names aliased (Vista/Aurora/Ember/Flicker/Nova/Comet/Crimson); key-gated sources added to filter chips |
 | 2026-11-03 02:48 UTC | `v0.2.12` | `2a1a2e4` | production | https://ct.devmatrix.top | local | cached multi-source search API (D1 + edge + SW), Eporner browser-direct |
 | 2026-11-03 03:06 UTC | `v0.2.13` | `e5cfab5` | production | https://ct.devmatrix.top | local | neutralise source naming: rename open-source id and flag to embedhub/EmbedHub; aliases constant renamed; prose updated |
+| 2026-11-03 03:09 UTC | `v0.2.14` | `1f9247e` | production | https://ct.devmatrix.top | local | docs: neutralise source naming in the release records |
