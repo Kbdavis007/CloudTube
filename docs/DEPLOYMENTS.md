@@ -23,3 +23,4 @@ npm run deploy:log -- --env production --url https://your-app.example --notes "w
 | 2026-11-02 23:26 UTC | `v0.2.7` | `483ea5d` | production | https://ct.devmatrix.top | local | RedGifs edge cache + retry for shared-IP 429s |
 | 2026-11-03 02:08 UTC | `v0.2.8` | `3f4d17e` | production | https://ct.devmatrix.top | local | Pornhub source via RapidAPI with in-app key |
 | 2026-11-03 02:15 UTC | `v0.2.9` | `055e5ad` | production | https://ct.devmatrix.top | local | xHamster and RedTube sources via multi-site RapidAPI |
+| 2026-11-03 02:32 UTC | `v0.2.10` | `caed445` | production | https://ct.devmatrix.top | local | Hover previews on search result thumbnails; adult source names aliased (Vista/Aurora/Ember/Flicker/Nova/Comet/Crimson); key-gated sources added to filter chips |
