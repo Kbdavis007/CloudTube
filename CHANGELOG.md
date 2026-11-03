@@ -18,6 +18,14 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 
 
+
+## [0.2.10] - 2026-11-03
+
+**Tag:** `v0.2.10` · **Branch:** `main` · **Deployed:** pending
+
+### Features
+- hover previews on result cards + alias adult source names (091fe44)
+
 ## [0.2.9] - 2026-11-03
 
 **Tag:** `v0.2.9` · **Branch:** `main` · **Deployed:** 2026-11-03 02:15 UTC (production)
