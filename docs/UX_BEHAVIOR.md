@@ -26,10 +26,8 @@ strip and the whole page scrolls, which is the layout that fits a phone.
 Video playback happens in an embedded player (`<iframe>`) inside the player view.
 Nothing on the play, pause, seek or forward path calls `window.open` or changes the
 page location. Videos that ship their own embed URL load it in the same iframe:
-XVideos and the open sources (Archive.org, PeerTube, Dailymotion, Eporner,
-AdultEmbed, RedGifs, and Pornhub, xHamster and RedTube when a RapidAPI key is
-set) set
-`playback.embedUrl`; YouTube videos derive
+the catalogue source and the open sources (Archive.org, PeerTube, Dailymotion, and
+the adult sources — see below) set `playback.embedUrl`; YouTube videos derive
 their embed URL from the video id. Which open sources a search queries is a user
 preference, set in **Settings → Search Sources** (persisted in `localStorage`).
 Sources that need a key are off by default and marked "key" in the picker.
@@ -38,17 +36,43 @@ The iframe is sandboxed without `allow-top-navigation`, `allow-popups` or
 `allow-popups-to-escape-sandbox`, so a tap on the embed can play, pause or seek but
 can never navigate the app away or open the source site.
 
+## Adult source names are aliased
+
+The adult sources are shown under neutral names (`src/data/sourceAliases.ts`):
+the catalogue source is **Vista**, and the open sources are **Aurora**, **Ember**,
+**Flicker**, **Nova**, **Comet** and **Crimson**. The real site is never rendered
+anywhere — search chips, filter chips, source pickers, error messages, the player
+badge, the "Go to Source Site" title and the saved-video `channelTitle` all use the
+alias. The stored `SourceFlag` values and open-source ids are unchanged, so this is
+a display-only swap; no data migration is needed.
+
+## Hover preview on result cards
+
+Resting the pointer on a search result thumbnail (or focusing it) plays a small
+muted preview in place of the still image; leaving the card stops it and restores
+the poster. `src/components/HoverPreview.tsx` picks the best available source, in
+order:
+
+1. A direct muted video (`playback.previewUrl`) — currently the RedGifs-style
+   short-clip source, whose feed serves plain mp4 URLs.
+2. A strip of stills (`playback.previewFrames`), cycled every 600 ms — the
+   Eporner-style source, whose search response includes several thumbnails.
+3. The source's own embed with `autoplay=1&mute=1` appended.
+4. Nothing: the card keeps its poster, so the grid is unchanged when idle.
+
+YouTube results always take path 3 (their thumbnail hosts expose no direct video).
+The preview only starts after a short hover delay so passing the pointer over the
+grid does not fire a burst of loads.
+
 ## Go to Source Site
 
 The only action that opens an external page is the **Go to Source Site** button in
 the video player.
 
 - It appears only when the video has a canonical source page
-  (`playback.externalUrl`), which is set for sources like XVideos, Archive.org,
-  PeerTube, Dailymotion, Eporner, AdultEmbed, RedGifs, Pornhub, xHamster and
-  RedTube, and absent for
-  YouTube. No URL is guessed. (AdultEmbed exposes no public watch page, so its exit
-  link is the player embed.)
+  (`playback.externalUrl`), which is set for the catalogue and open sources and
+  absent for YouTube. No URL is guessed. (The AdultEmbed-style source exposes no
+  public watch page, so its exit link is the player embed.)
 - It opens in a new tab with `rel="noopener noreferrer"`.
 - Style: orange label (`#ff6600`), brighter on hover (`#ffaa33`), external-link icon.
 

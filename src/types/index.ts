@@ -28,6 +28,16 @@ export interface PlaybackTarget {
   embedUrl: string;
   /** Canonical page on the source site, for "open original". */
   externalUrl: string;
+  /**
+   * Direct muted video URL used for the hover preview on result cards, when the
+   * source offers one. Preferred over `previewFrames` and the embed fallback.
+   */
+  previewUrl?: string;
+  /**
+   * Still frames (thumbnails) the hover preview can cycle through when the
+   * source exposes no direct video — a lightweight "moving thumbnail".
+   */
+  previewFrames?: string[];
 }
 
 export interface VideoMetadata {

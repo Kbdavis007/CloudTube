@@ -18,6 +18,7 @@ import {
   X,
 } from 'lucide-react';
 import { VideoMetadata } from '../../types';
+import { ADULT_SOURCE_ALIASES } from '../../data/sourceAliases';
 import { idbService } from '../../services/indexedDB';
 import {
   XvideosExportRange,
@@ -30,6 +31,9 @@ import {
 } from '../../services/xvideosApi';
 
 const CONSENT_STORAGE_KEY = 'cloudtube.xvideos.adultConfirmed';
+
+/** The neutral name this source is shown under; its real name is never rendered. */
+const SOURCE_NAME = ADULT_SOURCE_ALIASES.Xvideos!;
 
 /** Cards shown per review page. Bigger thumbnails mean fewer per page. */
 const REVIEW_PAGE_SIZE = 24;
@@ -160,8 +164,8 @@ export const XvideosSourceView: React.FC<XvideosSourceViewProps> = ({
       setReviewFilters(EMPTY_REVIEW_FILTERS);
       setReviewPage(0);
     } catch (err: any) {
-      console.error('XVideos catalogue download failed', err);
-      setCatalogError(err?.message || 'Failed to download the XVideos catalogue.');
+      console.error('Catalogue download failed', err);
+      setCatalogError(err?.message || 'Failed to download the catalogue.');
     } finally {
       setIsLoadingCatalog(false);
       setLoadProgress(null);
@@ -212,7 +216,7 @@ export const XvideosSourceView: React.FC<XvideosSourceViewProps> = ({
   };
 
   const handleClearCatalog = async () => {
-    if (!confirm('Remove the downloaded XVideos catalogue from this device?')) return;
+    if (!confirm('Remove the downloaded catalogue from this device?')) return;
     await idbService.clearXvideosCatalog();
     setCatalog([]);
     setAppliedQuery('');
@@ -378,10 +382,10 @@ export const XvideosSourceView: React.FC<XvideosSourceViewProps> = ({
         <div>
           <h1 className="text-xl sm:text-2xl font-extrabold text-white flex items-center gap-2">
             <ShieldAlert className="w-5 h-5 text-orange-500" />
-            XVideos Source
+            {SOURCE_NAME} Source
           </h1>
           <p className="text-xs sm:text-sm text-slate-400">
-            Import the XVideos webmaster catalogue and search it offline.
+            Import the webmaster catalogue and search it offline.
           </p>
         </div>
 
@@ -391,14 +395,13 @@ export const XvideosSourceView: React.FC<XvideosSourceViewProps> = ({
             <div className="space-y-2">
               <h2 className="text-sm font-bold text-white">Adult content notice</h2>
               <p className="text-xs text-slate-300 leading-relaxed">
-                This source imports the XVideos catalogue, which contains adult material. It is off
+                This source imports an adult catalogue, which contains adult material. It is off
                 by default and stays off until you confirm below. Confirm only if you are 18 or older
                 and it is legal to view this content where you are.
               </p>
               <p className="text-xs text-slate-400 leading-relaxed">
-                The catalogue is an official bulk export published for webmasters at{' '}
-                <span className="font-mono text-slate-300">info.xvideos.net/db</span>. Videos play
-                through XVideos' own embed player, so playback depends on that site.
+                The catalogue is an official bulk export published for webmasters. Videos play
+                through the source site's own embed player, so playback depends on that site.
               </p>
             </div>
           </div>
@@ -866,10 +869,10 @@ export const XvideosSourceView: React.FC<XvideosSourceViewProps> = ({
           <div>
             <h1 className="text-xl sm:text-2xl font-extrabold text-white flex items-center gap-2">
               <ShieldAlert className="w-5 h-5 text-orange-500" />
-              XVideos Source
+              {SOURCE_NAME} Source
             </h1>
             <p className="text-xs sm:text-sm text-slate-400">
-              Search the imported XVideos catalogue. {catalog.length > 0
+              Search the imported catalogue. {catalog.length > 0
                 ? `${catalog.length.toLocaleString()} videos stored offline.`
                 : 'No catalogue downloaded yet.'}
             </p>
@@ -1060,7 +1063,7 @@ export const XvideosSourceView: React.FC<XvideosSourceViewProps> = ({
                       target="_blank"
                       rel="noreferrer noopener"
                       className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
-                      title="Open on XVideos"
+                      title="Open on the source site"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
                     </a>

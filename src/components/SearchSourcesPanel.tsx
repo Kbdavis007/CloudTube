@@ -134,7 +134,7 @@ export const SearchSourcesPanel: React.FC<SearchSourcesPanelProps> = ({
               <KeyRound className="w-3.5 h-3.5 text-amber-400" />
               RapidAPI key
               <span className="text-[10px] font-normal text-slate-500">
-                for Pornhub, xHamster and RedTube
+                for the key-based adult sources
               </span>
             </label>
             <input

@@ -35,7 +35,15 @@ import {
 } from '../../services/searchSources';
 import { rankCandidates } from '../../services/tasteProfile';
 import { sourceFlagLabel } from '../../data/sourceLabels';
+import { HoverPreview } from '../HoverPreview';
 import { ApiErrorCard } from '../ApiErrorCard';
+
+/** Add muted-autoplay hints to a source embed so the hover preview starts itself. */
+const withAutoplay = (embedUrl?: string): string | undefined => {
+  if (!embedUrl) return undefined;
+  const join = embedUrl.includes('?') ? '&' : '?';
+  return `${embedUrl}${join}autoplay=1&mute=1`;
+};
 
 interface SearchViewProps {
   onIndexVideo: (video: VideoMetadata) => void;
@@ -338,6 +346,9 @@ export const SearchView: React.FC<SearchViewProps> = ({
                 'Eporner',
                 'AdultEmbed',
                 'RedGifs',
+                'Pornhub',
+                'Xhamster',
+                'Redtube',
               ] as SourceFlag[]
             ).map((flag) => {
               const count = combinedResults.filter((r) => r.sourceFlags.includes(flag)).length;
@@ -406,22 +417,29 @@ export const SearchView: React.FC<SearchViewProps> = ({
               >
                 {/* Thumbnail Header */}
                 <div className="relative aspect-video w-full bg-slate-950 overflow-hidden">
-                  <img
-                    src={video.thumbnails.medium}
+                  <HoverPreview
+                    poster={video.thumbnails.medium}
                     alt={video.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80" />
-
-                  {/* Play Overlay */}
-                  <button
-                    onClick={playVideo}
-                    className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition bg-black/40"
+                    previewUrl={video.playback?.previewUrl}
+                    previewFrames={video.playback?.previewFrames}
+                    embedUrl={
+                      isOpenSource
+                        ? withAutoplay(video.playback?.embedUrl)
+                        : `https://www.youtube-nocookie.com/embed/${video.youtubeId}?autoplay=1&mute=1&controls=0&modestbranding=1&playsinline=1&rel=0`
+                    }
                   >
-                    <div className="w-12 h-12 rounded-full bg-orange-600 flex items-center justify-center text-white shadow-xl hover:scale-110 transition">
-                      <Play className="w-6 h-6 fill-current ml-0.5" />
-                    </div>
-                  </button>
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80 pointer-events-none" />
+
+                    {/* Play Overlay */}
+                    <button
+                      onClick={playVideo}
+                      className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition bg-black/40"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-orange-600 flex items-center justify-center text-white shadow-xl hover:scale-110 transition">
+                        <Play className="w-6 h-6 fill-current ml-0.5" />
+                      </div>
+                    </button>
+                  </HoverPreview>
 
                   {/* Duration Badge */}
                   <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-black/80 font-mono text-[11px] font-semibold text-white">
@@ -568,8 +586,8 @@ export const SearchView: React.FC<SearchViewProps> = ({
           </div>
           <h2 className="text-base font-bold text-white">Search YouTube & Discover Videos Worth Saving</h2>
           <p className="text-xs text-slate-400 max-w-md mx-auto">
-            Search YouTube with your Google sign-in, or Archive.org, PeerTube, Dailymotion
-            and Eporner with no sign-in. Type any topic or click a suggested search to find
+            Search YouTube with your Google sign-in, or the key-free catalogues
+            with no sign-in. Type any topic or click a suggested search to find
             videos, score them, and save them to your library.
           </p>
           <button

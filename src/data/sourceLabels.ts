@@ -1,8 +1,10 @@
 import type { SourceFlag, CrawlJob } from '../types';
+import { ADULT_SOURCE_ALIASES } from './sourceAliases';
 
 /**
  * User-facing names for source flags. The stored flag values are stable
  * identifiers used in the data layer; only these labels are shown in the UI.
+ * Adult sources resolve to a neutral alias so their real name is not displayed.
  */
 export const SOURCE_FLAG_LABELS: Record<SourceFlag, string> = {
   YouTubeSearch: 'Search',
@@ -12,16 +14,16 @@ export const SOURCE_FLAG_LABELS: Record<SourceFlag, string> = {
   X: 'X',
   LinkedIn: 'LinkedIn',
   Playlist: 'Playlist',
-  Xvideos: 'XVideos',
+  Xvideos: ADULT_SOURCE_ALIASES.Xvideos!,
   ArchiveOrg: 'Archive.org',
   PeerTube: 'PeerTube',
   Dailymotion: 'Dailymotion',
-  Eporner: 'Eporner',
-  AdultEmbed: 'AdultEmbed',
-  RedGifs: 'RedGifs',
-  Pornhub: 'Pornhub',
-  Xhamster: 'xHamster',
-  Redtube: 'RedTube',
+  Eporner: ADULT_SOURCE_ALIASES.Eporner!,
+  AdultEmbed: ADULT_SOURCE_ALIASES.AdultEmbed!,
+  RedGifs: ADULT_SOURCE_ALIASES.RedGifs!,
+  Pornhub: ADULT_SOURCE_ALIASES.Pornhub!,
+  Xhamster: ADULT_SOURCE_ALIASES.Xhamster!,
+  Redtube: ADULT_SOURCE_ALIASES.Redtube!,
 };
 
 export const sourceFlagLabel = (flag: SourceFlag): string =>

@@ -1,4 +1,5 @@
 import type { SourceFlag, VideoMetadata } from '../types';
+import { ADULT_SOURCE_ALIASES } from '../data/sourceAliases';
 import { readRapidApiKey } from './rapidApiKey';
 
 /**
@@ -55,45 +56,45 @@ export const OPEN_SOURCES: OpenSourceDefinition[] = [
   },
   {
     id: 'eporner',
-    name: 'Eporner',
-    tagline: 'Eporner public catalogue',
+    name: ADULT_SOURCE_ALIASES.Eporner!,
+    tagline: 'Public catalogue (adult)',
     flag: 'Eporner',
     accent: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
   },
   {
     id: 'adultembed',
-    name: 'AdultEmbed',
-    tagline: 'AdultEmbed open video database',
+    name: ADULT_SOURCE_ALIASES.AdultEmbed!,
+    tagline: 'Open video database (adult)',
     flag: 'AdultEmbed',
     accent: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
   },
   {
     id: 'redgifs',
-    name: 'RedGifs',
-    tagline: 'RedGifs short clips (via CloudTube proxy)',
+    name: ADULT_SOURCE_ALIASES.RedGifs!,
+    tagline: 'Short clips (adult, via CloudTube proxy)',
     flag: 'RedGifs',
     accent: 'bg-red-500/20 text-red-300 border-red-500/30',
   },
   {
     id: 'pornhub',
-    name: 'Pornhub',
-    tagline: 'Pornhub catalogue (needs your RapidAPI key)',
+    name: ADULT_SOURCE_ALIASES.Pornhub!,
+    tagline: 'Catalogue (adult, needs your RapidAPI key)',
     flag: 'Pornhub',
     accent: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
     requiresKey: true,
   },
   {
     id: 'xhamster',
-    name: 'xHamster',
-    tagline: 'xHamster catalogue (needs your RapidAPI key)',
+    name: ADULT_SOURCE_ALIASES.Xhamster!,
+    tagline: 'Catalogue (adult, needs your RapidAPI key)',
     flag: 'Xhamster',
     accent: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
     requiresKey: true,
   },
   {
     id: 'redtube',
-    name: 'RedTube',
-    tagline: 'RedTube catalogue (needs your RapidAPI key)',
+    name: ADULT_SOURCE_ALIASES.Redtube!,
+    tagline: 'Catalogue (adult, needs your RapidAPI key)',
     flag: 'Redtube',
     accent: 'bg-red-600/20 text-red-300 border-red-600/30',
     requiresKey: true,
@@ -131,6 +132,9 @@ interface DraftVideo {
   tags: string[];
   embedUrl: string;
   externalUrl: string;
+  /** Optional hover-preview media; see `PlaybackTarget`. */
+  previewUrl?: string;
+  previewFrames?: string[];
 }
 
 /** Assemble the VideoMetadata shape the rest of the app already understands. */
@@ -160,7 +164,12 @@ function toVideoMetadata(source: OpenSourceDefinition, draft: DraftVideo): Video
     },
     posterUrl: draft.thumbnail,
     sourceVideoId: draft.sourceVideoId,
-    playback: { embedUrl: draft.embedUrl, externalUrl: draft.externalUrl },
+    playback: {
+      embedUrl: draft.embedUrl,
+      externalUrl: draft.externalUrl,
+      ...(draft.previewUrl ? { previewUrl: draft.previewUrl } : {}),
+      ...(draft.previewFrames?.length ? { previewFrames: draft.previewFrames } : {}),
+    },
     sourceFlags: [source.flag],
     indexedAt: now,
     lastUpdatedAt: now,
@@ -295,10 +304,16 @@ async function searchEporner(query: string, signal?: AbortSignal): Promise<Video
         // onto tags below, so the card's description stays empty.
         description: '',
         channelId: 'eporner',
-        channelTitle: 'Eporner',
+        channelTitle: ADULT_SOURCE_ALIASES.Eporner!,
         publishedAt: toIsoOrEmpty(v.added),
         durationSeconds: Number(v.length_sec) || 0,
         thumbnail: String(v.default_thumb?.src ?? v.thumbs?.[0]?.src ?? ''),
+        // Eporner ships a strip of stills; cycling them on hover reads as a
+        // moving thumbnail without a second network call.
+        previewFrames: (Array.isArray(v.thumbs) ? v.thumbs : [])
+          .map((t: any) => String(t?.src ?? ''))
+          .filter(Boolean)
+          .slice(0, 12),
         tags: String(v.keywords ?? '')
           .split(',')
           .map((t: string) => t.trim())
@@ -360,7 +375,7 @@ async function searchAdultEmbed(query: string, signal?: AbortSignal): Promise<Vi
         title: String(v.title ?? 'Untitled'),
         description: String(v.description ?? '').replace(/<[^>]+>/g, '').slice(0, 400),
         channelId: `adultembed:${v.studio?.slug ?? 'unknown'}`,
-        channelTitle: String(v.studio?.name ?? 'AdultEmbed'),
+        channelTitle: String(v.studio?.name ?? ADULT_SOURCE_ALIASES.AdultEmbed!),
         publishedAt: v.published_at ?? '',
         durationSeconds: Number(v.duration_seconds) || 0,
         thumbnail: String(v.thumbnail ?? ''),
@@ -389,10 +404,10 @@ async function searchRedGifs(query: string, signal?: AbortSignal): Promise<Video
     .map((v) =>
       toVideoMetadata(openSourceById('redgifs'), {
         sourceVideoId: String(v.id),
-        title: String(v.description ?? v.userName ?? 'RedGifs clip'),
+        title: String(v.description ?? v.userName ?? `${ADULT_SOURCE_ALIASES.RedGifs!} clip`),
         description: String(v.description ?? ''),
         channelId: `redgifs:${v.userName ?? 'unknown'}`,
-        channelTitle: String(v.userName ?? 'RedGifs'),
+        channelTitle: String(v.userName ?? ADULT_SOURCE_ALIASES.RedGifs!),
         publishedAt: v.createDate ? new Date(Number(v.createDate) * 1000).toISOString() : '',
         durationSeconds: Number(v.duration) || 0,
         thumbnail: String(v.urls?.poster ?? v.urls?.thumbnail ?? ''),
@@ -400,6 +415,8 @@ async function searchRedGifs(query: string, signal?: AbortSignal): Promise<Video
         // `urls.html` is the dedicated framable embed page; the watch page is not.
         embedUrl: String(v.urls?.html ?? `https://www.redgifs.com/ifr/${v.id}`),
         externalUrl: `https://www.redgifs.com/watch/${v.id}`,
+        // RedGifs serves the clip itself as a plain mp4, ideal for a muted hover preview.
+        previewUrl: String(v.urls?.sd ?? v.urls?.hd ?? ''),
       })
     );
 }
@@ -510,7 +527,7 @@ async function searchMultiSite(
  * with a clear message rather than silently returning nothing.
  */
 async function searchPornhub(query: string, signal?: AbortSignal): Promise<VideoMetadata[]> {
-  const key = requireRapidApiKey('Pornhub');
+  const key = requireRapidApiKey(ADULT_SOURCE_ALIASES.Pornhub!);
 
   const res = await fetch(
     `https://pornhub2.p.rapidapi.com/v2/search?query=${encodeURIComponent(query)}`,
@@ -524,12 +541,14 @@ async function searchPornhub(query: string, signal?: AbortSignal): Promise<Video
     }
   );
   if (res.status === 401 || res.status === 403) {
-    throw new Error('RapidAPI rejected the key (check it is subscribed to the Pornhub API)');
+    throw new Error(
+      `RapidAPI rejected the key (check it is subscribed to the ${ADULT_SOURCE_ALIASES.Pornhub!} API)`
+    );
   }
   if (res.status === 429) {
     throw new Error('RapidAPI free-plan limit reached — try again later');
   }
-  if (!res.ok) throw new Error(`Pornhub search responded ${res.status}`);
+  if (!res.ok) throw new Error(`${ADULT_SOURCE_ALIASES.Pornhub!} search responded ${res.status}`);
 
   const data = await res.json();
   const items: any[] = data?.data?.videos ?? [];
@@ -542,7 +561,7 @@ async function searchPornhub(query: string, signal?: AbortSignal): Promise<Video
         title: String(v.title ?? 'Untitled'),
         description: String(v.title ?? ''),
         channelId: `pornhub:${v.pornstars?.[0]?.pornstar_name ?? 'unknown'}`,
-        channelTitle: String(v.pornstars?.[0]?.pornstar_name ?? 'Pornhub'),
+        channelTitle: String(v.pornstars?.[0]?.pornstar_name ?? ADULT_SOURCE_ALIASES.Pornhub!),
         publishedAt: toIsoOrEmpty(v.publish_date),
         durationSeconds: parseClock(v.duration),
         thumbnail: String(v.default_thumb ?? v.thumb ?? ''),
