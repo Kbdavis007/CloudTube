@@ -16,6 +16,14 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 
 
+
+## [0.2.8] - 2026-11-03
+
+**Tag:** `v0.2.8` · **Branch:** `main` · **Deployed:** pending
+
+### Features
+- add Pornhub source via RapidAPI with in-app key (2d10380)
+
 ## [0.2.7] - 2026-11-02
 
 **Tag:** `v0.2.7` · **Branch:** `main` · **Deployed:** 2026-11-02 23:26 UTC (production)
