@@ -125,9 +125,43 @@ never ran and `POST /api/cloudflare/proxy` kept returning 405.
 | --- | --- |
 | `GET /api/health` | version / commit / branch provenance |
 | `POST /api/cloudflare/proxy` | server-side relay to the Cloudflare API |
+| `GET /api/xvideos/export` | streams the XVideos catalogue export |
+| `GET /api/redgifs/search` | RedGifs search (CORS + temporary token) |
+| `GET /api/search` | cached multi-source search (D1 + edge cache) |
 
 `wrangler.jsonc` sets `run_worker_first: ["/api/*"]` so API calls reach the
 Worker before the asset layer (otherwise the asset handler answers POST with 405).
+
+### Cached search API (`GET /api/search`)
+
+Open-source searches run through the Worker instead of the browser, so one
+upstream fetch serves every repeat of a term. Two cache layers, cheapest first:
+
+1. **Cloudflare edge cache** (`caches.default`) — holds the whole multi-source
+   response per colo for 5 minutes. A repeat search is a cache hit with no D1
+   read and no upstream call.
+2. **D1 `video_search_cache`** — durable, one row per (source, query) with a
+   per-source freshness window (RedGifs 30 min, Dailymotion 6 h, Archive 24 h,
+   the rest 12 h). A search from another colo, or after the edge entry expires,
+   still avoids the upstream call until the row goes stale.
+
+Only key-free sources are cached here; the user's key-gated sources stay
+browser-direct so the RapidAPI key is never uploaded. The client
+(`src/services/searchApi.ts`) falls back to calling each source directly when
+`/api/search` is unreachable, so search never breaks.
+
+**Enabling the D1 layer** (optional — the edge cache and service worker work
+without it):
+
+```bash
+export CLOUDFLARE_API_TOKEN=...   # Workers Scripts: Edit + D1: Edit
+export CLOUDFLARE_ACCOUNT_ID=...
+node scripts/setup-search-db.mjs   # creates the DB, binds it, applies the migration
+```
+
+The script writes the `d1_databases` binding into `wrangler.jsonc`; commit that
+change so the auto-deploy keeps the binding. The Worker also creates the table
+lazily on first search, so a fresh database needs no manual migration.
 
 Build settings for Workers Builds:
 

@@ -13,6 +13,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { XVIDEOS_EXPORT_RANGES as XVideosExportRanges } from './src/services/xvideosApi';
 import { searchRedGifsGifs } from './src/services/redgifsApi';
+import { searchWorkerSource } from './worker/searchSources';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -181,6 +182,42 @@ async function startServer() {
       const message = err instanceof Error ? err.message : 'Unknown error';
       return res.status(502).json({ success: false, errors: [{ message }] });
     }
+  });
+
+  // Cached multi-source search (dev parity with the Worker route).
+  //
+  // In production this is served by worker/searchApi.ts with D1 + the edge
+  // cache; locally there is no D1 binding, so this answers straight from the
+  // same adapters the Worker uses, which keeps the client's cached-search path
+  // exercised during development.
+  app.get('/api/search', async (req, res) => {
+    const query = String(req.query.q ?? '').trim();
+    if (!query) {
+      return res.status(400).json({ success: false, errors: [{ message: 'Missing "q" parameter' }] });
+    }
+    const ids = String(req.query.ids ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const entries = await Promise.all(
+      ids.map(async (id) => {
+        try {
+          return [id, { videos: await searchWorkerSource(id, query), cached: false, ageMs: 0 }] as const;
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Search failed';
+          return [id, { videos: [], cached: false, ageMs: 0, error: message }] as const;
+        }
+      })
+    );
+
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({
+      success: true,
+      query,
+      results: Object.fromEntries(entries),
+      meta: { sources: ids, dev: true },
+    });
   });
 
   if (!isProd) {

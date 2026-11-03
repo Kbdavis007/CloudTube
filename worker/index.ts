@@ -27,9 +27,12 @@ import {
 } from '../src/generated/version';
 import { XVIDEOS_EXPORT_RANGES } from '../src/services/xvideosApi';
 import { searchRedGifsGifs } from '../src/services/redgifsApi';
+import { handleSearch, type D1Database } from './searchApi';
 
 interface Env {
   ASSETS: { fetch: (request: Request) => Promise<Response> };
+  /** D1 database backing the cached search API. Optional so local/dev builds run. */
+  DB?: D1Database;
 }
 
 interface ProxyBody {
@@ -202,11 +205,34 @@ async function handleProxy(request: Request): Promise<Response> {
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx?: { waitUntil: (p: Promise<unknown>) => void }): Promise<Response> {
     const { pathname } = new URL(request.url);
 
     if (pathname === '/api/health') {
       return handleHealth();
+    }
+
+    if (pathname === '/api/search') {
+      if (request.method === 'OPTIONS') {
+        return new Response(null, {
+          status: 204,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+          },
+        });
+      }
+      if (request.method !== 'GET') {
+        return json(
+          { status: 405, ok: false, errors: [{ message: 'Use GET for /api/search' }] },
+          405
+        );
+      }
+      return handleSearch(request, {
+        db: env.DB,
+        waitUntil: ctx ? (p) => ctx.waitUntil(p) : undefined,
+      });
     }
 
     if (pathname === '/api/cloudflare/proxy') {

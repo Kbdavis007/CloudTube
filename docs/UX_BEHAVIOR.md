@@ -64,6 +64,28 @@ YouTube results always take path 3 (their thumbnail hosts expose no direct video
 The preview only starts after a short hover delay so passing the pointer over the
 grid does not fire a burst of loads.
 
+## Open-source search is cached server-side
+
+Open-source searches go through `GET /api/search` rather than each source's API
+called from the browser. The Worker fans out once, caches the result in D1 and
+the Cloudflare edge cache, and returns it; the client
+(`src/services/searchApi.ts`) renders the same shape as the old
+`searchAllOpenSources`, so the view is unaware of which path ran. The service
+worker adds a third layer on top (`cloudtube-search-v1`, stale-while-revalidate),
+so a term searched before renders from disk instantly.
+
+Two rules hold this together:
+
+- **Key-gated sources never reach the Worker.** Pornhub, Xhamster and Redtube
+  need the user's RapidAPI key, so they stay browser-direct; the API caches only
+  the key-free sources and the client fills the rest in itself.
+- **A failed API call degrades, it does not break.** If `/api/search` is
+  unreachable (offline, or a dev server without the route), the client calls each
+  source directly, exactly as it did before this feature.
+
+See `docs/VERSIONING.md` for the cache layers, freshness windows and how to
+enable the D1 database.
+
 ## Go to Source Site
 
 The only action that opens an external page is the **Go to Source Site** button in

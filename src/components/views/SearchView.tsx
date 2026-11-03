@@ -24,10 +24,10 @@ import {
 import { YouTubeApiClient } from '../../services/youtubeApi';
 import {
   OPEN_SOURCES,
-  searchAllOpenSources,
   openSourceById,
   type OpenSourceId,
 } from '../../services/openSourcesApi';
+import { searchOpenSourcesCached } from '../../services/searchApi';
 import {
   readEnabledOpenSources,
   saveEnabledOpenSources,
@@ -139,7 +139,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
     // Open sources need no sign-in, so they run regardless of YouTube auth.
     const openPromise: Promise<void> =
       openIds.length > 0
-        ? searchAllOpenSources(openIds, query).then((outcomes) => {
+        ? searchOpenSourcesCached(openIds, query).then((outcomes) => {
             setOpenResults(outcomes.flatMap((o) => o.videos));
             const errors: Partial<Record<OpenSourceId, string>> = {};
             outcomes.forEach((o) => {
