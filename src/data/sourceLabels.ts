@@ -1,10 +1,10 @@
 import type { SourceFlag, CrawlJob } from '../types';
-import { ADULT_SOURCE_ALIASES } from './sourceAliases';
+import { SOURCE_ALIASES } from './sourceAliases';
 
 /**
  * User-facing names for source flags. The stored flag values are stable
  * identifiers used in the data layer; only these labels are shown in the UI.
- * Adult sources resolve to a neutral alias so their real name is not displayed.
+ * Aliased sources resolve to a neutral name so their real name is not displayed.
  */
 export const SOURCE_FLAG_LABELS: Record<SourceFlag, string> = {
   YouTubeSearch: 'Search',
@@ -14,20 +14,20 @@ export const SOURCE_FLAG_LABELS: Record<SourceFlag, string> = {
   X: 'X',
   LinkedIn: 'LinkedIn',
   Playlist: 'Playlist',
-  Xvideos: ADULT_SOURCE_ALIASES.Xvideos!,
+  Xvideos: SOURCE_ALIASES.Xvideos!,
   ArchiveOrg: 'Archive.org',
   PeerTube: 'PeerTube',
   Dailymotion: 'Dailymotion',
-  Eporner: ADULT_SOURCE_ALIASES.Eporner!,
-  AdultEmbed: ADULT_SOURCE_ALIASES.AdultEmbed!,
-  RedGifs: ADULT_SOURCE_ALIASES.RedGifs!,
-  Pornhub: ADULT_SOURCE_ALIASES.Pornhub!,
-  Xhamster: ADULT_SOURCE_ALIASES.Xhamster!,
-  Redtube: ADULT_SOURCE_ALIASES.Redtube!,
+  Eporner: SOURCE_ALIASES.Eporner!,
+  EmbedHub: SOURCE_ALIASES.EmbedHub!,
+  RedGifs: SOURCE_ALIASES.RedGifs!,
+  Pornhub: SOURCE_ALIASES.Pornhub!,
+  Xhamster: SOURCE_ALIASES.Xhamster!,
+  Redtube: SOURCE_ALIASES.Redtube!,
 };
 
 export const sourceFlagLabel = (flag: SourceFlag): string =>
-  SOURCE_FLAG_LABELS[flag] ?? flag;
+  SOURCE_FLAG_LABELS[flag] ?? 'Other';
 
 /**
  * User-facing names for background activity types. Mirrors the crawl job

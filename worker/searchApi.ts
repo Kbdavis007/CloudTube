@@ -62,7 +62,7 @@ const SOURCE_TTL_MS: Record<string, number> = {
   peertube: 12 * 60 * 60 * 1000,
   dailymotion: 6 * 60 * 60 * 1000,
   eporner: 12 * 60 * 60 * 1000,
-  adultembed: 12 * 60 * 60 * 1000,
+  embedhub: 12 * 60 * 60 * 1000,
   redgifs: 30 * 60 * 1000,
 };
 
@@ -246,7 +246,7 @@ export async function handleSearch(request: Request, deps: SearchApiDeps): Promi
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
-  const ids = (requested.length ? requested : ['archive', 'peertube', 'dailymotion', 'adultembed', 'redgifs']).filter(
+  const ids = (requested.length ? requested : ['archive', 'peertube', 'dailymotion', 'embedhub', 'redgifs']).filter(
     (id) => isOpenSourceId(id) && isWorkerSource(id)
   );
 

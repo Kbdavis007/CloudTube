@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import type { PageTab } from './Sidebar';
 import type { SourceFlag } from '../types';
-import { ADULT_SOURCE_ALIASES } from '../data/sourceAliases';
+import { SOURCE_ALIASES } from '../data/sourceAliases';
 import { idbService } from '../services/indexedDB';
 
 export interface VideoSourceDefinition {
@@ -43,9 +43,9 @@ export const VIDEO_SOURCES: VideoSourceDefinition[] = [
   },
   {
     id: 'xvideos',
-    name: ADULT_SOURCE_ALIASES.Xvideos!,
+    name: SOURCE_ALIASES.Xvideos!,
     tagline: 'Webmaster catalogue',
-    description: 'Import the adult webmaster catalogue and search it offline.',
+    description: 'Import the webmaster catalogue and search it offline.',
     icon: ShieldAlert,
     accent: 'hover:border-orange-500/50',
     iconClass: 'bg-orange-500/10 border-orange-500/20 text-orange-400',

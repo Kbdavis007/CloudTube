@@ -1,5 +1,5 @@
 import type { VideoMetadata } from '../types';
-import { ADULT_SOURCE_ALIASES } from '../data/sourceAliases';
+import { SOURCE_ALIASES } from '../data/sourceAliases';
 import { readRapidApiKey } from './rapidApiKey';
 import {
   OPEN_SOURCES,
@@ -148,7 +148,7 @@ async function searchEporner(query: string, signal?: AbortSignal): Promise<Video
         // onto tags below, so the card's description stays empty.
         description: '',
         channelId: 'eporner',
-        channelTitle: ADULT_SOURCE_ALIASES.Eporner!,
+        channelTitle: SOURCE_ALIASES.Eporner!,
         publishedAt: toIsoOrEmpty(v.added),
         durationSeconds: Number(v.length_sec) || 0,
         thumbnail: String(v.default_thumb?.src ?? v.thumbs?.[0]?.src ?? ''),
@@ -176,7 +176,7 @@ function toIsoOrEmpty(value: unknown): string {
   return Number.isNaN(date.getTime()) ? '' : date.toISOString();
 }
 
-/** AdultEmbed returns categories/tags/performers as `{ name }` objects. */
+/** The open database returns categories/tags/performers as `{ name }` objects. */
 function namesOf(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value
@@ -203,7 +203,7 @@ function parseClock(value: unknown): number {
     .reduce((acc, part) => acc * 60 + part, 0);
 }
 
-async function searchAdultEmbed(query: string, signal?: AbortSignal): Promise<VideoMetadata[]> {
+async function searchEmbedHub(query: string, signal?: AbortSignal): Promise<VideoMetadata[]> {
   const url =
     'https://adultembed.com/api/database/browse/?search=' +
     encodeURIComponent(query) +
@@ -214,12 +214,12 @@ async function searchAdultEmbed(query: string, signal?: AbortSignal): Promise<Vi
   return items
     .filter((v) => v?.id)
     .map((v) =>
-      toVideoMetadata(openSourceById('adultembed'), {
+      toVideoMetadata(openSourceById('embedhub'), {
         sourceVideoId: String(v.id),
         title: String(v.title ?? 'Untitled'),
         description: String(v.description ?? '').replace(/<[^>]+>/g, '').slice(0, 400),
-        channelId: `adultembed:${v.studio?.slug ?? 'unknown'}`,
-        channelTitle: String(v.studio?.name ?? ADULT_SOURCE_ALIASES.AdultEmbed!),
+        channelId: `embedhub:${v.studio?.slug ?? 'unknown'}`,
+        channelTitle: String(v.studio?.name ?? SOURCE_ALIASES.EmbedHub!),
         publishedAt: v.published_at ?? '',
         durationSeconds: Number(v.duration_seconds) || 0,
         thumbnail: String(v.thumbnail ?? ''),
@@ -248,10 +248,10 @@ async function searchRedGifs(query: string, signal?: AbortSignal): Promise<Video
     .map((v) =>
       toVideoMetadata(openSourceById('redgifs'), {
         sourceVideoId: String(v.id),
-        title: String(v.description ?? v.userName ?? `${ADULT_SOURCE_ALIASES.RedGifs!} clip`),
+        title: String(v.description ?? v.userName ?? `${SOURCE_ALIASES.RedGifs!} clip`),
         description: String(v.description ?? ''),
         channelId: `redgifs:${v.userName ?? 'unknown'}`,
-        channelTitle: String(v.userName ?? ADULT_SOURCE_ALIASES.RedGifs!),
+        channelTitle: String(v.userName ?? SOURCE_ALIASES.RedGifs!),
         publishedAt: v.createDate ? new Date(Number(v.createDate) * 1000).toISOString() : '',
         durationSeconds: Number(v.duration) || 0,
         thumbnail: String(v.urls?.poster ?? v.urls?.thumbnail ?? ''),
@@ -371,7 +371,7 @@ async function searchMultiSite(
  * with a clear message rather than silently returning nothing.
  */
 async function searchPornhub(query: string, signal?: AbortSignal): Promise<VideoMetadata[]> {
-  const key = requireRapidApiKey(ADULT_SOURCE_ALIASES.Pornhub!);
+  const key = requireRapidApiKey(SOURCE_ALIASES.Pornhub!);
 
   const res = await fetch(
     `https://pornhub2.p.rapidapi.com/v2/search?query=${encodeURIComponent(query)}`,
@@ -386,13 +386,13 @@ async function searchPornhub(query: string, signal?: AbortSignal): Promise<Video
   );
   if (res.status === 401 || res.status === 403) {
     throw new Error(
-      `RapidAPI rejected the key (check it is subscribed to the ${ADULT_SOURCE_ALIASES.Pornhub!} API)`
+      `RapidAPI rejected the key (check it is subscribed to the ${SOURCE_ALIASES.Pornhub!} API)`
     );
   }
   if (res.status === 429) {
     throw new Error('RapidAPI free-plan limit reached — try again later');
   }
-  if (!res.ok) throw new Error(`${ADULT_SOURCE_ALIASES.Pornhub!} search responded ${res.status}`);
+  if (!res.ok) throw new Error(`${SOURCE_ALIASES.Pornhub!} search responded ${res.status}`);
 
   const data = await res.json();
   const items: any[] = data?.data?.videos ?? [];
@@ -405,7 +405,7 @@ async function searchPornhub(query: string, signal?: AbortSignal): Promise<Video
         title: String(v.title ?? 'Untitled'),
         description: String(v.title ?? ''),
         channelId: `pornhub:${v.pornstars?.[0]?.pornstar_name ?? 'unknown'}`,
-        channelTitle: String(v.pornstars?.[0]?.pornstar_name ?? ADULT_SOURCE_ALIASES.Pornhub!),
+        channelTitle: String(v.pornstars?.[0]?.pornstar_name ?? SOURCE_ALIASES.Pornhub!),
         publishedAt: toIsoOrEmpty(v.publish_date),
         durationSeconds: parseClock(v.duration),
         thumbnail: String(v.default_thumb ?? v.thumb ?? ''),
@@ -441,8 +441,8 @@ export async function searchOpenSource(
       return searchDailymotion(trimmed, signal);
     case 'eporner':
       return searchEporner(trimmed, signal);
-    case 'adultembed':
-      return searchAdultEmbed(trimmed, signal);
+    case 'embedhub':
+      return searchEmbedHub(trimmed, signal);
     case 'redgifs':
       return searchRedGifs(trimmed, signal);
     case 'pornhub':

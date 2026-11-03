@@ -19,9 +19,9 @@ npm run deploy:log -- --env production --url https://your-app.example --notes "w
 | 2026-11-02 19:56 UTC | `v0.2.3` | `d4d806f` | production | https://ct.devmatrix.top | local | version policy: patch bumps only, 1.0.0 gated |
 | 2026-11-02 22:45 UTC | `v0.2.4` | `bc9fa5d` | production | https://ct.devmatrix.top | local | Videos page shows the listing only; selecting a video opens a dedicated details+comments page |
 | 2026-11-02 22:57 UTC | `v0.2.5` | `bd27e2d` | production | https://ct.devmatrix.top | local | Add Eporner as a key-free open video source on the Search page |
-| 2026-11-02 23:16 UTC | `v0.2.6` | `9b63a4d` | production | https://ct.devmatrix.top | local | AdultEmbed + RedGifs search sources; Settings source picker |
+| 2026-11-02 23:16 UTC | `v0.2.6` | `9b63a4d` | production | https://ct.devmatrix.top | local | EmbedHub + RedGifs search sources; Settings source picker |
 | 2026-11-02 23:26 UTC | `v0.2.7` | `483ea5d` | production | https://ct.devmatrix.top | local | RedGifs edge cache + retry for shared-IP 429s |
 | 2026-11-03 02:08 UTC | `v0.2.8` | `3f4d17e` | production | https://ct.devmatrix.top | local | Pornhub source via RapidAPI with in-app key |
 | 2026-11-03 02:15 UTC | `v0.2.9` | `055e5ad` | production | https://ct.devmatrix.top | local | xHamster and RedTube sources via multi-site RapidAPI |
-| 2026-11-03 02:32 UTC | `v0.2.10` | `caed445` | production | https://ct.devmatrix.top | local | Hover previews on search result thumbnails; adult source names aliased (Vista/Aurora/Ember/Flicker/Nova/Comet/Crimson); key-gated sources added to filter chips |
+| 2026-11-03 02:32 UTC | `v0.2.10` | `caed445` | production | https://ct.devmatrix.top | local | Hover previews on search result thumbnails; source names aliased (Vista/Aurora/Ember/Flicker/Nova/Comet/Crimson); key-gated sources added to filter chips |
 | 2026-11-03 02:48 UTC | `v0.2.12` | `2a1a2e4` | production | https://ct.devmatrix.top | local | cached multi-source search API (D1 + edge + SW), Eporner browser-direct |

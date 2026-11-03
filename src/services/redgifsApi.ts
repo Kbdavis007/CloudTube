@@ -1,7 +1,7 @@
 /**
- * adult short-clip search helper.
+ * Short-clip search helper.
  *
- * adult source sends `access-control-allow-origin: https://www.redgifs.com` on its
+ * The source sends `access-control-allow-origin: https://www.redgifs.com` on its
  * search endpoint, so the browser cannot call it directly. Both runtimes that
  * serve the app (the edge Worker and the Node dev server) expose a same-origin
  * `/api/redgifs/search` route that calls this helper, which also handles the

@@ -12,7 +12,7 @@
  * uploaded.
  */
 
-import { ADULT_SOURCE_ALIASES } from '../src/data/sourceAliases';
+import { SOURCE_ALIASES } from '../src/data/sourceAliases';
 import { openSourceById, toVideoMetadata, type OpenSourceId } from '../src/services/videoShape';
 import { searchRedGifsGifs } from '../src/services/redgifsApi';
 import type { VideoMetadata } from '../src/types';
@@ -40,7 +40,7 @@ function parseRuntime(runtime: unknown): number {
   return Number.isFinite(seconds) ? seconds : 0;
 }
 
-/** AdultEmbed returns categories/tags/performers as `{ name }` objects. */
+/** The open database returns categories/tags/performers as `{ name }` objects. */
 function namesOf(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value
@@ -131,7 +131,7 @@ async function searchDailymotion(query: string, signal?: AbortSignal): Promise<V
     );
 }
 
-async function searchAdultEmbed(query: string, signal?: AbortSignal): Promise<VideoMetadata[]> {
+async function searchEmbedHub(query: string, signal?: AbortSignal): Promise<VideoMetadata[]> {
   const url =
     'https://adultembed.com/api/database/browse/?search=' +
     encodeURIComponent(query) +
@@ -142,12 +142,12 @@ async function searchAdultEmbed(query: string, signal?: AbortSignal): Promise<Vi
   return items
     .filter((v) => v?.id)
     .map((v) =>
-      toVideoMetadata(openSource('adultembed'), {
+      toVideoMetadata(openSource('embedhub'), {
         sourceVideoId: String(v.id),
         title: String(v.title ?? 'Untitled'),
         description: String(v.description ?? '').replace(/<[^>]+>/g, '').slice(0, 400),
-        channelId: `adultembed:${v.studio?.slug ?? 'unknown'}`,
-        channelTitle: String(v.studio?.name ?? ADULT_SOURCE_ALIASES.AdultEmbed!),
+        channelId: `embedhub:${v.studio?.slug ?? 'unknown'}`,
+        channelTitle: String(v.studio?.name ?? SOURCE_ALIASES.EmbedHub!),
         publishedAt: v.published_at ?? '',
         durationSeconds: Number(v.duration_seconds) || 0,
         thumbnail: String(v.thumbnail ?? ''),
@@ -167,10 +167,10 @@ async function searchRedGifs(query: string, signal?: AbortSignal): Promise<Video
     .map((v) =>
       toVideoMetadata(openSource('redgifs'), {
         sourceVideoId: String(v.id),
-        title: String(v.description ?? v.userName ?? `${ADULT_SOURCE_ALIASES.RedGifs!} clip`),
+        title: String(v.description ?? v.userName ?? `${SOURCE_ALIASES.RedGifs!} clip`),
         description: String(v.description ?? ''),
         channelId: `redgifs:${v.userName ?? 'unknown'}`,
-        channelTitle: String(v.userName ?? ADULT_SOURCE_ALIASES.RedGifs!),
+        channelTitle: String(v.userName ?? SOURCE_ALIASES.RedGifs!),
         publishedAt: v.createDate ? new Date(Number(v.createDate) * 1000).toISOString() : '',
         durationSeconds: Number(v.duration) || 0,
         thumbnail: String(v.urls?.poster ?? v.urls?.thumbnail ?? ''),
@@ -195,7 +195,7 @@ const WORKER_SOURCES: Record<string, (q: string, s?: AbortSignal) => Promise<Vid
   archive: searchArchive,
   peertube: searchPeerTube,
   dailymotion: searchDailymotion,
-  adultembed: searchAdultEmbed,
+  embedhub: searchEmbedHub,
   redgifs: searchRedGifs,
 };
 

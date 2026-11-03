@@ -11,7 +11,7 @@ export type SourceFlag =
   | 'PeerTube'
   | 'Dailymotion'
   | 'Eporner'
-  | 'AdultEmbed'
+  | 'EmbedHub'
   | 'RedGifs'
   | 'Pornhub'
   | 'Xhamster'

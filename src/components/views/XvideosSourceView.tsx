@@ -18,7 +18,7 @@ import {
   X,
 } from 'lucide-react';
 import { VideoMetadata } from '../../types';
-import { ADULT_SOURCE_ALIASES } from '../../data/sourceAliases';
+import { SOURCE_ALIASES } from '../../data/sourceAliases';
 import { idbService } from '../../services/indexedDB';
 import {
   XvideosExportRange,
@@ -30,10 +30,10 @@ import {
   xvideosRecordToVideo,
 } from '../../services/xvideosApi';
 
-const CONSENT_STORAGE_KEY = 'cloudtube.xvideos.adultConfirmed';
+const CONSENT_STORAGE_KEY = 'cloudtube.xvideos.contentConfirmed';
 
 /** The neutral name this source is shown under; its real name is never rendered. */
-const SOURCE_NAME = ADULT_SOURCE_ALIASES.Xvideos!;
+const SOURCE_NAME = SOURCE_ALIASES.Xvideos!;
 
 /** Cards shown per review page. Bigger thumbnails mean fewer per page. */
 const REVIEW_PAGE_SIZE = 24;
@@ -143,7 +143,7 @@ export const XvideosSourceView: React.FC<XvideosSourceViewProps> = ({
     };
   }, [confirmed]);
 
-  const confirmAdult = () => {
+  const confirmContent = () => {
     localStorage.setItem(CONSENT_STORAGE_KEY, 'true');
     setConfirmed(true);
   };
@@ -393,9 +393,9 @@ export const XvideosSourceView: React.FC<XvideosSourceViewProps> = ({
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" />
             <div className="space-y-2">
-              <h2 className="text-sm font-bold text-white">Adult content notice</h2>
+              <h2 className="text-sm font-bold text-white">Content notice</h2>
               <p className="text-xs text-slate-300 leading-relaxed">
-                This source imports an adult catalogue, which contains adult material. It is off
+                This source imports an age-restricted catalogue. It is off
                 by default and stays off until you confirm below. Confirm only if you are 18 or older
                 and it is legal to view this content where you are.
               </p>
@@ -408,7 +408,7 @@ export const XvideosSourceView: React.FC<XvideosSourceViewProps> = ({
 
           <div className="flex flex-wrap gap-2 pt-1">
             <button
-              onClick={confirmAdult}
+              onClick={confirmContent}
               className="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition active:scale-95"
             >
               I am 18 or older — enable this source

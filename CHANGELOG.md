@@ -40,7 +40,7 @@ working tree has uncommitted changes the badge turns amber and shows the
 **Tag:** `v0.2.10` · **Branch:** `main` · **Deployed:** 2026-11-03 02:32 UTC (production)
 
 ### Features
-- hover previews on result cards + alias adult source names (091fe44)
+- hover previews on result cards + alias source names (091fe44)
 
 ## [0.2.9] - 2026-11-03
 
@@ -68,7 +68,7 @@ working tree has uncommitted changes the badge turns amber and shows the
 **Tag:** `v0.2.6` · **Branch:** `main` · **Deployed:** 2026-11-02 23:16 UTC (production)
 
 ### Features
-- add AdultEmbed and RedGifs sources, plus source picker (a7fa8a8)
+- add EmbedHub and RedGifs sources, plus source picker (a7fa8a8)
 
 ## [0.2.5] - 2026-11-02
 

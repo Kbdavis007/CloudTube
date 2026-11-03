@@ -1,5 +1,5 @@
 import type { SourceFlag, VideoMetadata } from '../types';
-import { ADULT_SOURCE_ALIASES } from '../data/sourceAliases';
+import { SOURCE_ALIASES } from '../data/sourceAliases';
 
 /**
  * Shared shape for the open (non-YouTube) search sources.
@@ -16,7 +16,7 @@ export type OpenSourceId =
   | 'peertube'
   | 'dailymotion'
   | 'eporner'
-  | 'adultembed'
+  | 'embedhub'
   | 'redgifs'
   | 'pornhub'
   | 'xhamster'
@@ -64,45 +64,45 @@ export const OPEN_SOURCES: OpenSourceDefinition[] = [
   },
   {
     id: 'eporner',
-    name: ADULT_SOURCE_ALIASES.Eporner!,
-    tagline: 'Public catalogue (adult)',
+    name: SOURCE_ALIASES.Eporner!,
+    tagline: 'Public catalogue',
     flag: 'Eporner',
     accent: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
   },
   {
-    id: 'adultembed',
-    name: ADULT_SOURCE_ALIASES.AdultEmbed!,
-    tagline: 'Open video database (adult)',
-    flag: 'AdultEmbed',
+    id: 'embedhub',
+    name: SOURCE_ALIASES.EmbedHub!,
+    tagline: 'Open video database',
+    flag: 'EmbedHub',
     accent: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
   },
   {
     id: 'redgifs',
-    name: ADULT_SOURCE_ALIASES.RedGifs!,
-    tagline: 'Short clips (adult, via CloudTube proxy)',
+    name: SOURCE_ALIASES.RedGifs!,
+    tagline: 'Short clips (via CloudTube proxy)',
     flag: 'RedGifs',
     accent: 'bg-red-500/20 text-red-300 border-red-500/30',
   },
   {
     id: 'pornhub',
-    name: ADULT_SOURCE_ALIASES.Pornhub!,
-    tagline: 'Catalogue (adult, needs your RapidAPI key)',
+    name: SOURCE_ALIASES.Pornhub!,
+    tagline: 'Catalogue (needs your RapidAPI key)',
     flag: 'Pornhub',
     accent: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
     requiresKey: true,
   },
   {
     id: 'xhamster',
-    name: ADULT_SOURCE_ALIASES.Xhamster!,
-    tagline: 'Catalogue (adult, needs your RapidAPI key)',
+    name: SOURCE_ALIASES.Xhamster!,
+    tagline: 'Catalogue (needs your RapidAPI key)',
     flag: 'Xhamster',
     accent: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
     requiresKey: true,
   },
   {
     id: 'redtube',
-    name: ADULT_SOURCE_ALIASES.Redtube!,
-    tagline: 'Catalogue (adult, needs your RapidAPI key)',
+    name: SOURCE_ALIASES.Redtube!,
+    tagline: 'Catalogue (needs your RapidAPI key)',
     flag: 'Redtube',
     accent: 'bg-red-600/20 text-red-300 border-red-600/30',
     requiresKey: true,
