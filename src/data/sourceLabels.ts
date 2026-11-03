@@ -20,6 +20,8 @@ export const SOURCE_FLAG_LABELS: Record<SourceFlag, string> = {
   AdultEmbed: 'AdultEmbed',
   RedGifs: 'RedGifs',
   Pornhub: 'Pornhub',
+  Xhamster: 'xHamster',
+  Redtube: 'RedTube',
 };
 
 export const sourceFlagLabel = (flag: SourceFlag): string =>

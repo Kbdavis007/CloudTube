@@ -134,7 +134,7 @@ export const SearchSourcesPanel: React.FC<SearchSourcesPanelProps> = ({
               <KeyRound className="w-3.5 h-3.5 text-amber-400" />
               RapidAPI key
               <span className="text-[10px] font-normal text-slate-500">
-                for the Pornhub source
+                for Pornhub, xHamster and RedTube
               </span>
             </label>
             <input
@@ -151,8 +151,8 @@ export const SearchSourcesPanel: React.FC<SearchSourcesPanelProps> = ({
               className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 text-xs font-mono placeholder:text-slate-600 focus:outline-none focus:border-amber-500/60"
             />
             <p className="text-[11px] text-slate-400 leading-snug">
-              Stored only on this device and sent straight to RapidAPI. Leave blank to disable
-              Pornhub.
+              One key covers every RapidAPI source. Stored only on this device and sent straight
+              to RapidAPI. Leave blank to disable those sources.
             </p>
           </div>
 

@@ -16,7 +16,9 @@ export type OpenSourceId =
   | 'eporner'
   | 'adultembed'
   | 'redgifs'
-  | 'pornhub';
+  | 'pornhub'
+  | 'xhamster'
+  | 'redtube';
 
 export interface OpenSourceDefinition {
   id: OpenSourceId;
@@ -78,6 +80,22 @@ export const OPEN_SOURCES: OpenSourceDefinition[] = [
     tagline: 'Pornhub catalogue (needs your RapidAPI key)',
     flag: 'Pornhub',
     accent: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+    requiresKey: true,
+  },
+  {
+    id: 'xhamster',
+    name: 'xHamster',
+    tagline: 'xHamster catalogue (needs your RapidAPI key)',
+    flag: 'Xhamster',
+    accent: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+    requiresKey: true,
+  },
+  {
+    id: 'redtube',
+    name: 'RedTube',
+    tagline: 'RedTube catalogue (needs your RapidAPI key)',
+    flag: 'Redtube',
+    accent: 'bg-red-600/20 text-red-300 border-red-600/30',
     requiresKey: true,
   },
 ];
@@ -387,6 +405,103 @@ async function searchRedGifs(query: string, signal?: AbortSignal): Promise<Video
 }
 
 /**
+ * The user's RapidAPI key, or a clear error naming the source. RapidAPI's
+ * gateway sends CORS headers that let the browser call it directly, so the key
+ * is sent from the browser; it is the user's own and entered in Settings.
+ */
+function requireRapidApiKey(sourceName: string): string {
+  const key = readRapidApiKey();
+  if (!key) {
+    throw new Error(`Add your RapidAPI key in Settings → Search Sources to search ${sourceName}`);
+  }
+  return key;
+}
+
+/** Multi-site RapidAPI host backing the xHamster and RedTube sources. */
+const MULTISITE_HOST = 'xhamster-pornhub-youporn-xnxx-redtube-api.p.rapidapi.com';
+
+/** Durations here are "MM:SS", "H:MM:SS" or "2min"; parse to seconds. */
+function dureeToSeconds(value: unknown): number {
+  if (typeof value !== 'string') return 0;
+  const text = value.trim().toLowerCase();
+  if (text.includes(':')) return parseClock(text);
+  const minutes = text.match(/(\d+(?:[.,]\d+)?)\s*(?:min|m)\b/);
+  if (minutes) return Math.round(parseFloat(minutes[1].replace(',', '.')) * 60);
+  const seconds = text.match(/(\d+)\s*s/);
+  return seconds ? Number(seconds[1]) : 0;
+}
+
+/** The id each site's embed URL needs, taken from the result link's last segment. */
+function embedIdFromLink(link: string): string {
+  const path = link.split('?')[0].replace(/\/+$/, '');
+  return path.split('/').pop() ?? '';
+}
+
+function embedUrlFor(site: 'xhamster' | 'redtube', id: string): string {
+  if (!id) return '';
+  return site === 'redtube'
+    ? `https://embed.redtube.com/?id=${encodeURIComponent(id)}`
+    : `https://xhamster.com/embed/${encodeURIComponent(id)}`;
+}
+
+/**
+ * Search xHamster or RedTube through the multi-site RapidAPI endpoint. Each
+ * site is its own CloudTube source so it can be toggled independently, but they
+ * share this gateway and the same JSON shape (`{ resultats: [...] }`).
+ */
+async function searchMultiSite(
+  site: 'xhamster' | 'redtube',
+  query: string,
+  signal?: AbortSignal
+): Promise<VideoMetadata[]> {
+  const source = openSourceById(site);
+  const key = requireRapidApiKey(source.name);
+  const res = await fetch(
+    `https://${MULTISITE_HOST}/api/search?q=${encodeURIComponent(query)}&site=${site}`,
+    {
+      signal,
+      headers: {
+        Accept: 'application/json',
+        'x-rapidapi-key': key,
+        'x-rapidapi-host': MULTISITE_HOST,
+      },
+    }
+  );
+  if (res.status === 401 || res.status === 403) {
+    throw new Error('RapidAPI rejected the key (check it is subscribed to this API)');
+  }
+  if (res.status === 429) {
+    throw new Error('RapidAPI free-plan limit reached — try again later');
+  }
+  if (!res.ok) throw new Error(`${source.name} search responded ${res.status}`);
+
+  const data = await res.json();
+  const items: any[] = data?.resultats ?? [];
+
+  return items
+    .filter((v) => v?.lien && v?.titre)
+    .map((v) => {
+      const externalUrl = String(v.lien);
+      const id = embedIdFromLink(externalUrl);
+      return toVideoMetadata(source, {
+        sourceVideoId: id,
+        title: String(v.titre),
+        description: String(v.titre),
+        channelId: `${site}:${v.uploader ?? 'unknown'}`,
+        channelTitle: String(v.uploader ?? source.name),
+        // These feeds carry no publish date.
+        publishedAt: '',
+        durationSeconds: dureeToSeconds(v.duree),
+        thumbnail: String(v.vignette ?? ''),
+        tags: [],
+        embedUrl: embedUrlFor(site, id),
+        externalUrl,
+      });
+    })
+    .filter((v) => v.playback?.embedUrl);
+}
+
+/**
  * Pornhub search through the RapidAPI gateway.
  *
  * RapidAPI sends CORS headers that allow the browser to call it directly with
@@ -395,10 +510,7 @@ async function searchRedGifs(query: string, signal?: AbortSignal): Promise<Video
  * with a clear message rather than silently returning nothing.
  */
 async function searchPornhub(query: string, signal?: AbortSignal): Promise<VideoMetadata[]> {
-  const key = readRapidApiKey();
-  if (!key) {
-    throw new Error('Add your RapidAPI key in Settings → Search Sources to search Pornhub');
-  }
+  const key = requireRapidApiKey('Pornhub');
 
   const res = await fetch(
     `https://pornhub2.p.rapidapi.com/v2/search?query=${encodeURIComponent(query)}`,
@@ -472,6 +584,10 @@ export async function searchOpenSource(
       return searchRedGifs(trimmed, signal);
     case 'pornhub':
       return searchPornhub(trimmed, signal);
+    case 'xhamster':
+      return searchMultiSite('xhamster', trimmed, signal);
+    case 'redtube':
+      return searchMultiSite('redtube', trimmed, signal);
     default:
       return [];
   }

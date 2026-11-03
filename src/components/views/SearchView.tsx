@@ -99,6 +99,8 @@ export const SearchView: React.FC<SearchViewProps> = ({
     AdultEmbed: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
     RedGifs: 'bg-red-500/20 text-red-300 border-red-500/30',
     Pornhub: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+    Xhamster: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+    Redtube: 'bg-red-600/20 text-red-300 border-red-600/30',
   };
 
   // Reflect changes made in Settings (or another tab) without a reload.

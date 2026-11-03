@@ -27,7 +27,8 @@ Video playback happens in an embedded player (`<iframe>`) inside the player view
 Nothing on the play, pause, seek or forward path calls `window.open` or changes the
 page location. Videos that ship their own embed URL load it in the same iframe:
 XVideos and the open sources (Archive.org, PeerTube, Dailymotion, Eporner,
-AdultEmbed, RedGifs, and Pornhub when a RapidAPI key is set) set
+AdultEmbed, RedGifs, and Pornhub, xHamster and RedTube when a RapidAPI key is
+set) set
 `playback.embedUrl`; YouTube videos derive
 their embed URL from the video id. Which open sources a search queries is a user
 preference, set in **Settings → Search Sources** (persisted in `localStorage`).
@@ -44,7 +45,8 @@ the video player.
 
 - It appears only when the video has a canonical source page
   (`playback.externalUrl`), which is set for sources like XVideos, Archive.org,
-  PeerTube, Dailymotion, Eporner, AdultEmbed, RedGifs and Pornhub, and absent for
+  PeerTube, Dailymotion, Eporner, AdultEmbed, RedGifs, Pornhub, xHamster and
+  RedTube, and absent for
   YouTube. No URL is guessed. (AdultEmbed exposes no public watch page, so its exit
   link is the player embed.)
 - It opens in a new tab with `rel="noopener noreferrer"`.

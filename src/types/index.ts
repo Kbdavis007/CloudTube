@@ -13,7 +13,9 @@ export type SourceFlag =
   | 'Eporner'
   | 'AdultEmbed'
   | 'RedGifs'
-  | 'Pornhub';
+  | 'Pornhub'
+  | 'Xhamster'
+  | 'Redtube';
 
 /**
  * Where a video can be played. YouTube videos derive their embed URL from
