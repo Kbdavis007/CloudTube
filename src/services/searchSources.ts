@@ -17,23 +17,30 @@ const ALL_OPEN_SOURCE_IDS = OPEN_SOURCES.map((s) => s.id);
 const isOpenSourceId = (value: unknown): value is OpenSourceId =>
   typeof value === 'string' && (ALL_OPEN_SOURCE_IDS as string[]).includes(value);
 
-/** Every open source, the default so a first search behaves like before. */
+/** Every open source, including the ones that need a key (used by "Enable All"). */
 export const allOpenSourceIds = (): OpenSourceId[] => [...ALL_OPEN_SOURCE_IDS];
 
 /**
- * The enabled open sources. Falls back to "all enabled" when nothing is stored
- * or the stored value is unreadable, so a corrupt entry can never leave search
- * with no sources at all.
+ * The sources a first search should run. Key-required sources are left out so a
+ * fresh install never shows a "add your key" error until the user opts in.
+ */
+export const defaultOpenSourceIds = (): OpenSourceId[] =>
+  OPEN_SOURCES.filter((s) => !s.requiresKey).map((s) => s.id);
+
+/**
+ * The enabled open sources. Falls back to the key-free default when nothing is
+ * stored or the stored value is unreadable, so a corrupt entry can never leave
+ * search with no sources at all.
  */
 export function readEnabledOpenSources(): OpenSourceId[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return allOpenSourceIds();
+    if (!raw) return defaultOpenSourceIds();
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return allOpenSourceIds();
+    if (!Array.isArray(parsed)) return defaultOpenSourceIds();
     return parsed.filter(isOpenSourceId);
   } catch {
-    return allOpenSourceIds();
+    return defaultOpenSourceIds();
   }
 }
 

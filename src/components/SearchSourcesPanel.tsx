@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Search, Check, RotateCcw } from 'lucide-react';
+import { Search, Check, RotateCcw, KeyRound } from 'lucide-react';
 import { OPEN_SOURCES, type OpenSourceId } from '../services/openSourcesApi';
 import {
   readEnabledOpenSources,
@@ -7,6 +7,7 @@ import {
   subscribeSearchSources,
   allOpenSourceIds,
 } from '../services/searchSources';
+import { readRapidApiKey, saveRapidApiKey, subscribeRapidApiKey } from '../services/rapidApiKey';
 
 export interface SearchSourcesPanelProps {
   /** Collapsed by default, matching the other Settings panels. */
@@ -25,9 +26,11 @@ export const SearchSourcesPanel: React.FC<SearchSourcesPanelProps> = ({
   const [enabled, setEnabled] = useState<Set<OpenSourceId>>(
     () => new Set(readEnabledOpenSources())
   );
+  const [rapidApiKey, setRapidApiKey] = useState(() => readRapidApiKey());
 
   // Keep the panel in sync if another view changes the set.
   useEffect(() => subscribeSearchSources((ids) => setEnabled(new Set(ids))), []);
+  useEffect(() => subscribeRapidApiKey(setRapidApiKey), []);
 
   const toggle = (id: OpenSourceId) => {
     setEnabled((prev) => {
@@ -69,7 +72,7 @@ export const SearchSourcesPanel: React.FC<SearchSourcesPanelProps> = ({
       </div>
 
       <p className="text-xs text-slate-300 leading-relaxed">
-        Pick which key-free catalogues a search should include. Only the checked sources are
+        Pick which catalogues a search should include. Only the checked sources are
         queried — YouTube search is unaffected. Results play inside the app.
       </p>
 
@@ -108,6 +111,11 @@ export const SearchSourcesPanel: React.FC<SearchSourcesPanelProps> = ({
                       >
                         {source.name}
                       </span>
+                      {source.requiresKey && (
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded border border-amber-500/40 bg-amber-500/10 text-amber-300">
+                          key
+                        </span>
+                      )}
                     </span>
                     <span className="block mt-1 text-[11px] text-slate-400 leading-snug">
                       {source.tagline}
@@ -116,6 +124,36 @@ export const SearchSourcesPanel: React.FC<SearchSourcesPanelProps> = ({
                 </button>
               );
             })}
+          </div>
+
+          <div className="p-3 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-2">
+            <label
+              htmlFor="rapidapi-key"
+              className="flex items-center gap-2 text-xs font-bold text-white"
+            >
+              <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+              RapidAPI key
+              <span className="text-[10px] font-normal text-slate-500">
+                for the Pornhub source
+              </span>
+            </label>
+            <input
+              id="rapidapi-key"
+              type="password"
+              autoComplete="off"
+              spellCheck={false}
+              value={rapidApiKey}
+              onChange={(e) => {
+                setRapidApiKey(e.target.value);
+                saveRapidApiKey(e.target.value);
+              }}
+              placeholder="x-rapidapi-key from your RapidAPI app"
+              className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 text-xs font-mono placeholder:text-slate-600 focus:outline-none focus:border-amber-500/60"
+            />
+            <p className="text-[11px] text-slate-400 leading-snug">
+              Stored only on this device and sent straight to RapidAPI. Leave blank to disable
+              Pornhub.
+            </p>
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3 pt-1">

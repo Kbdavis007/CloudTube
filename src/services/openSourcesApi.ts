@@ -1,4 +1,5 @@
 import type { SourceFlag, VideoMetadata } from '../types';
+import { readRapidApiKey } from './rapidApiKey';
 
 /**
  * Key-free, CORS-enabled sources CloudTube can search without a sign-in.
@@ -14,7 +15,8 @@ export type OpenSourceId =
   | 'dailymotion'
   | 'eporner'
   | 'adultembed'
-  | 'redgifs';
+  | 'redgifs'
+  | 'pornhub';
 
 export interface OpenSourceDefinition {
   id: OpenSourceId;
@@ -23,6 +25,8 @@ export interface OpenSourceDefinition {
   tagline: string;
   flag: SourceFlag;
   accent: string;
+  /** True when the source cannot work until the user supplies a key. */
+  requiresKey?: boolean;
 }
 
 export const OPEN_SOURCES: OpenSourceDefinition[] = [
@@ -67,6 +71,14 @@ export const OPEN_SOURCES: OpenSourceDefinition[] = [
     tagline: 'RedGifs short clips (via CloudTube proxy)',
     flag: 'RedGifs',
     accent: 'bg-red-500/20 text-red-300 border-red-500/30',
+  },
+  {
+    id: 'pornhub',
+    name: 'Pornhub',
+    tagline: 'Pornhub catalogue (needs your RapidAPI key)',
+    flag: 'Pornhub',
+    accent: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+    requiresKey: true,
   },
 ];
 
@@ -296,6 +308,24 @@ function namesOf(value: unknown): string[] {
     .slice(0, 8);
 }
 
+/** Same as `namesOf` but reads a specific key (RapidAPI uses `tag_name` etc.). */
+function namesOfKeyed(value: unknown, key: string): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => (typeof item === 'string' ? item : item?.[key]))
+    .filter((n): n is string => typeof n === 'string' && n.length > 0)
+    .slice(0, 8);
+}
+
+/** Parse a `MM:SS` or `H:MM:SS` clock string into seconds. */
+function parseClock(value: unknown): number {
+  if (typeof value !== 'string' || !value.includes(':')) return 0;
+  return value
+    .split(':')
+    .map((part) => Number(part) || 0)
+    .reduce((acc, part) => acc * 60 + part, 0);
+}
+
 async function searchAdultEmbed(query: string, signal?: AbortSignal): Promise<VideoMetadata[]> {
   const url =
     'https://adultembed.com/api/database/browse/?search=' +
@@ -357,6 +387,66 @@ async function searchRedGifs(query: string, signal?: AbortSignal): Promise<Video
 }
 
 /**
+ * Pornhub search through the RapidAPI gateway.
+ *
+ * RapidAPI sends CORS headers that allow the browser to call it directly with
+ * `x-rapidapi-key` (verified with an OPTIONS preflight), so no proxy is needed.
+ * The key is the user's own, entered in Settings; without it the search fails
+ * with a clear message rather than silently returning nothing.
+ */
+async function searchPornhub(query: string, signal?: AbortSignal): Promise<VideoMetadata[]> {
+  const key = readRapidApiKey();
+  if (!key) {
+    throw new Error('Add your RapidAPI key in Settings → Search Sources to search Pornhub');
+  }
+
+  const res = await fetch(
+    `https://pornhub2.p.rapidapi.com/v2/search?query=${encodeURIComponent(query)}`,
+    {
+      signal,
+      headers: {
+        Accept: 'application/json',
+        'x-rapidapi-key': key,
+        'x-rapidapi-host': 'pornhub2.p.rapidapi.com',
+      },
+    }
+  );
+  if (res.status === 401 || res.status === 403) {
+    throw new Error('RapidAPI rejected the key (check it is subscribed to the Pornhub API)');
+  }
+  if (res.status === 429) {
+    throw new Error('RapidAPI free-plan limit reached — try again later');
+  }
+  if (!res.ok) throw new Error(`Pornhub search responded ${res.status}`);
+
+  const data = await res.json();
+  const items: any[] = data?.data?.videos ?? [];
+
+  return items
+    .filter((v) => v?.video_id)
+    .map((v) =>
+      toVideoMetadata(openSourceById('pornhub'), {
+        sourceVideoId: String(v.video_id),
+        title: String(v.title ?? 'Untitled'),
+        description: String(v.title ?? ''),
+        channelId: `pornhub:${v.pornstars?.[0]?.pornstar_name ?? 'unknown'}`,
+        channelTitle: String(v.pornstars?.[0]?.pornstar_name ?? 'Pornhub'),
+        publishedAt: toIsoOrEmpty(v.publish_date),
+        durationSeconds: parseClock(v.duration),
+        thumbnail: String(v.default_thumb ?? v.thumb ?? ''),
+        tags: [
+          ...namesOfKeyed(v.categories, 'category'),
+          ...namesOfKeyed(v.tags, 'tag_name'),
+          ...namesOfKeyed(v.pornstars, 'pornstar_name'),
+        ].slice(0, 8),
+        // The embed page is framable (no X-Frame-Options / frame-ancestors).
+        embedUrl: `https://www.pornhub.com/embed/${v.video_id}`,
+        externalUrl: String(v.url ?? `https://www.pornhub.com/view_video.php?viewkey=${v.video_id}`),
+      })
+    );
+}
+
+/**
  * Search one open source. Failures are surfaced to the caller so a single
  * unreachable source never blocks the others.
  */
@@ -380,6 +470,8 @@ export async function searchOpenSource(
       return searchAdultEmbed(trimmed, signal);
     case 'redgifs':
       return searchRedGifs(trimmed, signal);
+    case 'pornhub':
+      return searchPornhub(trimmed, signal);
     default:
       return [];
   }

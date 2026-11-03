@@ -165,6 +165,7 @@ export const SelectedVideoPage: React.FC<SelectedVideoPageProps> = ({
     Eporner: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
     AdultEmbed: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
     RedGifs: 'bg-red-500/20 text-red-300 border-red-500/30',
+    Pornhub: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
   };
 
   return (

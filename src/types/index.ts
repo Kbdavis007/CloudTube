@@ -12,7 +12,8 @@ export type SourceFlag =
   | 'Dailymotion'
   | 'Eporner'
   | 'AdultEmbed'
-  | 'RedGifs';
+  | 'RedGifs'
+  | 'Pornhub';
 
 /**
  * Where a video can be played. YouTube videos derive their embed URL from

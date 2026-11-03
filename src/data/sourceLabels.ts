@@ -19,6 +19,7 @@ export const SOURCE_FLAG_LABELS: Record<SourceFlag, string> = {
   Eporner: 'Eporner',
   AdultEmbed: 'AdultEmbed',
   RedGifs: 'RedGifs',
+  Pornhub: 'Pornhub',
 };
 
 export const sourceFlagLabel = (flag: SourceFlag): string =>
