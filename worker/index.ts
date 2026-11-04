@@ -10,7 +10,6 @@
  *   POST /api/cloudflare/proxy  -> server-side relay to the Cloudflare API
  *   GET  /api/xvideos/export    -> streams the XVideos catalogue export
  *   GET  /api/redgifs/search    -> RedGifs search (CORS + temporary token)
- *   GET  /_remote/*             -> re-serves an external site so it can be framed
  *
  * The proxy exists because api.cloudflare.com sends no CORS headers, so a
  * browser cannot call it directly. /api/xvideos/export exists for the same
@@ -28,7 +27,6 @@ import {
 } from '../src/generated/version';
 import { XVIDEOS_EXPORT_RANGES } from '../src/services/xvideosApi';
 import { searchRedGifsGifs } from '../src/services/redgifsApi';
-import { proxyRemote, REMOTE_PREFIX } from '../src/services/remoteProxy';
 import { handleSearch, type D1Database } from './searchApi';
 
 interface Env {
@@ -209,19 +207,6 @@ async function handleProxy(request: Request): Promise<Response> {
 export default {
   async fetch(request: Request, env: Env, ctx?: { waitUntil: (p: Promise<unknown>) => void }): Promise<Response> {
     const { pathname } = new URL(request.url);
-
-    // Remote-site proxy for the "Remote" page: re-serve the embedded site with
-    // its anti-framing headers removed. Handled before the asset layer so the
-    // prefix is never answered by the SPA fallback.
-    if (pathname === REMOTE_PREFIX || pathname.startsWith(`${REMOTE_PREFIX}/`)) {
-      if (request.method !== 'GET' && request.method !== 'HEAD') {
-        return json(
-          { status: 405, ok: false, errors: [{ message: `Use GET for ${REMOTE_PREFIX}` }] },
-          405
-        );
-      }
-      return proxyRemote(request);
-    }
 
     if (pathname === '/api/health') {
       return handleHealth();

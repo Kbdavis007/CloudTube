@@ -12,10 +12,8 @@ import {
   Layers,
   Cloud,
   ArrowUpRight,
-  ArrowRight,
   GitBranch,
   CalendarClock,
-  Globe,
 } from 'lucide-react';
 import { isVaultConfigured, clearCredentialsVault } from '../../services/crypto';
 import { idbService } from '../../services/indexedDB';
@@ -179,28 +177,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
       {/* Which key-free catalogues a search should query */}
       <SearchSourcesPanel />
-
-      {/* Remote: open an external site full-page inside the app */}
-      <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-4">
-        <div className="flex items-center gap-2">
-          <Globe className="w-4 h-4 text-orange-500" />
-          <h2 className="text-sm font-bold text-white">Remote</h2>
-        </div>
-        <p className="text-xs text-slate-300 leading-relaxed">
-          Open an external site full-page inside CloudTube, proxied so it can be framed. The left
-          sidebar stays put, so you can jump back to your library at any time.
-        </p>
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            onClick={() => onNavigate?.('remote')}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white text-xs font-bold transition shadow-sm active:scale-95"
-          >
-            <Globe className="w-4 h-4" />
-            <span>Open Remote</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
 
       {/* YouTube access */}
       <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-3">

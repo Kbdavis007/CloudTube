@@ -14,7 +14,6 @@ import { fileURLToPath } from 'url';
 import { XVIDEOS_EXPORT_RANGES as XVideosExportRanges } from './src/services/xvideosApi';
 import { searchRedGifsGifs } from './src/services/redgifsApi';
 import { searchWorkerSource } from './worker/searchSources';
-import { proxyRemote, REMOTE_PREFIX } from './src/services/remoteProxy';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -219,21 +218,6 @@ async function startServer() {
       results: Object.fromEntries(entries),
       meta: { sources: ids, dev: true },
     });
-  });
-
-  // Remote-site proxy for the "Remote" page.
-  //
-  // The embedded site refuses to be framed (X-Frame-Options: SAMEORIGIN), so
-  // the page is re-served from this origin with those headers removed and its
-  // root-relative URLs pointed back here. Only one fixed host is reachable, so
-  // this is not an open relay. Registered before Vite's middleware so the prefix
-  // is not treated as a client route.
-  app.all(`${REMOTE_PREFIX}*`, async (req, res) => {
-    const requestUrl = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
-    const proxied = await proxyRemote(new Request(requestUrl, { method: req.method }));
-    res.status(proxied.status);
-    proxied.headers.forEach((value, key) => res.setHeader(key, value));
-    res.end(Buffer.from(await proxied.arrayBuffer()));
   });
 
   if (!isProd) {

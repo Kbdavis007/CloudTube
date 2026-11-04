@@ -9,7 +9,6 @@ import {
   Settings,
   Lock,
   Trash2,
-  Globe,
 } from 'lucide-react';
 
 export type PageTab =
@@ -23,7 +22,6 @@ export type PageTab =
   | 'removals'
   | 'wizard'
   | 'scaffolding'
-  | 'remote'
   | 'settings';
 
 interface SidebarProps {
@@ -87,12 +85,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'Removed & Taste',
       icon: Trash2,
       badge: removalCount > 0 ? String(removalCount) : null,
-    },
-    {
-      id: 'remote' as PageTab,
-      label: 'Remote',
-      icon: Globe,
-      badge: null,
     },
     {
       id: 'settings' as PageTab,
