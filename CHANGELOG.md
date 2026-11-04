@@ -24,6 +24,14 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 
 
+
+## [0.2.16] - 2026-11-04
+
+**Tag:** `v0.2.16` · **Branch:** `main` · **Deployed:** pending
+
+### Other Changes
+- remove the Remote page and its framing proxy (9fae6c4)
+
 ## [0.2.15] - 2026-11-04
 
 **Tag:** `v0.2.15` · **Branch:** `main` · **Deployed:** pending
