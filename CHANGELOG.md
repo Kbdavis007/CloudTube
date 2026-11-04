@@ -23,6 +23,14 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 
 
+
+## [0.2.15] - 2026-11-04
+
+**Tag:** `v0.2.15` · **Branch:** `main` · **Deployed:** pending
+
+### Features
+- embed an external site full-page via a framing proxy (1541755)
+
 ## [0.2.14] - 2026-11-03
 
 **Tag:** `v0.2.14` · **Branch:** `main` · **Deployed:** 2026-11-03 03:09 UTC (production)
