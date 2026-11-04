@@ -2,7 +2,8 @@ node_modules/
 build/
 dist/
 coverage/
-.openhands/
+.openhands/*
+!.openhands/memory/
 .DS_Store
 *.log
 .env*
