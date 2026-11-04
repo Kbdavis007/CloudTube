@@ -1,5 +1,18 @@
 # CloudTube project memory
 
+## Memory policy (user standing instruction, 2026-11-04)
+- **Always write memory into the repository you are working in** — never rely on the
+  user-tier / session memory (`~/.openhands/memory/`), which is not shared and is lost
+  when the sandbox is recycled. Everything durable belongs in the repo.
+- Canonical location: **`.openhands/memory/MEMORY.md`**, tracked in git. `.gitignore` uses
+  `.openhands/*` + `!.openhands/memory/` so other agent state stays out of version control.
+- **Keep repos separate**: CloudTube memory goes in CloudTube, YieldBot memory in YieldBot.
+  The shared sandbox/Cloudflare notes are duplicated into both rather than cross-referenced.
+- **Commit and push memory changes like any other change** (fetch `origin main` first).
+  NOTE: CloudTube is **public** and auto-deploys from `main`; a memory-only commit is
+  docs-only but still triggers the deploy pipeline.
+- Never write secrets, tokens, or credentials into memory — reference them by name only.
+
 ## CloudTube project (github.com/Kbdavis007/CloudTube)
 
 ### Delivery / autonomy (user standing instruction, 2026-10-31)
