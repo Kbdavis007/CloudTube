@@ -12,10 +12,10 @@
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    // Send API calls to the Worker before the asset layer. Without this, /api/* can
-    // be answered by the static asset handler (which returns 405 for POST), which is
-    // exactly the failure this Worker exists to fix.
-    "run_worker_first": ["/api/*"]
+    // Send API calls and the Remote-site proxy to the Worker before the asset
+    // layer. Without this, /api/* can be answered by the static asset handler
+    // (which returns 405 for POST) and /_remote* would hit the SPA fallback.
+    "run_worker_first": ["/api/*", "/_remote/*"]
   },
   // Observability: Workers Logs, Traces, and real-time Issues. Mirrors the
   // dashboard settings so the local config and production stay in sync.

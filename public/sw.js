@@ -41,6 +41,14 @@ self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
 
+  // The Remote page proxies a whole external site. Leave both the proxied
+  // requests and every cross-origin sub-resource it pulls (images, players, JS)
+  // entirely to the browser: caching a live site here would serve stale pages,
+  // and intercepting opaque no-cors loads can break them.
+  if (url.pathname.startsWith('/_remote') || url.origin !== self.location.origin) {
+    return;
+  }
+
   // Searches are the expensive, rate-limited calls, so they get a dedicated
   // stale-while-revalidate cache: a repeat term is answered from disk instantly
   // while a fresh copy is fetched in the background.

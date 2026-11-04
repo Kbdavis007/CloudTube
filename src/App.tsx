@@ -24,6 +24,7 @@ import { RemoveVideoModal, RemovalRequest } from './components/RemoveVideoModal'
 import { SetupWizardView } from './components/views/SetupWizardView';
 import { ScaffoldingExplorerView } from './components/views/ScaffoldingExplorerView';
 import { SettingsView } from './components/views/SettingsView';
+import { RemoteView } from './components/views/RemoteView';
 import { LandingSplashView } from './components/views/LandingSplashView';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { initAuth, setCachedAccessToken, refreshGoogleAccessToken } from './services/googleAuth';
@@ -439,7 +440,15 @@ export default function App() {
           isLoggedIn={isLoggedIn}
         />
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto md:min-h-0">
+        <main
+          className={`flex-1 p-4 sm:p-6 lg:p-8 md:min-h-0 ${
+            // The Remote page embeds a live site in a full-height frame; on
+            // desktop it owns the area so the shell must not also scroll it.
+            currentTab === 'remote'
+              ? 'flex flex-col overflow-y-auto md:overflow-hidden'
+              : 'overflow-y-auto'
+          }`}
+        >
           {isLoading ? (
             <div className="flex items-center justify-center h-64">
               <div className="text-center space-y-3">
@@ -552,6 +561,8 @@ export default function App() {
               )}
 
               {currentTab === 'scaffolding' && <ScaffoldingExplorerView />}
+
+              {currentTab === 'remote' && <RemoteView />}
 
               {currentTab === 'settings' && (
                 <SettingsView
