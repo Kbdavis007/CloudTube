@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#f97316" />
+    <title>Privacy Policy — CloudTube</title>
+    <meta
+      name="description"
+      content="How CloudTube accesses, uses, stores, and shares Google user data, and how you can delete it."
+    />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="canonical" href="https://ct.devmatrix.top/privacy" />
+    <link rel="stylesheet" href="/legal.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="ct-legal-header">
+        <a class="brand" href="/">
+          <span class="dot"></span>
+          <span>CloudTube</span>
+          <span class="tag">Privacy Policy</span>
+        </a>
+        <nav class="ct-legal-nav">
+          <a href="/" aria-current="false">Home</a>
+          <a href="/privacy" aria-current="page">Privacy</a>
+          <a href="/tos">Terms</a>
+        </nav>
+      </header>
+
+      <h1>Privacy Policy</h1>
+      <p class="updated">Last updated: 5 November 2026 · Applies to https://ct.devmatrix.top</p>
+
+      <p>
+        CloudTube (&ldquo;the app&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;) is a personal YouTube
+        library operated by Brian Keith Davis. This policy explains, in plain terms, what data the
+        app accesses, how it is used, where it is stored, who it is shared with, and how you can
+        remove it. It covers both the app at <a href="https://ct.devmatrix.top">https://ct.devmatrix.top</a>
+        and any copy of it you run yourself.
+      </p>
+
+      <div class="callout">
+        <p>
+          <strong>The short version.</strong> CloudTube keeps your library in your own browser. Your
+          saved videos, channels, notes, ratings, and removal history are stored on your device and
+          are not uploaded to us. We do not sell your data, we do not show ads, and we do not use
+          your Google user data for advertising or to train generalized AI models.
+        </p>
+      </div>
+
+      <h2>1. Who we are</h2>
+      <p>
+        CloudTube is a personal, non-commercial project. The data controller is:
+      </p>
+      <ul>
+        <li>Name: Brian Keith Davis</li>
+        <li>Application: CloudTube</li>
+        <li>Contact: <a href="mailto:kbdavis0007@gmail.com">kbdavis0007@gmail.com</a></li>
+      </ul>
+      <p>
+        Questions about this policy, or requests to access or delete your data, can be sent to that
+        address.
+      </p>
+
+      <h2>2. Data we access through Google</h2>
+      <p>
+        When you choose &ldquo;Sign in with Google&rdquo;, you grant CloudTube access to the
+        following Google OAuth scopes. The app requests the YouTube scopes because collecting and
+        organising a YouTube library is the app's only purpose.
+      </p>
+
+      <h3>Google account identity</h3>
+      <ul>
+        <li><code>userinfo.profile</code> — your name and profile picture, used to show who is signed in.</li>
+        <li><code>userinfo.email</code> — your email address, used to identify your account in the app.</li>
+      </ul>
+
+      <h3>YouTube data</h3>
+      <ul>
+        <li><code>youtube.readonly</code> — read your channel, your uploads, video metadata, and comments.</li>
+        <li><code>youtube</code> and <code>youtube.force-ssl</code> — the scopes required by Google to
+          call the YouTube Data API for channel and video lookups and to read comments. CloudTube does
+          not post, edit, or delete anything on your YouTube account.</li>
+      </ul>
+
+      <p>
+        The specific data read through these scopes is: your channel identity and subscriber counts,
+        video titles, descriptions, tags, durations, view and like counts, thumbnails, publish dates,
+        and public comments on videos you collect.
+      </p>
+
+      <h2>3. How we use Google user data</h2>
+      <p>
+        Google user data is used only to provide the app's single user-facing feature: building,
+        displaying, searching, and organising your personal YouTube library. Specifically:
+      </p>
+      <ul>
+        <li>to show your saved videos, channels, and comments;</li>
+        <li>to import the videos of a channel you ask to collect;</li>
+        <li>to store your own notes, ratings, and tags against those videos;</li>
+        <li>to generate optional AI summaries of a video you have collected.</li>
+      </ul>
+      <p>
+        We do not use Google user data for advertising, profiling, creditworthiness, or lending
+        decisions. We do not sell it, rent it, or transfer it to data brokers.
+      </p>
+
+      <h2>4. Limited Use disclosure</h2>
+      <p>
+        CloudTube's use and transfer of information received from Google APIs adheres to the
+        <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener"
+          >Google API Services User Data Policy</a
+        >, including the Limited Use requirements. In particular:
+      </p>
+      <ul>
+        <li>
+          Google user data is used only to provide or improve the app's user-facing features that are
+          prominent in the app's interface.
+        </li>
+        <li>Google user data is not sold, and is not transferred to third parties for advertising.</li>
+        <li>
+          Google user data is not used to determine creditworthiness or for lending purposes, and is
+          not used to train generalized artificial intelligence or machine learning models.
+        </li>
+        <li>
+          No humans read your Google user data, except where you ask us to act on it, where it is
+          needed for security purposes (such as abuse investigation), to comply with applicable law,
+          or with your explicit consent.
+        </li>
+      </ul>
+
+      <h2>5. Where your data is stored</h2>
+      <p>
+        Your library is stored locally in your browser, on your own device. It uses
+        <strong>IndexedDB</strong> for videos, channels, comments, crawl jobs, and removal records,
+        and <strong>localStorage</strong> for small preferences such as your theme, the last page you
+        visited, and which search sources are enabled. CloudTube has no database of its own that
+        holds your library, and there is no CloudTube account to which your library is uploaded.
+      </p>
+      <p>
+        The practical consequences are: clearing your browser storage removes your library; using a
+        different browser or device gives you a separate library; and you can export or restore the
+        whole library as a JSON file from <em>Settings &rarr; Backup</em>.
+      </p>
+      <p>
+        Your Google OAuth access token is held in memory only, for the duration of the browser
+        session, and is never written to localStorage, sessionStorage, or a server we control.
+      </p>
+
+      <h3>The one piece of server-side storage</h3>
+      <p>
+        When you run a search, the request goes through a caching route so that the same term is not
+        fetched from the source over and over. That route keeps a short-lived copy of the
+        <em>search results themselves</em> — public video metadata such as titles, thumbnails, and
+        URLs — keyed by the search term and the source, in a Cloudflare database. Each entry expires
+        within a few hours and is refreshed on the next search. This cache holds no Google user data
+        and nothing that identifies you or your library, and it is shared by everyone using the app.
+      </p>
+
+      <h2>6. Third parties that process data</h2>
+      <p>
+        CloudTube uses a small number of service providers. Each one only sees what is needed to
+        perform its function:
+      </p>
+      <ul>
+        <li>
+          <strong>Google (Firebase Authentication and YouTube Data API)</strong> — handles sign-in and
+          answers the YouTube requests described above. Google's handling of that data is governed by
+          the <a href="https://policies.google.com/privacy" rel="noopener">Google Privacy Policy</a>.
+        </li>
+        <li>
+          <strong>Google (Firebase AI Logic / Gemini)</strong> — when you ask for an AI summary, the
+          text of that video's metadata (such as its title, description, and tags) and its collected
+          comments are sent to Google's AI service to generate the summary. No summary is generated
+          unless you ask for one.
+        </li>
+        <li>
+          <strong>Cloudflare</strong> — hosts the app, serves the web pages you load, and stores the
+          short-lived shared search cache described in section 5.
+        </li>
+      </ul>
+      <p>
+        CloudTube contains no advertising networks, no analytics trackers, and no third-party
+        tracking pixels. There is no cookie used for advertising or cross-site tracking.
+      </p>
+
+      <h2>7. Optional sources and keys you provide</h2>
+      <p>
+        CloudTube can search additional video sources. Some of these are optional and off unless you
+        turn them on, and some require an API key that you supply:
+      </p>
+      <ul>
+        <li>
+          If you add a RapidAPI key for the optional adult-content sources, that key is stored in your
+          browser's localStorage and is sent only to the RapidAPI endpoint you are querying, directly
+          from your browser. It is not sent to us.
+        </li>
+        <li>
+          If you connect a Cloudflare account, the API token you provide is encrypted in your browser
+          with AES-GCM before it is written to localStorage. Some Cloudflare API calls are relayed
+          through the app's own proxy route because Cloudflare blocks direct browser requests; the
+          token is passed through that route in transit and is not stored on the server.
+        </li>
+      </ul>
+
+      <h2>8. Legal bases and your rights</h2>
+      <p>
+        Where the EU or UK GDPR applies, we process Google user data on the basis of your consent
+        (which you give by signing in and granting the scopes) and our legitimate interest in
+        operating the app you asked to use. You can withdraw consent at any time by signing out and
+        revoking access, as described below.
+      </p>
+      <p>
+        Depending on where you live, you may have the right to access, correct, delete, or port your
+        data, to object to processing, and to lodge a complaint with a supervisory authority. Because
+        your library lives in your own browser, you can exercise most of these rights directly
+        without contacting us. California residents have equivalent rights under the CCPA/CPRA,
+        including the right to know and the right to delete; we do not sell or share personal
+        information as those terms are defined by that law.
+      </p>
+
+      <h2>9. Retention and deletion</h2>
+      <p>
+        We retain no copy of your library, so there is nothing for us to delete on our side. You are
+        in direct control of the data on your device:
+      </p>
+      <ul>
+        <li>
+          <strong>Delete individual items</strong> — remove a video from your library at any time, and
+          clear the removal record when you no longer want it influencing your results.
+        </li>
+        <li>
+          <strong>Clear everything</strong> — use <em>Settings &rarr; Clear Library Data</em> to empty
+          the library, then clear this site's storage in your browser settings to remove preferences
+          and any locally stored keys.
+        </li>
+        <li>
+          <strong>Revoke Google access</strong> — sign out of CloudTube, then remove CloudTube's access
+          at
+          <a href="https://myaccount.google.com/permissions" rel="noopener"
+            >myaccount.google.com/permissions</a
+          >. Revoking access stops all future API calls immediately.
+        </li>
+      </ul>
+      <p>
+        If you would like us to confirm what (if anything) we hold for you, email
+        <a href="mailto:kbdavis0007@gmail.com">kbdavis0007@gmail.com</a> and we will respond within
+        30 days.
+      </p>
+
+      <h2>10. Security</h2>
+      <p>
+        All traffic to the app is served over HTTPS. Optional credentials you store in the app are
+        encrypted with AES-GCM before being written to your browser's storage, and your Google OAuth
+        token is kept in memory rather than persisted. No method of storage or transmission is
+        perfectly secure, so we cannot guarantee absolute security; you should keep your device and
+        browser up to date.
+      </p>
+
+      <h2>11. Children</h2>
+      <p>
+        CloudTube is not directed at children under 13 (or the minimum age in your country), and we
+        do not knowingly collect personal information from them. If you believe a child has used the
+        app, contact us and we will help you remove the data.
+      </p>
+
+      <h2>12. International transfers</h2>
+      <p>
+        The service providers listed above may process data in countries other than your own,
+        including the United States. Those transfers rely on the providers' own safeguards, such as
+        standard contractual clauses.
+      </p>
+
+      <h2>13. Changes to this policy</h2>
+      <p>
+        If this policy changes, the &ldquo;Last updated&rdquo; date at the top of this page will
+        change as well, and material changes will be noted in the app's release notes. Continuing to
+        use CloudTube after a change means you accept the updated policy.
+      </p>
+
+      <h2>14. Contact</h2>
+      <p>
+        CloudTube is operated by Brian Keith Davis. For any privacy question or request, email
+        <a href="mailto:kbdavis0007@gmail.com">kbdavis0007@gmail.com</a>.
+      </p>
+
+      <footer class="ct-legal-footer">
+        <span>CloudTube — your personal YouTube library.</span>
+        <span>
+          <a href="/privacy">Privacy Policy</a> ·
+          <a href="/tos">Terms of Service</a> ·
+          <a href="/">Home</a>
+        </span>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -302,6 +302,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </a>
         </div>
 
+        {/* Legal pages live outside the app so they load without signing in. */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-[11px]">
+          <a
+            href="/privacy"
+            className="text-slate-400 hover:text-orange-400 underline underline-offset-2 transition"
+          >
+            Privacy Policy
+          </a>
+          <a
+            href="/tos"
+            className="text-slate-400 hover:text-orange-400 underline underline-offset-2 transition"
+          >
+            Terms of Service
+          </a>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
           <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1">
             <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
