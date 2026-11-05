@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "node scripts/version.mjs && tsc --noEmit",
+    "test": "node scripts/version.mjs && tsx --test tests/**/*.test.ts tests/**/*.test.tsx",
     "version:sync": "node scripts/version.mjs",
     "release:patch": "node scripts/release.mjs patch",
     "release:minor": "node scripts/release.mjs minor",
