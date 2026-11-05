@@ -1,8 +1,12 @@
 name: Refresh Vega catalogue
 
 # Scrapes the Vega search pages once a day, rebuilds the baked catalogue, and
-# commits it. Pushing to main makes Cloudflare rebuild and redeploy the app, so
-# the site picks up the fresh catalogue.
+# lands it as a tagged release. The release push is what makes Cloudflare
+# rebuild and redeploy the app, so the site picks up the fresh catalogue.
+#
+# Every push to main must be a release (see AGENTS.md), so this runs the same
+# `scripts/release.mjs patch` flow a human would rather than pushing a bare data
+# commit.
 #
 # Needs one repository secret: FIRECRAWL_API_KEY (Settings -> Secrets and
 # variables -> Actions). Without it the run skips the scrape and says so in the
@@ -11,7 +15,7 @@ name: Refresh Vega catalogue
 # Cloudflare Workers Builds rebuild on a push only when "Builds" is enabled for
 # the project. If it is not, set a deploy hook URL as the CF_DEPLOY_HOOK secret
 # (Workers & Pages -> the project -> Settings -> Builds -> Deploy hooks) and the
-# final step will trigger the rebuild itself.
+# workflow will trigger the rebuild itself.
 
 on:
   schedule:
@@ -32,6 +36,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # release.mjs resolves the next version and writes the changelog from
+          # `git describe` and the tag list, so it needs the full history.
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-python@v5
         with:
@@ -66,7 +75,7 @@ jobs:
         if: steps.key.outputs.has_key == 'true'
         run: python3 scrapers/vega/vega_build_manifest.py scrapers/vega/data/vega_catalog.jsonc scrapers/vega/data/vega_pages/p*.json
 
-      - name: Validate and bake the catalogue into the app
+      - name: Bake the catalogue into the app
         if: steps.key.outputs.has_key == 'true'
         run: |
           python3 - <<'PY'
@@ -80,28 +89,33 @@ jobs:
           print(f'baked {len(videos)} videos')
           PY
 
-      - name: Commit if the catalogue changed
-        id: commit
+      - name: Commit the refreshed catalogue
+        id: data
+        if: steps.key.outputs.has_key == 'true'
         run: |
           git config user.name  'cloudtube-bot'
           git config user.email 'cloudtube-bot@users.noreply.github.com'
           git add scrapers/vega/data src/data/vegaCatalog.json
           if git diff --cached --quiet; then
-            echo "No catalogue change; nothing to commit."
+            echo "Catalogue unchanged; nothing to release."
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
-            # No "[skip ci]": the push is what makes Cloudflare rebuild and
-            # redeploy, and that marker would suppress the build.
             git commit -m "chore(vega): refresh the baked catalogue"
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Push
-        if: steps.commit.outputs.changed == 'true'
-        run: git push
+      - name: Cut the release
+        id: release
+        if: steps.data.outputs.changed == 'true'
+        run: |
+          # Rebase onto anything that landed while we scraped, so the release
+          # push does not race a concurrent session.
+          git pull --rebase origin main
+          node scripts/release.mjs patch --push
+          echo "version=$(git describe --tags --abbrev=0)" >> "$GITHUB_OUTPUT"
 
       - name: Trigger a Cloudflare rebuild
-        if: steps.commit.outputs.changed == 'true'
+        if: steps.data.outputs.changed == 'true'
         env:
           CF_DEPLOY_HOOK: ${{ secrets.CF_DEPLOY_HOOK }}
         run: |
@@ -111,3 +125,26 @@ jobs:
           else
             echo "no CF_DEPLOY_HOOK secret; relying on Cloudflare's git integration"
           fi
+
+      - name: Record the deploy
+        if: steps.data.outputs.changed == 'true'
+        continue-on-error: true
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          # Best effort: wait briefly for the new version to serve, then stamp
+          # the changelog entry. A failure here does not fail the run.
+          for _ in $(seq 1 6); do
+            serving=$(curl -fsS --max-time 15 https://ct.devmatrix.top/api/health \
+              | python3 -c "import sys,json;print(json.load(sys.stdin).get('version',''))" 2>/dev/null || true)
+            [ "$serving" = "${VERSION#v}" ] && break
+            sleep 20
+          done
+          npm run deploy:log -- --env production --url https://ct.devmatrix.top \
+            --notes "daily Vega catalogue refresh"
+          git config user.name  'cloudtube-bot'
+          git config user.email 'cloudtube-bot@users.noreply.github.com'
+          git add CHANGELOG.md docs/DEPLOYMENTS.md
+          git commit -m "chore(deploy): record $VERSION ship"
+          git pull --rebase origin main
+          git push
