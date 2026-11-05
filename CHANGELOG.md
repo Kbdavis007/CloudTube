@@ -27,6 +27,14 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 
 
+
+## [0.2.19] - 2026-11-05
+
+**Tag:** `v0.2.19` · **Branch:** `main` · **Deployed:** pending
+
+### Features
+- search the built-in Vega catalogue from Search & Collect (5e149ff)
+
 ## [0.2.18] - 2026-11-05
 
 **Tag:** `v0.2.18` · **Branch:** `main` · **Deployed:** 2026-11-05 15:15 UTC (production)
