@@ -317,6 +317,26 @@ in-app Play button automatically. `SourceFlag` is defined in `src/types/index.ts
   shared by all users, TTL hours). Do not claim "no server storage" without checking the code.
 - Operator identity in the policy: Brian Keith Davis / `kbdavis0007@gmail.com` (git author).
 
+## Repo workflow: PR template, OpenSpec, Playwright (issue #9, v0.2.x 2026-11-05)
+- **`.github/pull_request_template.md`** is plain markdown — GitHub supports YAML
+  frontmatter on *issue* templates only, never on PR templates. Its section headings are
+  the contract (Summary, Type of change, OpenSpec, Lever, Harness impact, Verification,
+  End-to-end proof (Playwright), Risk and rollback, Checklist).
+- **OpenSpec is the planning gate** (`openspec/`, standalone CLI
+  `curl -fsSL https://openspec.dev/cli/install.sh | sh`): new items get a change first
+  (`openspec new change <name>`), bug fixes / edits edit + re-sync the existing change.
+  `openspec validate --all --strict` passes a zero-delta change only when the change's
+  `.openspec.yaml` sets **`skip_specs: true`** (docs/tooling changes). Use
+  `openspec init --tools none` — `--tools agents` dumps 95KB of skills into `.agents/`.
+- **Playwright e2e** (`npm run e2e`, `tests/e2e/`, `playwright.config.ts`): `@playwright/test`
+  ships **no postinstall**, so `bun install --frozen-lockfile` still reports "no changes"
+  (CF build stays green). No browser download needed here — the sandbox has
+  `/usr/bin/chromium`; the config falls back env -> `/usr/bin/chromium` -> managed browser.
+  Proof pattern: POST the template to `api.github.com/markdown` (gfm) and screenshot the
+  rendered HTML into `docs/screenshots/`.
+- **Harness kit** tracked in `.harness/source.json` (`kit_url`, `kit_commit`, `updated_at`,
+  `update_command`).
+
 ## Sandbox persistence (IMPORTANT)
 - `~` (and `/usr/local`, `/tmp`) live on the container overlay and are RESET whenever the
   sandbox is recycled (e.g. after idle timeout, PID 1 restarts). Only `/workspace` persists.
