@@ -297,6 +297,26 @@ in-app Play button automatically. `SourceFlag` is defined in `src/types/index.ts
   youporn (302 -> `/`), spankbang (403), tube8/beeg/porntrex/pornhd/tnaflix/hqporner (HTML or 403/404). Hubtraffic
   (MindGeek webmaster feed) exists but needs a key and is Pornhub/RedTube only.
 
+## Legal pages: /privacy and /tos (v0.2.x, 2026-11-05)
+- **Why:** Google OAuth consent screen (branding) requires a privacy policy + TOS on a domain
+  you own, as a **dedicated HTML page**, **linked on the app homepage**, with a **Limited Use
+  disclosure**. Ref: https://support.google.com/cloud/answer/13806988
+- **Files:** `public/privacy.html`, `public/tos.html`, `public/legal.css` — standalone HTML with
+  **no JS and no sign-in**, because the React app is gated behind Google sign-in and a reviewer
+  cannot see it otherwise. Copied to `dist/` by the Vite build.
+- **Friendly URLs:** the Worker's SPA fallback used to answer `/privacy` and `/tos` with the app
+  shell (**200**), so a status-code-only check falsely implies the pages exist. Cloudflare's
+  `assets.html_handling` default `auto-trailing-slash` maps `/privacy` -> `/privacy.html`
+  (`/privacy.html` 307s back to `/privacy`); pinned explicitly in `wrangler.jsonc`.
+- **Dev parity:** `server.ts` serves them from `public/` *before* `vite.middlewares` (dev only),
+  using the shared allowlist `resolveLegalPage()` in `worker/legalPages.ts`. Explicit map, not
+  filesystem-derived.
+- **Policy content is grounded in code:** it names the actual scopes, states the library lives in
+  IndexedDB/localStorage and the OAuth token is memory-only, and **discloses the one server-side
+  store** — the Cloudflare D1 `video_search_cache` (public video metadata, keyed by source+query,
+  shared by all users, TTL hours). Do not claim "no server storage" without checking the code.
+- Operator identity in the policy: Brian Keith Davis / `kbdavis0007@gmail.com` (git author).
+
 ## Sandbox persistence (IMPORTANT)
 - `~` (and `/usr/local`, `/tmp`) live on the container overlay and are RESET whenever the
   sandbox is recycled (e.g. after idle timeout, PID 1 restarts). Only `/workspace` persists.
