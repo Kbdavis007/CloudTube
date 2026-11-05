@@ -187,6 +187,19 @@ export const LandingSplashView: React.FC<LandingSplashViewProps> = ({ onAuthSucc
             </p>
           </div>
         </div>
+
+        {/* Legal links. Google's OAuth verification requires the privacy policy to
+            be linked on the app homepage, and this page is the homepage signed-out
+            visitors see. Plain anchors, not the SPA router: the pages are static. */}
+        <div className="pt-2 text-[11px] text-slate-400 flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
+          <a href="/privacy" className="text-slate-400 hover:text-orange-400 underline underline-offset-2">
+            Privacy Policy
+          </a>
+          <span aria-hidden="true">·</span>
+          <a href="/tos" className="text-slate-400 hover:text-orange-400 underline underline-offset-2">
+            Terms of Service
+          </a>
+        </div>
       </div>
     </div>
   );
