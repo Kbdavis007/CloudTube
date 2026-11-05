@@ -31,3 +31,4 @@ npm run deploy:log -- --env production --url https://your-app.example --notes "w
 | 2026-11-05 15:15 UTC | `v0.2.18` | `6c47a4a` | production | https://ct.devmatrix.top | local | persist the Cloudflare agent setup in .openhands-setup/cloudflare (idempotent restore + MCP manifests) |
 | 2026-11-05 15:31 UTC | `v0.2.19` | `353fec0` | production | https://ct.devmatrix.top | local | Search the built-in Vega catalogue from the Search & Collect page |
 | 2026-11-05 23:16 UTC | `v0.2.20` | `14d0b11` | production | https://ct.devmatrix.top | local | Daily Vega catalogue refresh workflow |
+| 2026-11-05 23:18 UTC | `v0.2.21` | `19270a4` | production | https://ct.devmatrix.top | local | Privacy Policy and Terms of Service pages at /privacy and /tos, linked from the homepage and Settings (Google OAuth verification) |
