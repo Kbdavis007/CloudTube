@@ -178,9 +178,9 @@
   `md:`-prefixed on purpose — do not drop the prefix or mobile breaks.
 - Playback never leaves the app: play/pause/seek/forward all stay in the embedded `<iframe>`.
   The single external action is the **Go to Source Site** button in `VideoPlayerView`, shown
-  only when the video has `playback.externalUrl` (set for XVideos, absent for YouTube — do not
-  guess a URL), opened in a new tab with `rel="noopener noreferrer"`. Styled `#ff6600` →
-  hover `#ffaa33`. See `docs/UX_BEHAVIOR.md`.
+  only when the video has `playback.externalUrl` (set for the baked Vega catalogue, absent for
+  YouTube — do not guess a URL), opened in a new tab with `rel="noopener noreferrer"`. Styled
+  `#ff6600` → hover `#ffaa33`. See `docs/UX_BEHAVIOR.md`.
 - Verifying sticky/scroll behavior without a test runner: render `Sidebar`/`VideoPlayerView`
   with `react-dom/server`'s `renderToStaticMarkup` and assert on the HTML string (Tailwind
   class names survive verbatim), then for real scroll proof serve the built `dist/` CSS with a
@@ -218,11 +218,12 @@
   `window.top.location.href = ...` and `window.open(...)`: both are refused and the top page
   stays, while an un-sandboxed control iframe does navigate away. Results were read back from
   `localStorage` (a DOM `<pre>` and the page title were not visible to the browser tools).
-- XVideos catalogue downloads are review-gated: `handleRefresh` in `XvideosSourceView.tsx`
-  puts records in `pending` (sorted newest-first) and writes nothing; `idbService.addXvideosRecords`
-  upserts by slug only on Import. Excluded/removed rows live in a `Set` of `xv:slug` keys.
-  Review list renders the first `REVIEW_PAGE_SIZE` (120) rows with a filter for the rest —
-  the weekly export is ~12k rows, so never render the whole list.
+- The Vega catalogue ships **baked into the build**: `src/data/vegaCatalog.json` is imported by
+  `src/services/vegaApi.ts`, so Vite inlines it (`resolveJsonModule`). There is no download, no
+  proxy route and no IndexedDB catalogue store (DB v4 dropped `xvideosCatalog`). `VegaSourceView`
+  reads the module directly; `catalogToVideoMetadata` maps a record onto `VideoMetadata` with
+  `youtubeId = "<sourceId>:<sourceVideoId>"`. The file may hold several sources — each record
+  names its `sourceId` and the top-level `sources[]` maps ids to a name and `SourceFlag`.
 
 ## Free-video sources: what's wired up (Eporner v0.2.5; AdultEmbed + RedGifs + source picker v0.2.6, 2026-11-02)
 Open-source picker lives in `src/services/openSourcesApi.ts` -> `OPEN_SOURCES`/`OpenSourceId`,
