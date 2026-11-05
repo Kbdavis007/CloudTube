@@ -351,3 +351,15 @@ in-app Play button automatically. `SourceFlag` is defined in `src/types/index.ts
   `bash .openhands-setup/cloudflare/restore.sh` (from the repo root; templates in
   `.openhands-setup/cloudflare/`, documented in `.openhands-setup/README.md`). It restores
   skills, the MCP plugin and the AGENTS.md line, and installs `cf` — but NOT auth.
+
+## CloudTube daily Vega refresh (2026-11-05)
+- `.github/workflows/refresh-vega-catalogue.yml` scrapes (Firecrawl CLI, server-side fetch so the
+  runner IP is irrelevant), rebuilds, bakes into `src/data/vegaCatalog.json`, then **cuts a
+  release** (`release.mjs patch --push`) — AGENTS.md requires every push to be a release, so it
+  must not push a bare data commit. Needs `fetch-depth: 0`.
+- Its required repo secret `FIRECRAWL_API_KEY` is **not set and the agent cannot set it**: both
+  `GITHUB_TOKEN` and `Github_Super_Token` get 403 on `/actions/secrets/public-key`. Owner must add
+  it under Settings -> Secrets and variables -> Actions. Without it the run skips the scrape and
+  stays green (a `::notice::` explains). `CF_DEPLOY_HOOK` is optional.
+- If a push ever fails with `remote: fatal error in commit_refs` + `! [remote rejected] (failure)`
+  while reads work, it is a transient GitHub write outage — wait a few minutes and retry.
