@@ -2,6 +2,11 @@ import type { VideoMetadata } from '../types';
 import { SOURCE_ALIASES } from '../data/sourceAliases';
 import { readRapidApiKey } from './rapidApiKey';
 import {
+  catalogToVideoMetadata,
+  loadBakedCatalog,
+  searchCatalog,
+} from './vegaApi';
+import {
   OPEN_SOURCES,
   openSourceById,
   toVideoMetadata,
@@ -422,6 +427,20 @@ async function searchPornhub(query: string, signal?: AbortSignal): Promise<Video
 }
 
 /**
+ * Search the catalogue that ships with the build.
+ *
+ * The records are a static JSON module, so this needs no network and cannot
+ * fail on a rate limit: the whole catalogue is searched in memory. An empty
+ * query returns the newest records, so selecting the source and pressing search
+ * behaves like every other source.
+ */
+async function searchVega(query: string): Promise<VideoMetadata[]> {
+  const catalog = loadBakedCatalog();
+  const ranked = searchCatalog(catalog, query, 60);
+  return ranked.map((r) => catalogToVideoMetadata(r.record));
+}
+
+/**
  * Search one open source. Failures are surfaced to the caller so a single
  * unreachable source never blocks the others.
  */
@@ -433,6 +452,8 @@ export async function searchOpenSource(
   const trimmed = query.trim();
   if (!trimmed) return [];
   switch (id) {
+    case 'vega':
+      return searchVega(trimmed);
     case 'archive':
       return searchArchive(trimmed, signal);
     case 'peertube':

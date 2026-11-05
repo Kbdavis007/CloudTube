@@ -12,6 +12,7 @@ import { SOURCE_ALIASES } from '../data/sourceAliases';
  */
 
 export type OpenSourceId =
+  | 'vega'
   | 'archive'
   | 'peertube'
   | 'dailymotion'
@@ -41,6 +42,13 @@ export interface OpenSourceDefinition {
  * explicit "Go to Source Site" link built from `playback.externalUrl`.
  */
 export const OPEN_SOURCES: OpenSourceDefinition[] = [
+  {
+    id: 'vega',
+    name: SOURCE_ALIASES.Vega!,
+    tagline: 'Built-in catalogue (searched offline)',
+    flag: 'Vega',
+    accent: 'bg-sky-700/20 text-orange-300 border-orange-700/40',
+  },
   {
     id: 'archive',
     name: 'Archive.org',

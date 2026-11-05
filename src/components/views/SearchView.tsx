@@ -340,6 +340,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
                 'X',
                 'LinkedIn',
                 'Playlist',
+                'Vega',
                 'ArchiveOrg',
                 'PeerTube',
                 'Dailymotion',
