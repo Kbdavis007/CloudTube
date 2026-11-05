@@ -28,6 +28,20 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 
 
+
+## [0.2.20] - 2026-11-05
+
+**Tag:** `v0.2.20` · **Branch:** `main` · **Deployed:** pending
+
+### Fixes
+- track expanded channels and restore the view on reload (#7) (a467928)
+
+### Documentation
+- record the lockfile fix and the Vega search source (b30130f)
+
+### Other Changes
+- refresh the baked Vega catalogue daily (d5368f5)
+
 ## [0.2.19] - 2026-11-05
 
 **Tag:** `v0.2.19` · **Branch:** `main` · **Deployed:** 2026-11-05 15:31 UTC (production)
