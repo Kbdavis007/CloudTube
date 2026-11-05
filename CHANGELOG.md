@@ -31,6 +31,14 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 
 
+
+## [0.2.23] - 2026-11-05
+
+**Tag:** `v0.2.23` · **Branch:** `main` · **Deployed:** pending
+
+### Documentation
+- record the daily refresh workflow and the GitHub write outage (3188f2f)
+
 ## [0.2.22] - 2026-11-05
 
 **Tag:** `v0.2.22` · **Branch:** `main` · **Deployed:** 2026-11-05 23:21 UTC (production)
