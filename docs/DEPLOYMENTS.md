@@ -33,3 +33,4 @@ npm run deploy:log -- --env production --url https://your-app.example --notes "w
 | 2026-11-05 23:16 UTC | `v0.2.20` | `14d0b11` | production | https://ct.devmatrix.top | local | Daily Vega catalogue refresh workflow |
 | 2026-11-05 23:18 UTC | `v0.2.21` | `19270a4` | production | https://ct.devmatrix.top | local | Privacy Policy and Terms of Service pages at /privacy and /tos, linked from the homepage and Settings (Google OAuth verification) |
 | 2026-11-05 23:21 UTC | `v0.2.22` | `06edc2f` | production | https://ct.devmatrix.top | local | daily Vega catalogue refresh workflow |
+| 2026-11-05 23:28 UTC | `v0.2.23` | `07fabd3` | production | https://ct.devmatrix.top | local | daily refresh workflow + memory notes |
