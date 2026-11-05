@@ -29,6 +29,17 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 
 
+
+## [0.2.21] - 2026-11-05
+
+**Tag:** `v0.2.21` · **Branch:** `main` · **Deployed:** pending
+
+### Features
+- add /privacy and /tos pages for Google OAuth verification (7dc8052)
+
+### Documentation
+- record the legal pages setup and the SPA-fallback gotcha (4ec3417)
+
 ## [0.2.20] - 2026-11-05
 
 **Tag:** `v0.2.20` · **Branch:** `main` · **Deployed:** 2026-11-05 23:16 UTC (production)
