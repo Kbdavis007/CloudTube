@@ -25,6 +25,21 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 
 
+
+## [0.2.17] - 2026-11-05
+
+**Tag:** `v0.2.17` · **Branch:** `main` · **Deployed:** pending
+
+### Fixes
+- regenerate bun.lock at lockfileVersion 1 for bun 1.2.15 (bb3c97d)
+
+### Other Changes
+- Add the Vega catalogue scraper pipeline and its generated files (3a3f57d)
+- Update project memory for the baked Vega catalogue (9dbc6bf)
+- Bake the video catalogue into the build under the Vega source (2778ade)
+- Record the in-repo memory policy in project memory (439d7d4)
+- Track project memory in the repository (146e00c)
+
 ## [0.2.16] - 2026-11-04
 
 **Tag:** `v0.2.16` · **Branch:** `main` · **Deployed:** 2026-11-04 06:46 UTC (production)
