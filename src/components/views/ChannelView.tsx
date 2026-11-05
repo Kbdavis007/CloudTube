@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ChannelMetadata, VideoMetadata } from '../../types';
 import { YouTubeApiClient } from '../../services/youtubeApi';
 import {
@@ -31,9 +31,7 @@ export const ChannelView: React.FC<ChannelViewProps> = ({
   onAddChannel,
   accessToken,
 }) => {
-  const [selectedChannelId, setSelectedChannelId] = useState<string>(
-    channels[0]?.channelId || ''
-  );
+  const [selectedChannelId, setSelectedChannelId] = useState<string>('');
   const [isExpanding, setIsExpanding] = useState(false);
   const [expansionProgress, setExpansionProgress] = useState<{
     pct: number;
@@ -47,8 +45,26 @@ export const ChannelView: React.FC<ChannelViewProps> = ({
   const [newChannelHandle, setNewChannelHandle] = useState('');
   const [addChannelError, setAddChannelError] = useState<string | null>(null);
 
-  const selectedChannel = channels.find((c) => c.channelId === selectedChannelId) || channels[0];
-  const channelVideos = videos.filter((v) => v.channelId === selectedChannelId);
+  // Keep the selection pointing at a channel that still exists. The channels
+  // list arrives asynchronously and grows as channels are collected, so without
+  // this the id could stay empty and the video grid below would render nothing.
+  useEffect(() => {
+    if (channels.length === 0) {
+      if (selectedChannelId) setSelectedChannelId('');
+      return;
+    }
+    if (!channels.some((c) => c.channelId === selectedChannelId)) {
+      setSelectedChannelId(channels[0].channelId);
+    }
+  }, [channels, selectedChannelId]);
+
+  const selectedChannel =
+    channels.find((c) => c.channelId === selectedChannelId) ?? channels[0];
+  // Filter by the channel actually being shown, not the raw id, so the grid
+  // always matches the banner above it.
+  const channelVideos = selectedChannel
+    ? videos.filter((v) => v.channelId === selectedChannel.channelId)
+    : [];
 
   const formatNumber = (num: number) => {
     if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + 'M';

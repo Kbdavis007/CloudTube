@@ -252,6 +252,16 @@ export class IndexedDBService {
     });
   }
 
+  async getChannel(channelId: string): Promise<ChannelMetadata | null> {
+    const db = await this.init();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('channels', 'readonly');
+      const req = tx.objectStore('channels').get(channelId);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
   async saveChannel(channel: ChannelMetadata): Promise<void> {
     const db = await this.init();
     return new Promise((resolve, reject) => {

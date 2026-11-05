@@ -28,16 +28,20 @@ import { LandingSplashView } from './components/views/LandingSplashView';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { initAuth, setCachedAccessToken, refreshGoogleAccessToken } from './services/googleAuth';
 import { YouTubeApiClient } from './services/youtubeApi';
+import { expandChannel } from './services/channelExpansion';
+import { loadViewState, saveViewState } from './services/viewState';
 import { splitLinks } from './services/googleApiErrors';
 
 export default function App() {
-  const [currentTab, setCurrentTab] = useState<PageTab>('dashboard');
+  const [currentTab, setCurrentTab] = useState<PageTab>(() => loadViewState().tab);
   const [videos, setVideos] = useState<VideoMetadata[]>([]);
   const [channels, setChannels] = useState<ChannelMetadata[]>([]);
   const [comments, setComments] = useState<VideoComment[]>([]);
   const [removals, setRemovals] = useState<VideoRemoval[]>([]);
   const [videoPendingRemoval, setVideoPendingRemoval] = useState<VideoMetadata | null>(null);
-  const [selectedVideoId, setSelectedVideoId] = useState<string>('');
+  const [selectedVideoId, setSelectedVideoId] = useState<string>(
+    () => loadViewState().selectedVideoId
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'info' } | null>(null);
   // When set, the wizard opens on this step (used by Settings to replace a token).
@@ -109,6 +113,13 @@ export default function App() {
     refreshLibraryData();
   }, []);
 
+  // Keep the current view across reloads. The tab and the selected video are the
+  // only navigation state, so restoring them is enough to land back where the
+  // user was instead of on the dashboard.
+  useEffect(() => {
+    saveViewState({ tab: currentTab, selectedVideoId });
+  }, [currentTab, selectedVideoId]);
+
   // 1. Index a newly discovered video from search or channel crawl
   const handleIndexVideo = async (video: VideoMetadata) => {
     await idbService.saveVideo(video);
@@ -152,34 +163,21 @@ export default function App() {
     }
 
     try {
-      const uploads = await YouTubeApiClient.getChannelUploads(accessToken, channelId);
-      for (const v of uploads) {
-        v.sourceFlags = ['ChannelUploads', 'YouTubeSearch'];
-        await idbService.saveVideo(v);
-      }
-
-      const chan = channels.find((c) => c.channelId === channelId);
-      if (chan) {
-        chan.isExpanded = true;
-        chan.lastExpandedAt = new Date().toISOString();
-        chan.expandedVideoCount = uploads.length;
-        await idbService.saveChannel(chan);
-      }
-
-      const job: CrawlJob = {
-        id: crypto.randomUUID(),
-        type: 'channel_expansion',
-        status: 'completed',
-        queryOrTarget: `${channelTitle} (${channelId})`,
-        itemsFound: uploads.length,
-        progressPct: 100,
-        createdAt: new Date().toISOString(),
-        completedAt: new Date().toISOString(),
-      };
-      await idbService.addCrawlJob(job);
+      // Save the channel record too, not just its videos: a channel reached from
+      // a search result has no record yet, so without this it never shows up on
+      // the Channels page.
+      const result = await expandChannel(channelId, channelTitle, {
+        store: idbService,
+        fetchUploads: (id) => YouTubeApiClient.getChannelUploads(accessToken, id),
+        fetchChannel: (id) => YouTubeApiClient.getChannelById(accessToken, id),
+      });
 
       await refreshLibraryData();
-      showToast(`Imported ${uploads.length} videos from "${channelTitle}"!`);
+      showToast(
+        result.channelCreated
+          ? `Added channel "${channelTitle}" and imported ${result.videoCount} videos!`
+          : `Imported ${result.videoCount} videos from "${channelTitle}"!`
+      );
     } catch (err: any) {
       console.error('Channel collection failed:', err);
       showToast(`Channel collection failed: ${err.message}`, 'info');
