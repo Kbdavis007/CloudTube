@@ -320,6 +320,14 @@ in-app Play button automatically. `SourceFlag` is defined in `src/types/index.ts
 - MCP: `~/.agents/plugins/cloudflare/` (verbatim `plugin.json` + `mcp.json` from
   github.com/cloudflare/skills) -> server `cloudflare` = streamable-http
   `https://mcp.cloudflare.com/mcp` (OAuth; 401 without token).
-- cf CLI (beta): `sudo npm install -g cf` -> `/usr/local/bin/cf`. Auth via
+- cf CLI (beta): `sudo npm install -g cf` -> `/usr/local/bin/cf` (v0.15.0). Auth via
   `cf auth login` (OAuth device flow at https://dash.cloudflare.com/oauth2/device/verify).
-- When interacting with Cloudflare, use the cf CLI unless the project has a Wrangler config file.
+  **Not completable from inside the sandbox:** the verify page serves a Turnstile
+  "Verify you are human" challenge that never resolves headless -> the owner must enter the
+  device code in their own browser. `cf auth login --no-browser --device` prints the code.
+- Instruction line: `When interacting with Cloudflare, use the cf CLI unless the project has a
+  Wrangler config file.` lives in `~/.openhands/AGENTS.md` (mirrored to `~/.agents/AGENTS.md`).
+- **After any sandbox reset** (all of the above live on the ephemeral overlay) run:
+  `bash .openhands-setup/cloudflare/restore.sh` (from the repo root; templates in
+  `.openhands-setup/cloudflare/`, documented in `.openhands-setup/README.md`). It restores
+  skills, the MCP plugin and the AGENTS.md line, and installs `cf` — but NOT auth.
