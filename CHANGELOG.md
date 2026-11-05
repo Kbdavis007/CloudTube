@@ -26,6 +26,14 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 
 
+
+## [0.2.18] - 2026-11-05
+
+**Tag:** `v0.2.18` · **Branch:** `main` · **Deployed:** pending
+
+### Maintenance
+- persist the Cloudflare agent setup in the repo kit (b21dabd)
+
 ## [0.2.17] - 2026-11-05
 
 **Tag:** `v0.2.17` · **Branch:** `main` · **Deployed:** pending
