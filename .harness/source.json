@@ -1,0 +1,6 @@
+{
+  "kit_url": "https://github.com/harnessworks/harness-starter-kit",
+  "kit_commit": "62437bec264b2deed83353e8209660d645e86828",
+  "updated_at": "2026-11-05",
+  "update_command": "/harness update"
+}

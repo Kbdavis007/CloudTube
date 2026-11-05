@@ -15,5 +15,10 @@ src/generated/version.ts
 # Wrangler local build/cache
 .wrangler/
 
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+
 # Firecrawl CLI cache (scrapers/vega)
 .firecrawl/

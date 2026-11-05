@@ -31,9 +31,22 @@
 
 ## Verification
 
-- No test runner. Verify with `npx tsc --noEmit` + `npx vite build`.
+- No test runner for the app; verify with `npx tsc --noEmit` + `npx vite build`. Unit
+  tests run with `npm test` (`tsx --test`), and browser end-to-end checks run with
+  `npm run e2e` (Playwright; it reuses the system Chromium or
+  `npx playwright install chromium`).
 - `npm install` fails with ERESOLVE; use `npm install --legacy-peer-deps`. It writes a
   `package-lock.json` that is not gitignored even though the project tracks `bun.lock` — delete it
   before committing.
 - After pushing, confirm the deploy landed via `curl -s https://ct.devmatrix.top/api/health`
   (returns the serving commit) and by grepping the served bundle for a new string.
+
+## Pull requests and OpenSpec
+
+- Every PR is described with `.github/pull_request_template.md`. Fill every section; the
+  End-to-end proof section expects Playwright screenshots.
+- Behaviour changes are planned in `openspec/` before code is written: create a change
+  for a new item (`openspec new change <name>`), and edit + re-sync the existing change
+  for a bug fix or an edit to an existing feature. Validate with
+  `openspec validate --all --strict`. Docs/config/tooling-only changes set
+  `skip_specs: true` on the change.
