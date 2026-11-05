@@ -28,10 +28,25 @@ vega_urls.txt ──► firecrawl scrape ──► data/vega_pages/pNN.json
 `data/vega_pages/` (one file per page, `p01.json`, `p02.json`, …):
 
 ```bash
-firecrawl scrape "$url" -o data/vega_pages/p01.json
+bash scrape.sh                       # all URLs -> data/vega_pages/
+# or a single page:
+firecrawl scrape "$url" -f markdown,links --max-age 0 -o data/vega_pages/p01.json
 ```
 
 Firecrawl caches to `.firecrawl/` in the working directory — it is git-ignored.
+
+### Automated daily refresh
+
+`.github/workflows/refresh-vega-catalogue.yml` runs the whole pipeline once a
+day (06:17 UTC) and can be run by hand from the Actions tab. It scrapes, rebuilds
+the catalogue, bakes it into `src/data/vegaCatalog.json`, and commits the result;
+that push makes Cloudflare rebuild and redeploy the app.
+
+It needs one repository secret: `FIRECRAWL_API_KEY`
+(Settings → Secrets and variables → Actions). If Cloudflare's own git
+integration does not rebuild on the push, add a deploy hook URL as the
+`CF_DEPLOY_HOOK` secret and the workflow triggers it directly.
+
 
 ## 2. Parse + build the catalogue
 
