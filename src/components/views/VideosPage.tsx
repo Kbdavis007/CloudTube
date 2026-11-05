@@ -12,6 +12,8 @@ import {
   ArrowUpDown,
 } from 'lucide-react';
 import { sourceFlagLabel } from '../../data/sourceLabels';
+import { HoverPreview } from '../HoverPreview';
+import { hoverPreviewEmbedUrl } from '../../services/preview';
 import { SelectedVideoPage } from './SelectedVideoPage';
 
 /** Cards per page in the library browser. */
@@ -19,6 +21,10 @@ const LIBRARY_PAGE_SIZE = 24;
 
 interface VideosPageProps {
   selectedVideo: VideoMetadata | null;
+  /** Whether `selectedVideo` is saved in the library. */
+  isInLibrary: boolean;
+  /** Saves the video being watched to the library. */
+  onSaveToLibrary: (video: VideoMetadata) => Promise<void>;
   allVideos: VideoMetadata[];
   comments: VideoComment[];
   onSelectVideo: (youtubeId: string) => void;
@@ -37,6 +43,8 @@ interface VideosPageProps {
  */
 export const VideosPage: React.FC<VideosPageProps> = ({
   selectedVideo,
+  isInLibrary,
+  onSaveToLibrary,
   allVideos,
   comments,
   onSelectVideo,
@@ -305,6 +313,8 @@ export const VideosPage: React.FC<VideosPageProps> = ({
     return (
       <SelectedVideoPage
         currentVideo={selectedVideo}
+        isInLibrary={isInLibrary}
+        onSaveToLibrary={onSaveToLibrary}
         allVideos={allVideos}
         comments={comments.filter((c) => c.videoId === selectedVideo.youtubeId)}
         onSelectVideo={onSelectVideo}
@@ -549,24 +559,29 @@ export const VideosPage: React.FC<VideosPageProps> = ({
                 }`}
               >
                 <div className="relative aspect-video bg-black">
-                  <button
-                    onClick={() => onSelectVideo(video.youtubeId)}
-                    className="block w-full h-full"
-                    title="Play this video"
-                  >
-                    {thumbnail ? (
-                      <img
-                        src={thumbnail}
-                        alt={video.title}
-                        loading="lazy"
-                        className="w-full h-full object-cover"
+                  {thumbnail ? (
+                    <HoverPreview
+                      poster={thumbnail}
+                      alt={video.title}
+                      previewUrl={video.playback?.previewUrl}
+                      previewFrames={video.playback?.previewFrames}
+                      embedUrl={hoverPreviewEmbedUrl(video)}
+                    >
+                      {/* The play overlay is a child of the preview (a sibling of
+                          the iframe), so hovering it still starts the preview
+                          without nesting the iframe inside a button. */}
+                      <button
+                        onClick={() => onSelectVideo(video.youtubeId)}
+                        className="absolute inset-0"
+                        title="Play this video"
+                        aria-label={`Play ${video.title}`}
                       />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-600">
-                        <Tv className="w-6 h-6" />
-                      </div>
-                    )}
-                  </button>
+                    </HoverPreview>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-slate-600">
+                      <Tv className="w-6 h-6" />
+                    </div>
+                  )}
                   <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/80 text-[10px] font-mono text-white">
                     {formatDuration(video.durationSeconds)}
                   </div>

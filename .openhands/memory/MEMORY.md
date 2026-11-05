@@ -297,6 +297,51 @@ in-app Play button automatically. `SourceFlag` is defined in `src/types/index.ts
   youporn (302 -> `/`), spankbang (403), tube8/beeg/porntrex/pornhd/tnaflix/hqporner (HTML or 403/404). Hubtraffic
   (MindGeek webmaster feed) exists but needs a key and is Pornhub/RedTube only.
 
+## Watching vs saving, and hover previews (issue #11, 2026-11-05)
+- **Watching must not save.** `handleIndexVideo` in `src/App.tsx` is the ONLY writer that adds a
+  video to the library (it calls `idbService.saveVideo`). Play paths must never call it. The bug was
+  `SearchView.playVideo` calling `onIndexVideo(video)` for open-source results, plus
+  `handleIndexAndPlay` (index-then-play) used by Vega.
+- **Transient playback:** `ephemeralVideo` state in `App.tsx` holds a video that is being watched but
+  is not in the library. `resolvePlayerSelection(videos, selectedVideoId, ephemeral)` in
+  `src/services/playerSelection.ts` returns `{video, isInLibrary}`. `SelectedVideoPage` shows
+  **Save to Library** when `!isInLibrary` and hides the removal button (removal is library-only).
+  Clear `ephemeralVideo` in `navigate('player')`, `handleSelectVideo`, `handleBackToVideos`,
+  removal and restore.
+- **`VideosPage`/`SelectedVideoPage` props are load-bearing:** adding a required prop to
+  `SelectedVideoPage` means updating `VideosPage`, which means updating the `App.tsx` call site.
+  Tests render `VideosPage` directly (SSR via `renderToStaticMarkup`) to cover that wiring.
+- **Hover previews:** rules live in `src/services/preview.ts` — `withAutoplay(embedUrl)`,
+  `youtubeEmbedUrl(id)`, `hoverPreviewEmbedUrl(video)` (source embed → external page → YouTube
+  embed derived from `youtubeId`, since YouTube results have no `playback`). `SearchView`,
+  `VegaSourceView` and `VideosPage` library cards all render `HoverPreview`. Put the clickable
+  overlay button as a **child** of `HoverPreview`, never wrapping it — otherwise `mouseenter` never
+  fires on the wrapper (the iframe covers it) and the preview silently never starts.
+- **Tests:** `npx tsx --test tests/x.test.tsx` runs a single file. SSR rendering of React
+  components works with no DOM/jsdom. `npm test` = `tsx --test tests/**/*.test.ts(x)`.
+- **`package-lock.json` reappears** after `npm install --legacy-peer-deps`; delete before committing
+  (project tracks `bun.lock`).
+
+## Legal pages: /privacy and /tos (v0.2.x, 2026-11-05)
+- **Why:** Google OAuth consent screen (branding) requires a privacy policy + TOS on a domain
+  you own, as a **dedicated HTML page**, **linked on the app homepage**, with a **Limited Use
+  disclosure**. Ref: https://support.google.com/cloud/answer/13806988
+- **Files:** `public/privacy.html`, `public/tos.html`, `public/legal.css` — standalone HTML with
+  **no JS and no sign-in**, because the React app is gated behind Google sign-in and a reviewer
+  cannot see it otherwise. Copied to `dist/` by the Vite build.
+- **Friendly URLs:** the Worker's SPA fallback used to answer `/privacy` and `/tos` with the app
+  shell (**200**), so a status-code-only check falsely implies the pages exist. Cloudflare's
+  `assets.html_handling` default `auto-trailing-slash` maps `/privacy` -> `/privacy.html`
+  (`/privacy.html` 307s back to `/privacy`); pinned explicitly in `wrangler.jsonc`.
+- **Dev parity:** `server.ts` serves them from `public/` *before* `vite.middlewares` (dev only),
+  using the shared allowlist `resolveLegalPage()` in `worker/legalPages.ts`. Explicit map, not
+  filesystem-derived.
+- **Policy content is grounded in code:** it names the actual scopes, states the library lives in
+  IndexedDB/localStorage and the OAuth token is memory-only, and **discloses the one server-side
+  store** — the Cloudflare D1 `video_search_cache` (public video metadata, keyed by source+query,
+  shared by all users, TTL hours). Do not claim "no server storage" without checking the code.
+- Operator identity in the policy: Brian Keith Davis / `kbdavis0007@gmail.com` (git author).
+
 ## Sandbox persistence (IMPORTANT)
 - `~` (and `/usr/local`, `/tmp`) live on the container overlay and are RESET whenever the
   sandbox is recycled (e.g. after idle timeout, PID 1 restarts). Only `/workspace` persists.

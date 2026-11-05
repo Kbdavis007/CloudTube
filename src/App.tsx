@@ -30,6 +30,7 @@ import { initAuth, setCachedAccessToken, refreshGoogleAccessToken } from './serv
 import { YouTubeApiClient } from './services/youtubeApi';
 import { expandChannel } from './services/channelExpansion';
 import { loadViewState, saveViewState } from './services/viewState';
+import { resolvePlayerSelection } from './services/playerSelection';
 import { splitLinks } from './services/googleApiErrors';
 
 export default function App() {
@@ -42,6 +43,9 @@ export default function App() {
   const [selectedVideoId, setSelectedVideoId] = useState<string>(
     () => loadViewState().selectedVideoId
   );
+  // A video being played before it is saved. Watching a result must not add it
+  // to the library, so the player holds the video here until the user saves it.
+  const [ephemeralVideo, setEphemeralVideo] = useState<VideoMetadata | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'info' } | null>(null);
   // When set, the wizard opens on this step (used by Settings to replace a token).
@@ -230,7 +234,10 @@ export default function App() {
     await idbService.addCrawlJob(job);
 
     setVideoPendingRemoval(null);
-    if (selectedVideoId === video.youtubeId) setSelectedVideoId('');
+    if (selectedVideoId === video.youtubeId) {
+      setSelectedVideoId('');
+      setEphemeralVideo(null);
+    }
     await refreshLibraryData();
 
     const meta = getRemovalReason(request.reason);
@@ -246,6 +253,7 @@ export default function App() {
     const restored = await idbService.restoreRemoval(removalId);
     await refreshLibraryData();
     if (restored) {
+      setEphemeralVideo(null);
       setSelectedVideoId(restored.youtubeId);
       showToast(`Restored "${restored.video.title.slice(0, 24)}..." to your library.`);
     }
@@ -291,15 +299,19 @@ export default function App() {
     }
   };
 
-  // 5. Select video to play. Selecting opens the dedicated video page; the
-  // Videos listing is shown when nothing is selected.
+  // 5. Select a video to play. Selecting opens the dedicated video page; the
+  // Videos listing is shown when nothing is selected. A video already in the
+  // library plays from there; one that is not (a search result the user has not
+  // saved) plays from the transient selection so watching never adds it.
   const handleSelectVideo = (youtubeId: string) => {
+    setEphemeralVideo(null);
     setSelectedVideoId(youtubeId);
     setCurrentTab('player');
   };
 
   // Leave the dedicated video page and return to the Videos listing.
   const handleBackToVideos = () => {
+    setEphemeralVideo(null);
     setSelectedVideoId('');
   };
 
@@ -314,16 +326,30 @@ export default function App() {
   const navigate = (tab: PageTab) => {
     if (tab !== 'wizard') setWizardStep(undefined);
     // Opening Videos from the nav shows the listing, not the last video.
-    if (tab === 'player') setSelectedVideoId('');
+    if (tab === 'player') {
+      setEphemeralVideo(null);
+      setSelectedVideoId('');
+    }
     setCurrentTab(tab);
   };
 
-  // 5b. Play a video that may not be in the library yet: index it first so the
-  // player has metadata to render, then select it.
-  const handleIndexAndPlay = async (video: VideoMetadata) => {
-    await handleIndexVideo(video);
+  // 5b. Play a video that may not be in the library yet without saving it: hold
+  // it as the transient selection and open the player. It is added to the
+  // library only when the user presses "Save to Library".
+  const handlePlayVideo = (video: VideoMetadata) => {
+    if (videos.some((v) => v.youtubeId === video.youtubeId)) {
+      handleSelectVideo(video.youtubeId);
+      return;
+    }
+    setEphemeralVideo(video);
     setSelectedVideoId(video.youtubeId);
     setCurrentTab('player');
+  };
+
+  // 5c. Save the video currently being watched to the library.
+  const handleSaveToLibrary = async (video: VideoMetadata) => {
+    await handleIndexVideo(video);
+    setEphemeralVideo(video);
   };
 
   // 6. Update the video's saved summary
@@ -398,7 +424,10 @@ export default function App() {
 
   // A video is only "selected" when the user picked one. The Videos page shows
   // its listing while this is null; the dedicated page renders when it is set.
-  const currentVideo = videos.find((v) => v.youtubeId === selectedVideoId) || null;
+  // The video may be in the library or only being watched, so the two are
+  // resolved together.
+  const playerSelection = resolvePlayerSelection(videos, selectedVideoId, ephemeralVideo);
+  const currentVideo = playerSelection.video;
   const currentVideoComments = comments.filter((c) => c.videoId === selectedVideoId);
   const indexedVideoIds = new Set(videos.map((v) => v.youtubeId));
 
@@ -464,7 +493,7 @@ export default function App() {
                 <SearchView
                   onIndexVideo={handleIndexVideo}
                   onExpandChannel={handleExpandChannel}
-                  onPlayVideo={handleSelectVideo}
+                  onPlayVideo={handlePlayVideo}
                   indexedVideoIds={indexedVideoIds}
                   accessToken={accessToken}
                   userEmail={user?.email}
@@ -475,7 +504,7 @@ export default function App() {
               {currentTab === 'vega' && (
                 <VegaSourceView
                   onIndexVideo={handleIndexVideo}
-                  onPlayVideo={handleIndexAndPlay}
+                  onPlayVideo={handlePlayVideo}
                   indexedVideoIds={indexedVideoIds}
                 />
               )}
@@ -483,6 +512,8 @@ export default function App() {
               {currentTab === 'player' && (
                 <VideosPage
                   selectedVideo={currentVideo}
+                  isInLibrary={playerSelection.isInLibrary}
+                  onSaveToLibrary={handleSaveToLibrary}
                   allVideos={videos}
                   comments={currentVideoComments}
                   onSelectVideo={handleSelectVideo}

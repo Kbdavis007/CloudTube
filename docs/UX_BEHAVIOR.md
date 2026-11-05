@@ -46,12 +46,30 @@ badge, the "Go to Source Site" title and the saved-video `channelTitle` all use 
 alias. The stored `SourceFlag` values and open-source ids are unchanged, so this is
 a display-only swap; no data migration is needed.
 
+## Watching is not saving
+
+A video enters the library only when the user saves it — the **+ Save** button on
+a search result, **Add to Library** on a catalogue card, or **Save to Library**
+on the player page. Playing a video does not save it.
+
+- Search and catalogue results play straight from the result card. The video is
+  held as a transient selection (`ephemeralVideo` in `src/App.tsx`) and the player
+  shows it without it being in the library.
+- `src/services/playerSelection.ts` resolves what the player shows: a video in the
+  library plays from there (`isInLibrary: true`); one that is not plays from the
+  transient selection (`isInLibrary: false`).
+- While a video is not in the library the player shows **Save to Library** and
+  hides the removal action, which only applies to saved videos.
+- `handleIndexVideo` (the only writer that adds a video) is called by the save
+  buttons, never by a play path.
+
 ## Hover preview on result cards
 
-Resting the pointer on a search result thumbnail (or focusing it) plays a small
-muted preview in place of the still image; leaving the card stops it and restores
-the poster. `src/components/HoverPreview.tsx` picks the best available source, in
-order:
+Resting the pointer on a video thumbnail (or focusing it) plays a small muted
+preview in place of the still image; leaving the card stops it and restores the
+poster. It applies to search results (`SearchView`), catalogue cards
+(`VegaSourceView`) and library cards (`VideosPage`). `src/components/HoverPreview.tsx`
+picks the best available source, in order:
 
 1. A direct muted video (`playback.previewUrl`) — currently the RedGifs-style
    short-clip source, whose feed serves plain mp4 URLs.
@@ -62,7 +80,9 @@ order:
 
 YouTube results always take path 3 (their thumbnail hosts expose no direct video).
 The preview only starts after a short hover delay so passing the pointer over the
-grid does not fire a burst of loads.
+grid does not fire a burst of loads. The rules that pick the URL live in
+`src/services/preview.ts` (`hoverPreviewEmbedUrl`, `withAutoplay`), so every card
+behaves the same and the behaviour is unit-tested without a DOM.
 
 ## Open-source search is cached server-side
 
