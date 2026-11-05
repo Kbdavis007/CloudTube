@@ -14,7 +14,7 @@ import { Sidebar, PageTab } from './components/Sidebar';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { DashboardView } from './components/views/DashboardView';
 import { SearchView } from './components/views/SearchView';
-import { XvideosSourceView } from './components/views/XvideosSourceView';
+import { VegaSourceView } from './components/views/VegaSourceView';
 import { VideosPage } from './components/views/VideosPage';
 import { ChannelView } from './components/views/ChannelView';
 import { CommentsView } from './components/views/CommentsView';
@@ -474,8 +474,8 @@ export default function App() {
                 />
               )}
 
-              {currentTab === 'xvideos' && (
-                <XvideosSourceView
+              {currentTab === 'vega' && (
+                <VegaSourceView
                   onIndexVideo={handleIndexVideo}
                   onPlayVideo={handleIndexAndPlay}
                   indexedVideoIds={indexedVideoIds}

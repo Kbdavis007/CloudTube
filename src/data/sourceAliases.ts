@@ -8,7 +8,7 @@ import type { SourceFlag } from '../types';
  * screen in the app names the underlying site.
  */
 export const SOURCE_ALIASES: Partial<Record<SourceFlag, string>> = {
-  Xvideos: 'Vista',
+  Vega: 'Vega',
   Eporner: 'Aurora',
   EmbedHub: 'Ember',
   RedGifs: 'Flicker',

@@ -6,7 +6,7 @@ export type SourceFlag =
   | 'X'
   | 'LinkedIn'
   | 'Playlist'
-  | 'Xvideos'
+  | 'Vega'
   | 'ArchiveOrg'
   | 'PeerTube'
   | 'Dailymotion'
@@ -19,7 +19,7 @@ export type SourceFlag =
 
 /**
  * Where a video can be played. YouTube videos derive their embed URL from
- * `youtubeId`; sources that ship their own embed code (the XVideos export does)
+ * `youtubeId`; sources that ship their own embed code (the Vega catalogue does)
  * set this instead, so the player does not have to know which source it is
  * looking at.
  */
@@ -65,7 +65,7 @@ export interface VideoMetadata {
   lastUpdatedAt: string;
   /** Set by sources that provide their own embed; absent for YouTube. */
   playback?: PlaybackTarget;
-  /** Source-native identifier (e.g. the XVideos video slug) when it is not YouTube. */
+  /** Source-native identifier (e.g. the Vega video slug) when it is not YouTube. */
   sourceVideoId?: string;
   /** Poster/preview image for non-YouTube sources, where the thumbnail grid differs. */
   posterUrl?: string;

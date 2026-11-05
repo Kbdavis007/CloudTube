@@ -109,7 +109,7 @@ export const SelectedVideoPage: React.FC<SelectedVideoPageProps> = ({
   const prevVideo = currentIndex > 0 ? allVideos[currentIndex - 1] : null;
   const nextVideo = currentIndex < allVideos.length - 1 ? allVideos[currentIndex + 1] : null;
 
-  // Only sources that ship their own page (XVideos) can be opened outside the
+  // Only sources that ship their own page (Vega) can be opened outside the
   // app. YouTube videos have no canonical source-site page in this library, so
   // the button is hidden rather than pointing at a guessed URL.
   const sourceUrl = currentVideo.playback?.externalUrl;
@@ -158,7 +158,7 @@ export const SelectedVideoPage: React.FC<SelectedVideoPageProps> = ({
     X: 'bg-sky-500/20 text-sky-400 border-sky-500/30',
     LinkedIn: 'bg-blue-600/20 text-blue-300 border-blue-600/30',
     Playlist: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-    Xvideos: 'bg-orange-700/20 text-orange-300 border-orange-700/40',
+    Vega: 'bg-sky-700/20 text-orange-300 border-orange-700/40',
     ArchiveOrg: 'bg-teal-500/20 text-teal-300 border-teal-500/30',
     PeerTube: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30',
     Dailymotion: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
@@ -209,7 +209,7 @@ export const SelectedVideoPage: React.FC<SelectedVideoPageProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Video Embed & Details (2 Cols) */}
         <div className="lg:col-span-2 space-y-4">
-          {/* Responsive embed. Sources that ship their own player URL (XVideos)
+          {/* Responsive embed. Sources that ship their own player URL (Vega)
               use it directly; YouTube derives the URL from the video id.
 
               The iframe is sandboxed without `allow-top-navigation`,

@@ -99,7 +99,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
     X: 'bg-sky-500/20 text-sky-400 border-sky-500/30',
     LinkedIn: 'bg-blue-600/20 text-blue-300 border-blue-600/30',
     Playlist: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-    Xvideos: 'bg-orange-700/20 text-orange-300 border-orange-700/40',
+    Vega: 'bg-sky-700/20 text-orange-300 border-orange-700/40',
     ArchiveOrg: 'bg-teal-500/20 text-teal-300 border-teal-500/30',
     PeerTube: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30',
     Dailymotion: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',

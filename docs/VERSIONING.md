@@ -125,7 +125,6 @@ never ran and `POST /api/cloudflare/proxy` kept returning 405.
 | --- | --- |
 | `GET /api/health` | version / commit / branch provenance |
 | `POST /api/cloudflare/proxy` | server-side relay to the Cloudflare API |
-| `GET /api/xvideos/export` | streams the XVideos catalogue export |
 | `GET /api/redgifs/search` | RedGifs search (CORS + temporary token) |
 | `GET /api/search` | cached multi-source search (D1 + edge cache) |
 

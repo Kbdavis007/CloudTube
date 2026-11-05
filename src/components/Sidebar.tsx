@@ -14,7 +14,7 @@ import {
 export type PageTab =
   | 'dashboard'
   | 'search'
-  | 'xvideos'
+  | 'vega'
   | 'player'
   | 'channels'
   | 'comments'

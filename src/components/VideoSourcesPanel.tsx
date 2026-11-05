@@ -16,6 +16,7 @@ import type { PageTab } from './Sidebar';
 import type { SourceFlag } from '../types';
 import { SOURCE_ALIASES } from '../data/sourceAliases';
 import { idbService } from '../services/indexedDB';
+import { countBakedCatalog } from '../services/vegaApi';
 
 export interface VideoSourceDefinition {
   /** Doubles as the tab the source opens. */
@@ -42,10 +43,10 @@ export const VIDEO_SOURCES: VideoSourceDefinition[] = [
     iconClass: 'bg-red-500/10 border-red-500/20 text-red-400',
   },
   {
-    id: 'xvideos',
-    name: SOURCE_ALIASES.Xvideos!,
-    tagline: 'Webmaster catalogue',
-    description: 'Import the webmaster catalogue and search it offline.',
+    id: 'vega',
+    name: SOURCE_ALIASES.Vega!,
+    tagline: 'Built-in catalogue',
+    description: 'Browse the catalogue that ships with the app and search it offline.',
     icon: ShieldAlert,
     accent: 'hover:border-orange-500/50',
     iconClass: 'bg-orange-500/10 border-orange-500/20 text-orange-400',
@@ -128,22 +129,17 @@ const useSourceStats = (isYouTubeConnected: boolean) => {
   const refresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      const [videos, catalogCount] = await Promise.all([
-        idbService.getAllVideos(),
-        idbService.countXvideosCatalog(),
-      ]);
+      const videos = await idbService.getAllVideos();
+      const catalogCount = countBakedCatalog();
       const countByFlag = (flag: SourceFlag) =>
         videos.filter((v) => (v.sourceFlags || []).includes(flag)).length;
 
       setStats({
         search: { videoCount: countByFlag('YouTubeSearch'), connected: isYouTubeConnected },
-        xvideos: {
-          videoCount: countByFlag('Xvideos'),
+        vega: {
+          videoCount: countByFlag('Vega'),
           connected: catalogCount > 0,
-          detail:
-            catalogCount > 0
-              ? `${catalogCount.toLocaleString()} in catalogue`
-              : 'Catalogue not downloaded',
+          detail: `${catalogCount.toLocaleString()} in catalogue`,
         },
       });
     } catch (err) {

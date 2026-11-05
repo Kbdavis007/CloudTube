@@ -6,13 +6,12 @@ import {
   PersonalMetadata,
   VideoRemoval,
 } from '../types';
-import { extractSlug, type XvideosRecord } from './xvideosApi';
 
 const DB_NAME = 'CloudTubeDB';
 // v2 adds the `removals` store (video + reason + timestamp).
-// v3 adds `xvideosCatalog`: the downloaded XVideos export, kept so the source
-// stays searchable offline without re-fetching the ~2.6MB file on every load.
-const DB_VERSION = 3;
+// v4 drops `xvideosCatalog`: the browse catalogue now ships with the build
+// (src/data/vegaCatalog.json), so it is no longer downloaded or stored here.
+const DB_VERSION = 4;
 
 export class IndexedDBService {
   private db: IDBDatabase | null = null;
@@ -74,11 +73,10 @@ export class IndexedDBService {
           removalStore.createIndex('removedAt', 'removedAt', { unique: false });
         }
 
-        // XVideos catalogue Store. Keyed by the source slug, which is stable
-        // across export refreshes, so a re-import replaces rows in place.
-        if (!db.objectStoreNames.contains('xvideosCatalog')) {
-          const catalogStore = db.createObjectStore('xvideosCatalog', { keyPath: 'slug' });
-          catalogStore.createIndex('date', 'date', { unique: false });
+        // v4 removes the retired `xvideosCatalog` store; the browse catalogue is
+        // baked into the build now.
+        if (db.objectStoreNames.contains('xvideosCatalog')) {
+          db.deleteObjectStore('xvideosCatalog');
         }
       };
     });
@@ -241,66 +239,6 @@ export class IndexedDBService {
 
     await this.saveVideo(video);
     return video;
-  }
-
-  // --- XVideos Catalogue Operations ---
-
-  async getXvideosCatalog(): Promise<XvideosRecord[]> {
-    const db = await this.init();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction('xvideosCatalog', 'readonly');
-      const req = tx.objectStore('xvideosCatalog').getAll();
-      req.onsuccess = () => resolve(req.result || []);
-      req.onerror = () => reject(req.error);
-    });
-  }
-
-  async countXvideosCatalog(): Promise<number> {
-    const db = await this.init();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction('xvideosCatalog', 'readonly');
-      const req = tx.objectStore('xvideosCatalog').count();
-      req.onsuccess = () => resolve(req.result || 0);
-      req.onerror = () => reject(req.error);
-    });
-  }
-
-  /**
-   * Insert or update the given catalogue records without clearing the store, so
-   * a reviewed subset can be imported while the rest of the stored catalogue is
-   * left alone. Records are written in chunks to keep each transaction small.
-   */
-  async addXvideosRecords(records: XvideosRecord[]): Promise<number> {
-    const db = await this.init();
-    const CHUNK = 1000;
-
-    for (let i = 0; i < records.length; i += CHUNK) {
-      const chunk = records.slice(i, i + CHUNK).map((record) => ({
-        ...record,
-        slug: extractSlug(record.pageUrl) || record.videoId,
-      }));
-
-      await new Promise<void>((resolve, reject) => {
-        const tx = db.transaction('xvideosCatalog', 'readwrite');
-        const store = tx.objectStore('xvideosCatalog');
-        chunk.forEach((record) => store.put(record));
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-        tx.onabort = () => reject(tx.error);
-      });
-    }
-
-    return records.length;
-  }
-
-  async clearXvideosCatalog(): Promise<void> {
-    const db = await this.init();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction('xvideosCatalog', 'readwrite');
-      tx.objectStore('xvideosCatalog').clear();
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
   }
 
   // --- Channel Operations ---
@@ -468,7 +406,7 @@ export class IndexedDBService {
   async clearDatabase(): Promise<void> {
     const db = await this.init();
     const tx = db.transaction(
-      ['videos', 'channels', 'comments', 'crawlJobs', 'removals', 'xvideosCatalog'],
+      ['videos', 'channels', 'comments', 'crawlJobs', 'removals'],
       'readwrite'
     );
     tx.objectStore('videos').clear();
@@ -476,7 +414,6 @@ export class IndexedDBService {
     tx.objectStore('comments').clear();
     tx.objectStore('crawlJobs').clear();
     tx.objectStore('removals').clear();
-    tx.objectStore('xvideosCatalog').clear();
     await new Promise((resolve) => {
       tx.oncomplete = resolve;
     });
