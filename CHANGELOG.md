@@ -32,6 +32,14 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 
 
+
+## [0.2.24] - 2026-11-05
+
+**Tag:** `v0.2.24` · **Branch:** `main` · **Deployed:** pending
+
+### Documentation
+- note the daily refresh workflow and its secret (135bc4a)
+
 ## [0.2.23] - 2026-11-05
 
 **Tag:** `v0.2.23` · **Branch:** `main` · **Deployed:** 2026-11-05 23:28 UTC (production)
