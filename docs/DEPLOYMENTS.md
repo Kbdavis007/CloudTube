@@ -35,3 +35,4 @@ npm run deploy:log -- --env production --url https://your-app.example --notes "w
 | 2026-11-05 23:21 UTC | `v0.2.22` | `06edc2f` | production | https://ct.devmatrix.top | local | daily Vega catalogue refresh workflow |
 | 2026-11-05 23:28 UTC | `v0.2.23` | `07fabd3` | production | https://ct.devmatrix.top | local | daily refresh workflow + memory notes |
 | 2026-11-05 23:30 UTC | `v0.2.24` | `834d5ba` | production | https://ct.devmatrix.top | local | memory notes |
+| 2026-11-05 23:33 UTC | `v0.2.25` | `efa6921` | production | https://ct.devmatrix.top | local | Agent-first PR template, OpenSpec scaffold, harness kit pin, Playwright e2e proof |
