@@ -45,8 +45,13 @@
 
 - Every PR is described with `.github/pull_request_template.md`. Fill every section; the
   End-to-end proof section expects Playwright screenshots.
+- **Screenshot URLs must keep working after the PR closes.** Drag images into the PR body
+  (GitHub re-hosts them permanently) or link a committed file by full commit SHA. Never
+  link by branch name — a branch URL 404s once the branch is deleted, even `main` moves.
 - Behaviour changes are planned in `openspec/` before code is written: create a change
   for a new item (`openspec new change <name>`), and edit + re-sync the existing change
   for a bug fix or an edit to an existing feature. Validate with
   `openspec validate --all --strict`. Docs/config/tooling-only changes set
   `skip_specs: true` on the change.
+- `npm run e2e` writes screenshots to gitignored `test-results/` and never dirties the
+  tree. To refresh the committed proof under `docs/screenshots/`, run `npm run e2e:proof`.

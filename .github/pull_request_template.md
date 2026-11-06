@@ -97,14 +97,18 @@ Add only the smallest useful piece; prefer updating existing docs over duplicati
 A green type-check is not proof the change works. Drive the real app in a browser
 with Playwright and attach screenshots.
 
-Drag the images into this description (easiest: GitHub uploads them to a
-user-images URL that survives branch deletion), or commit them under
-`docs/screenshots/` and link them by COMMIT SHA, never by branch name:
+Screenshot URLs MUST keep working after this PR is merged and its branch is
+deleted, so a reviewer can still open the evidence later. Use, in order of
+preference:
 
-    https://raw.githubusercontent.com/<owner>/<repo>/<full-commit-sha>/docs/screenshots/<file>.png
+  1. Drag the image into this description. GitHub re-hosts it on
+     user-images.githubusercontent.com, which is permanent.
+  2. Commit it under `docs/screenshots/` and link by full COMMIT SHA:
+       https://raw.githubusercontent.com/<owner>/<repo>/<full-commit-sha>/docs/screenshots/<file>.png
 
-A branch URL 404s the moment the branch is deleted on merge, so the evidence
-disappears from the PR you were trying to prove.
+Never link by branch name (`.../main/...` or `.../<feature-branch>/...`): the
+branch URL 404s as soon as the branch is deleted, and even `main` changes under
+you, so the evidence disappears from the PR you were trying to prove.
 
   UI change        -> drive the actual flow; capture before/after.
   Docs/config      -> capture the rendered result (e.g. this PR body) plus the

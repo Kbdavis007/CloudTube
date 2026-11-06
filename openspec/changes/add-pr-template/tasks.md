@@ -20,3 +20,9 @@
 ## 4. Docs
 
 - [x] 4.1 Point `AGENTS.md` at the template and the OpenSpec workflow
+
+## 5. Follow-up: durable evidence URLs
+
+- [x] 5.1 Template requires screenshot URLs that survive merge/branch deletion (drag-in, or commit-SHA link); branch URLs are banned
+- [x] 5.2 `npm run e2e` writes to gitignored `test-results/` so it never dirties the tree; `npm run e2e:proof` refreshes `docs/screenshots/`
+- [x] 5.3 e2e asserts the stable-URL rule

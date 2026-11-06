@@ -12,6 +12,7 @@
     "lint": "node scripts/version.mjs && tsc --noEmit",
     "test": "node scripts/version.mjs && tsx --test tests/**/*.test.ts tests/**/*.test.tsx",
     "e2e": "node scripts/version.mjs && playwright test",
+    "e2e:proof": "E2E_SHOT_DIR=docs/screenshots node scripts/version.mjs && E2E_SHOT_DIR=docs/screenshots playwright test",
     "version:sync": "node scripts/version.mjs",
     "release:patch": "node scripts/release.mjs patch",
     "release:minor": "node scripts/release.mjs minor",

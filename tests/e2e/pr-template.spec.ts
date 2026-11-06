@@ -5,7 +5,11 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const TEMPLATE = resolve(root, '.github/pull_request_template.md');
-const SHOTS = resolve(root, 'docs/screenshots');
+// Screenshots are not deterministic (they capture live app state), so a normal
+// `npm run e2e` must not touch the committed proof and dirty the tree — that
+// would block the release script. Refresh committed proof deliberately with
+// `npm run e2e:proof`.
+const SHOTS = resolve(root, process.env.E2E_SHOT_DIR || 'test-results/screenshots');
 
 const template = readFileSync(TEMPLATE, 'utf8');
 
@@ -36,10 +40,11 @@ test.describe('pull request template', () => {
     expect(template).toContain('harness-starter-kit');
     expect(template).toContain('Playwright');
     expect(template).toContain('CHANGELOG.md');
-    // Evidence must not be linked by branch name: the URL 404s once the branch
-    // is deleted on merge. Pin it to a commit SHA or a GitHub-uploaded image.
-    expect(template).toContain('never by branch name');
+    // Evidence must stay viewable after the PR closes: a branch URL (feature
+    // branch OR main) breaks, so pin it to a commit SHA or a GitHub-uploaded image.
+    expect(template).toContain('keep working after this PR is merged');
     expect(template).toContain('<full-commit-sha>');
+    expect(template).toContain('user-images.githubusercontent.com');
     // A PR body is filled by an agent: it must tell the agent to close the issue.
     expect(template).toMatch(/Closes #<issue-number>/);
   });
