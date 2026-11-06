@@ -48,6 +48,14 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 
 
+
+## [0.2.39] - 2026-11-06
+
+**Tag:** `v0.2.39` · **Branch:** `main` · **Deployed:** pending
+
+### Features
+- add eleven screened sources to the baked catalogue (e9ea215)
+
 ## [0.2.38] - 2026-11-06
 
 **Tag:** `v0.2.38` · **Branch:** `main` · **Deployed:** 2026-11-06 06:46 UTC (production)
