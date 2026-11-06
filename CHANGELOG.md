@@ -37,6 +37,17 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 
 
+
+## [0.2.28] - 2026-11-06
+
+**Tag:** `v0.2.28` · **Branch:** `main` · **Deployed:** pending
+
+### Fixes
+- stop the daily release colliding on the version tag (907b61e)
+
+### Maintenance
+- refresh the baked catalogue (e1c357a)
+
 ## [0.2.27] - 2026-11-06
 
 **Tag:** `v0.2.27` · **Branch:** `main` · **Deployed:** 2026-11-06 01:59 UTC (production)
