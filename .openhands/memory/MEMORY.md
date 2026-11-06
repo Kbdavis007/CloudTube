@@ -434,3 +434,37 @@ in-app Play button automatically. `SourceFlag` is defined in `src/types/index.ts
   video can be listed under different ids. Older entries carry forward.
 - Raw page dumps (`scrapers/vega/data/vega_pages/`) are git-ignored (HTML is ~4x
   the JSON and regenerated every run); only the built catalogue is committed.
+
+## Vortex = xgroovy, second baked source (v0.2.34, 2026-11-06)
+- **xgroovy is wired as a second source** alongside Vega. Alias/UI name **Vortex**,
+  `SourceFlag` **`XGroovy`** (real host only in the stored embed/page URLs, never
+  rendered). Files: `xg_parse.py` (listing parser), `xg_dates.py` (date resolver),
+  `xgroovy_urls.txt`; `scrape.sh` now takes `[OUTPUT_DIR] [URLS_FILE]`;
+  `vega_build_manifest.py` is source-aware (`--source`, `SOURCES` has both ids,
+  `to_catalog_video(..., source_id)`).
+- **Listing**: `https://xgroovy.com/search/riding-pov/<page>/?sort=new` (omit
+  `<page>` for page 1), 50/page, ~20 pages. `sort=new` IS newest-first. **No dates
+  in the listing and no period filter** (period/added params ignored). Cards:
+  `div.item[data-video-id]` → `a[href]`, `strong.title`, `span.item-quality`,
+  `div.duration` ("11 min"), `div.views` ("922 views"), optional
+  `div.author-link a`. ~40/50 cards have **no author** (user uploads) — that is
+  normal, not a parse miss. The `/ajax/*` and `?mode=async` endpoints return
+  **empty**; there is no JSON API.
+- **Exact date is only on the video page**: JSON-LD `"uploadDate": "…+00:00"`
+  (note: `"uploadDate": "…"` with a space after the colon). `xg_dates.py` reads
+  each video page, writes `{id: isoDate}`, skips ids already dated in `--known`
+  (the committed catalogue), so a daily run fetches only new ids.
+- **xgroovy rate-limits bursts**: concurrency 8 → HTTP 429 (nginx); concurrency
+  2–4 with a small delay is fine. `xg_dates.py` defaults to concurrency 2 +
+  0.1s delay + 429 retry with backoff; 197 ids took ~45s, 0 failures.
+- **Embed**: `https://xgroovy.com/embed/<id>` → 200, **no X-Frame-Options**
+  (framable; kt_player). `/videos/<id>/embed` redirects to the detail page and
+  HAS `X-Frame-Options: SAMEORIGIN` — use `/embed/<id>`.
+- **Pipeline is now two passes** (both append into the one catalogue):
+  `scrape.sh` vega → `scrape.sh` xgroovy → `xg_dates.py` → `build --source vega`
+  → `build --source xgroovy --dates …` → bake `src/data/vegaCatalog.json`.
+  Result: **548 videos = 351 Vega + 197 Vortex**, deduped by canonical pageUrl.
+- **`vega_to_cloudtube.py` has `FLAG_BY_SOURCE`** (id→SourceFlag) that also needs
+  a per-source entry; `userTags` derives from it.
+- Vortex's 4-page window spans ~2 weeks (~50–57 videos/week), so a 7-day window
+  has margin; `xg_dates.py` skips already-dated ids so re-runs are cheap.
