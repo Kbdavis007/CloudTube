@@ -484,3 +484,48 @@ in-app Play button automatically. `SourceFlag` is defined in `src/types/index.ts
   but `/embed/{id}/` returned no player (path unknown).
 - **Rule reinforced:** framable-from-sandbox is NOT sufficient — must re-check
   from the Cloudflare Worker egress (xvideos-proxy / RedGifs lesson).
+
+## Eleven more sources wired (v0.2.39, 2026-11-06)
+- The 11 screened candidates from the survey are now baked sources. Aliases/flags:
+  justporn=Quasar/JustPorn, hornyfap=Nebula/HornyFap, yesporn=Zenith/YesPorn,
+  xxbrits=Pulsar/XXBrits, notfans=Onyx/NotFans, pornlib=Atlas/PornLib,
+  drtuber=Halo/DrTuber, porngo=Prism/PornGo, youjizz=Orbit/YouJizz,
+  anysex=Lumen/AnySex, alotporn=Cinder/AlotPorn. Catalogue 579 -> **1221 videos /
+  13 sources**. Real host only in stored `embedUrl`/`pageUrl`; UI shows the alias.
+- **Parsers** in `scrapers/vega/engine_parse.py`: one card parser per engine family
+  (`_kt_kvs` justporn/yesporn/alotporn, `_kvs_alt` hornyfap/notfans/youjizz,
+  `_xxbrits`, `_pornlib`, `_drtuber`, `_porngo`, `_anysex`), `ENGINES` selector
+  map, `HOST_BY_SOURCE`, and **`RESULTS_SELECTOR`** which scopes parsing to the
+  results grid (`#list_videos_videos_list_search_result_items` on KVS sites,
+  `#search_results` drtuber, `div.thumbs.result` pornlib) — without it sidebar /
+  "related" cards get mixed in (justporn 31->27, drtuber 66->66, pornlib 36->36).
+- **Dates**: `engine_dates.py` reads the detail page (`uploadDate`/`datePublished`/
+  "Published on DD.MM.YYYY"/ISO/relative ago). 9/11 sources yield dates; **drtuber
+  and porngo expose none anywhere** — their entries fall back to the first-seen
+  date, which `vega_build_manifest.py` carries forward from the committed
+  catalogue (keyed by canonical pageUrl), so it is stable across runs.
+- **Pagination differs per site**: KVS family uses **`&from_videos=N`** (NOT
+  `?page=N`, which is ignored); pornlib/porngo use a trailing path segment
+  `/2/`; youjizz uses `?page=N`; drtuber is AJAX-only (single page, 66 results);
+  xxbrits ignores paging params (single page). justporn `?sort_by=post_date` is a
+  no-op (already newest-ish); porngo/anysex/hornyfap/notfans/yesporn honour
+  `sort_by=post_date`.
+- **`scrape.sh` gate** (`looks_like_results`) must recognise each engine's card
+  marker or the run aborts: `div id="video_"`, `data-video-id`, `data-video_id`,
+  `data-videoid`, `data-fav-video-id`, `ch-video` (drtuber's `a.th.ch-video`),
+  `thumb__top` (porngo).
+- **porngo embed quirk**: `https://porngo.com/embed/<id>` 301s to `http://www...`
+  (mixed content). Store the **`https://www.porngo.com/embed/<id>`** form — 200,
+  no XFO, no redirect. All 11 embeds verified 200 + framable from the sandbox.
+- **`vega_to_cloudtube.py` `FLAG_BY_SOURCE`** and the three `Record<SourceFlag,
+  string>` colour maps (VideosPage/SelectedVideoPage/SearchView) must each get the
+  new flags or `tsc` fails. Panel count now sums every catalogue flag
+  (`CATALOG_SOURCES`), not just Vega+XGroovy.
+- Workflow scrapes every source with `|| echo "::warning::…"` so one dead site
+  cannot block the daily refresh (its videos carry forward). Pages/dates caches
+  git-ignored via `scrapers/vega/data/*_pages/` + `*_dates.json`.
+- **`npm run release:patch -- --push` prompts for a GitHub username** (no creds in
+  the sandbox); the commit+tag are still created locally. Push with
+  `git push --atomic "https://${GITHUB_TOKEN}@github.com/Kbdavis007/CloudTube.git"
+  main vX.Y.Z` (or plain `main` for the deploy-record commit). Verify with
+  `curl -s https://ct.devmatrix.top/api/health` (version flips in ~1 min).
