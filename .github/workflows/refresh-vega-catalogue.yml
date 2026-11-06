@@ -66,10 +66,27 @@ jobs:
       - name: Scrape the search pages
         env:
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
-        run: bash scrapers/vega/scrape.sh
+        run: |
+          bash scrapers/vega/scrape.sh scrapers/vega/data/vega_pages scrapers/vega/vega_urls.txt
+          bash scrapers/vega/scrape.sh scrapers/vega/data/xgroovy_pages scrapers/vega/xgroovy_urls.txt
+
+      - name: Resolve the Vortex upload dates
+        # The xgroovy listing carries no upload date, so read it from each video
+        # page. Ids already dated in the committed catalogue are skipped, so a
+        # daily run only fetches the handful that are new.
+        run: |
+          python3 scrapers/vega/xg_dates.py \
+            --out scrapers/vega/data/xgroovy_dates.json \
+            --known scrapers/vega/data/vega_catalog.jsonc \
+            scrapers/vega/data/xgroovy_pages/p*.html
 
       - name: Rebuild the baked catalogue
-        run: python3 scrapers/vega/vega_build_manifest.py scrapers/vega/data/vega_catalog.jsonc scrapers/vega/data/vega_pages/p*.html
+        run: |
+          python3 scrapers/vega/vega_build_manifest.py scrapers/vega/data/vega_catalog.jsonc \
+            --source vega scrapers/vega/data/vega_pages/p*.html
+          python3 scrapers/vega/vega_build_manifest.py scrapers/vega/data/vega_catalog.jsonc \
+            --source xgroovy --dates scrapers/vega/data/xgroovy_dates.json \
+            scrapers/vega/data/xgroovy_pages/p*.html
 
       - name: Bake the catalogue into the app
         run: |

@@ -7,6 +7,7 @@ export type SourceFlag =
   | 'LinkedIn'
   | 'Playlist'
   | 'Vega'
+  | 'XGroovy'
   | 'ArchiveOrg'
   | 'PeerTube'
   | 'Dailymotion'

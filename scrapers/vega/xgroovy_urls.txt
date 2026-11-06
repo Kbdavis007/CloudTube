@@ -1,0 +1,8 @@
+# xgroovy "riding pov" search, newest first, one page per line.
+# The listing has no date filter, so pages are scraped newest-first and the
+# exact upload date is read from each video page (see xg_dates.py). Four pages
+# (~200 results) spans roughly two weeks, comfortably covering the last week.
+https://xgroovy.com/search/riding-pov/?sort=new
+https://xgroovy.com/search/riding-pov/2/?sort=new
+https://xgroovy.com/search/riding-pov/3/?sort=new
+https://xgroovy.com/search/riding-pov/4/?sort=new

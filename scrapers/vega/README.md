@@ -8,34 +8,35 @@ to a display name and a CloudTube `SourceFlag` (see `src/types/index.ts`), which
 is what the library filters on. Adding another source means adding an entry to
 `sources` and emitting records with a matching `sourceId`; nothing else changes.
 
+Two sources are wired: **Vega** (xvideos) and **Vortex** (xgroovy). Both are
+scraped the same way — `scrape.sh` with a per-source URL file — and both parsers
+emit the same record shape, so the builder treats them identically.
+
 ```
-vega_urls.txt ──► curl (Firecrawl fallback) ──► data/vega_pages/pNN.html
-                                            │
-                                            ▼
-                                      vega_parse.py
-                                            │
-                                            ▼
+vega_urls.txt    ──► curl (Firecrawl fallback) ──► data/vega_pages/pNN.html    ──► vega_parse.py
+xgroovy_urls.txt ──► curl (Firecrawl fallback) ──► data/xgroovy_pages/pNN.html ──► xg_parse.py
+                                                          │  (xg_dates.py fills upload dates)
+                                                          ▼
                                   vega_build_manifest.py ──► src/data/vegaCatalog.json
-                                            │
-                                            ▼
+                                                          │
+                                                          ▼
                                    vega_to_cloudtube.py ──► data/vega_cloudtube_backup.jsonc
 ```
 
 ## 1. Scrape
 
-`vega_urls.txt` lists the search-result pages to fetch. `scrape.sh` fetches each
-with `curl` and a browser User-Agent and saves the raw HTML under
-`data/vega_pages/` (one file per page, `p01.html`, `p02.html`, …):
+Each source has a URL file listing the search-result pages to fetch. `scrape.sh`
+takes an output directory and a URL file (defaulting to the Vega pair):
 
 ```bash
-bash scrape.sh                       # all URLs -> data/vega_pages/
-# or a single page:
-curl -sSL -A "Mozilla/5.0 …" "$url" -o data/vega_pages/p01.html
+bash scrape.sh                                  # Vega -> data/vega_pages/
+bash scrape.sh data/xgroovy_pages xgroovy_urls.txt   # Vortex -> data/xgroovy_pages/
 ```
 
-The listing is fetched directly; the raw HTML carries every field the catalogue
-needs, so no rendering service is involved. The pages are intermediates and are
-git-ignored — only the built catalogue is committed.
+It fetches each page with `curl` and a browser User-Agent and saves the raw HTML
+as `p01.html`, `p02.html`, … The listing is fetched directly; the raw HTML carries
+every field the catalogue needs, so no rendering service is involved. The pages
+are intermediates and are git-ignored — only the built catalogue is committed.
 
 If `curl` comes back blocked or without result cards, `scrape.sh` re-fetches
 through the [Firecrawl CLI](https://docs.firecrawl.dev/sdks/cli) and switches to
@@ -44,6 +45,19 @@ that mode is paced (`FIRECRAWL_RATE_LIMIT` / `FIRECRAWL_RATE_WINDOW` override th
 window). Firecrawl caches to `.firecrawl/`, which is also git-ignored. The
 fallback needs the `FIRECRAWL_API_KEY` environment variable; without it only the
 curl path runs.
+
+### Vortex upload dates
+
+The xgroovy listing carries no upload date, so `xg_dates.py` reads the exact
+`uploadDate` from each video's own page and writes a `{id: isoDate}` map. Ids
+already dated in the committed catalogue are skipped, so a daily run only fetches
+the new ones. It is deliberately gentle (concurrency 2, a short delay, retries on
+HTTP 429) because xgroovy rate-limits bursts:
+
+```bash
+python3 xg_dates.py --out data/xgroovy_dates.json \
+  --known data/vega_catalog.jsonc data/xgroovy_pages/p*.html
+```
 
 ### Automated daily refresh
 
@@ -94,11 +108,16 @@ for carrying the same videos into another CloudTube instance.
 ## Layout
 
 ```
-vega_urls.txt              search pages to scrape
-vega_parse.py              HTML or Firecrawl-markdown listing card -> record
-vega_build_manifest.py     records -> baked multi-source catalogue
+vega_urls.txt              Vega search pages to scrape
+xgroovy_urls.txt           Vortex search pages to scrape
+vega_parse.py              Vega listing card (HTML or Firecrawl markdown) -> record
+xg_parse.py                Vortex listing card (HTML) -> record
+xg_dates.py                Vortex video page -> {id: uploadDate} map
+vega_build_manifest.py     records -> baked multi-source catalogue (--source selects parser)
 vega_to_cloudtube.py       catalogue -> CloudTube library backup
-data/vega_pages/           raw scrape dumps (one per page, git-ignored)
+data/vega_pages/           Vega raw scrape dumps (git-ignored)
+data/xgroovy_pages/        Vortex raw scrape dumps (git-ignored)
+data/xgroovy_dates.json    Vortex upload-date cache (git-ignored)
 data/vega_catalog.jsonc    generated catalogue (commented twin)
 data/vega_cloudtube_backup.jsonc  generated CloudTube backup
 data/raw/                  exploratory dumps (home / search / week)

@@ -5,9 +5,14 @@ The catalogue is a single file that can hold videos from any number of sources.
 Each video names its `sourceId`, and the top-level `sources` array maps those ids
 to a display name and the CloudTube `SourceFlag` used for filtering.
 
-Usage: vega_build_manifest.py OUT.jsonc PAGES...
+Usage: vega_build_manifest.py OUT.jsonc PAGES... [--source SOURCE_ID] [--dates DATES.json]
+
 Also writes a strict-JSON twin (same path, .json) for direct import.
+
+Pages are appended to whatever is already in OUT, so running once per source
+merges every source into the one file. Dedupe is by canonical page URL.
 """
+import argparse
 import json
 import re
 import sys
@@ -15,7 +20,6 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from vega_parse import parse_page  # noqa: E402
 
 AGO = re.compile(r"(?:(\d+)\s*(minute|hour|day|week|month)s?|a\s+(minute|hour|day|week|month))")
 
@@ -23,7 +27,19 @@ AGO = re.compile(r"(?:(\d+)\s*(minute|hour|day|week|month)s?|a\s+(minute|hour|da
 # CloudTube's src/types/index.ts so the library can filter by source.
 SOURCES = [
     {"id": "vega", "name": "Vega", "flag": "Vega", "tagline": "Web catalogue"},
+    {"id": "xgroovy", "name": "Vortex", "flag": "XGroovy", "tagline": "Web catalogue"},
 ]
+
+# How each source's pages are parsed. Both parsers return the same record shape,
+# so everything downstream is source-agnostic.
+def _parse_source(source_id: str, path, dates: dict | None = None) -> list[dict]:
+    if source_id == "xgroovy":
+        from xg_parse import parse_page as parse_xg
+
+        return parse_xg(path, dates)
+    from vega_parse import parse_page as parse_vega
+
+    return parse_vega(path)
 
 
 def canonical_url(url: str) -> str:
@@ -54,16 +70,19 @@ def approx_date(ago: str, now: datetime) -> str:
     return (now - delta).date().isoformat()
 
 
-def to_catalog_video(v: dict, now: datetime) -> dict:
+def to_catalog_video(v: dict, now: datetime, source_id: str) -> dict:
     uploader = (v.get("channel") or "").strip()
     quality = v.get("quality") or ""
+    # xgroovy carries an exact ISO date from the video page; vega only a relative
+    # age ("3 days ago"), which is approximated.
+    published = v.get("publishedDate") or approx_date(v.get("uploadedAgo") or "", now)
     return {
-        "sourceId": "vega",
+        "sourceId": source_id,
         "sourceVideoId": v["id"],
         "title": v["title"],
         "description": " · ".join(p for p in [quality, uploader] if p),
         "tags": ["riding pov"],
-        # The listing exposes neither cast nor category; left empty rather than guessed.
+        # The listings expose neither cast nor category; left empty rather than guessed.
         "actors": [],
         "category": "",
         "quality": quality,
@@ -73,7 +92,7 @@ def to_catalog_video(v: dict, now: datetime) -> dict:
         "embedUrl": v["embedUrl"],
         "pageUrl": canonical_url(v["watchUrl"]),
         "uploader": uploader,
-        "publishedDate": approx_date(v["uploadedAgo"], now),
+        "publishedDate": published,
         "viewCount": v.get("views") or 0,
         "isPremium": False,
     }
@@ -126,19 +145,32 @@ def load_existing(path: Path) -> list[dict]:
 
 
 def main() -> None:
-    out = Path(sys.argv[1])
-    pages = [Path(p) for p in sys.argv[2:]]
+    ap = argparse.ArgumentParser()
+    ap.add_argument("out")
+    ap.add_argument("pages", nargs="+")
+    ap.add_argument("--source", default="vega", help="which parser to use for the pages")
+    ap.add_argument("--dates", help="xgroovy {id: isoDate} map to merge in")
+    args = ap.parse_args()
+
+    out = Path(args.out)
+    pages = [Path(p) for p in args.pages]
     now = datetime.now(timezone.utc)
     existing = load_existing(out)
     existing_keys = {(e.get("pageUrl") or e.get("sourceVideoId")) for e in existing}
+
+    dates = {}
+    if args.dates:
+        from xg_parse import load_dates
+
+        dates = load_dates(args.dates)
 
     # New scrapes first, then the videos already in the catalogue, so the fresh
     # listing wins any field that changed and older entries are carried forward
     # rather than dropped.
     fresh: list[dict] = []
     for p in pages:
-        for v in parse_page(p):
-            fresh.append(to_catalog_video(v, now))
+        for v in _parse_source(args.source, p, dates):
+            fresh.append(to_catalog_video(v, now, args.source))
 
     merged: list[dict] = []
     seen: set[str] = set()

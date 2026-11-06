@@ -137,7 +137,9 @@ const useSourceStats = (isYouTubeConnected: boolean) => {
       setStats({
         search: { videoCount: countByFlag('YouTubeSearch'), connected: isYouTubeConnected },
         vega: {
-          videoCount: countByFlag('Vega'),
+          // The built-in catalogue holds several sources (Vega, Vortex); count
+          // everything saved from it, not just one flag.
+          videoCount: countByFlag('Vega') + countByFlag('XGroovy'),
           connected: catalogCount > 0,
           detail: `${catalogCount.toLocaleString()} in catalogue`,
         },

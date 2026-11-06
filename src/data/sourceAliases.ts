@@ -9,6 +9,7 @@ import type { SourceFlag } from '../types';
  */
 export const SOURCE_ALIASES: Partial<Record<SourceFlag, string>> = {
   Vega: 'Vega',
+  XGroovy: 'Vortex',
   Eporner: 'Aurora',
   EmbedHub: 'Ember',
   RedGifs: 'Flicker',

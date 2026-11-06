@@ -17,7 +17,7 @@ from pathlib import Path
 NAMESPACE = uuid.NAMESPACE_URL
 
 # CloudTube SourceFlag per catalogue source id (see src/types/index.ts).
-FLAG_BY_SOURCE = {"vega": "Vega"}
+FLAG_BY_SOURCE = {"vega": "Vega", "xgroovy": "XGroovy"}
 
 
 def to_iso_duration(seconds: int) -> str:
@@ -65,7 +65,7 @@ def to_video(v: dict, now: str) -> dict:
             "indexScore": 50,
             "userRating": 70,
             "userNotes": "",
-            "userTags": ["Vega-Imported"],
+            "userTags": [f"{FLAG_BY_SOURCE.get(v['sourceId'], 'Vega')}-Imported"],
         },
     }
 

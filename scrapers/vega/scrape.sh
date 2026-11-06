@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
-# Fetch the search pages in vega_urls.txt into data/vega_pages/.
+# Fetch the search pages listed in a URL file into an output directory.
 #
-#   bash scrapers/vega/scrape.sh [OUTPUT_DIR]
+#   bash scrapers/vega/scrape.sh [OUTPUT_DIR] [URLS_FILE]
+#
+# Defaults to the Vega pages (data/vega_pages, vega_urls.txt); pass a different
+# pair for another source, e.g. data/xgroovy_pages xgroovy_urls.txt.
 #
 # Each URL becomes pNN.html. curl is tried first with a browser User-Agent; if a
 # page comes back blocked or without any results, it is re-fetched through the
@@ -15,7 +18,7 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUT="${1:-$HERE/data/vega_pages}"
-URLS="$HERE/vega_urls.txt"
+URLS="${2:-$HERE/vega_urls.txt}"
 ATTEMPTS=3
 CURL_GAP=1
 FC_RATE_LIMIT="${FIRECRAWL_RATE_LIMIT:-10}"    # requests allowed per window
@@ -31,8 +34,11 @@ have_firecrawl() {
   command -v firecrawl >/dev/null 2>&1 && [ -n "${FIRECRAWL_API_KEY:-}" ]
 }
 
-# A usable page is an xvideos results listing, so it must contain result cards.
-looks_like_results() { grep -q 'div id="video_' "$1" 2>/dev/null; }
+# A usable page is a results listing: xvideos uses `div id="video_<eid>"` cards,
+# xgroovy uses `data-video-id` attributes. Either marker means the page rendered.
+looks_like_results() {
+  grep -q -e 'div id="video_' -e 'data-video-id="' "$1" 2>/dev/null
+}
 
 curl_fetch() {  # url dest
   local url=$1 dest=$2 code

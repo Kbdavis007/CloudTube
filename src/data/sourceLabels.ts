@@ -15,6 +15,7 @@ export const SOURCE_FLAG_LABELS: Record<SourceFlag, string> = {
   LinkedIn: 'LinkedIn',
   Playlist: 'Playlist',
   Vega: SOURCE_ALIASES.Vega!,
+  XGroovy: SOURCE_ALIASES.XGroovy!,
   ArchiveOrg: 'Archive.org',
   PeerTube: 'PeerTube',
   Dailymotion: 'Dailymotion',
