@@ -45,7 +45,7 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 ## [0.2.33] - 2026-11-06
 
-**Tag:** `v0.2.33` · **Branch:** `main` · **Deployed:** pending
+**Tag:** `v0.2.33` · **Branch:** `main` · **Deployed:** 2026-11-06 02:47 UTC (production)
 
 ### Documentation
 - record v0.2.31 ship and the curl-first scraper notes (a6e0c5e)
