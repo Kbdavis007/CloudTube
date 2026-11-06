@@ -67,14 +67,47 @@ jobs:
         env:
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
         run: |
-          bash scrapers/vega/scrape.sh scrapers/vega/data/vega_pages scrapers/vega/vega_urls.txt
-          bash scrapers/vega/scrape.sh scrapers/vega/data/xgroovy_pages scrapers/vega/xgroovy_urls.txt
+          # "source:outdir:urlsfile" per wired source. A source that fails to
+          # fetch is skipped (its videos stay in the catalogue, carried
+          # forward), so one flaky site cannot block the whole daily refresh.
+          sources=(
+            "vega:vega_pages:vega_urls.txt"
+            "xgroovy:xgroovy_pages:xgroovy_urls.txt"
+            "justporn:justporn_pages:justporn_urls.txt"
+            "hornyfap:hornyfap_pages:hornyfap_urls.txt"
+            "yesporn:yesporn_pages:yesporn_urls.txt"
+            "xxbrits:xxbrits_pages:xxbrits_urls.txt"
+            "notfans:notfans_pages:notfans_urls.txt"
+            "pornlib:pornlib_pages:pornlib_urls.txt"
+            "drtuber:drtuber_pages:drtuber_urls.txt"
+            "porngo:porngo_pages:porngo_urls.txt"
+            "youjizz:youjizz_pages:youjizz_urls.txt"
+            "anysex:anysex_pages:anysex_urls.txt"
+            "alotporn:alotporn_pages:alotporn_urls.txt"
+          )
+          for entry in "${sources[@]}"; do
+            IFS=: read -r src outdir urls <<<"$entry"
+            echo "::group::scrape $src"
+            bash scrapers/vega/scrape.sh "scrapers/vega/data/$outdir" "scrapers/vega/$urls" \
+              || echo "::warning::scrape failed for $src; its catalogue entries are carried forward"
+            echo "::endgroup::"
+          done
 
-      - name: Resolve the Vortex upload dates
-        # The xgroovy listing carries no upload date, so read it from each video
-        # page. Ids already dated in the committed catalogue are skipped, so a
-        # daily run only fetches the handful that are new.
+      - name: Resolve exact upload dates
+        # Listings mostly carry no date, so read `uploadDate` from each video's
+        # own page. Ids already dated in the committed catalogue are skipped, so
+        # a daily run only fetches the handful that are new. drtuber and porngo
+        # expose no date anywhere, so they are left out (their entries fall back
+        # to the day they were first catalogued).
         run: |
+          for src in justporn hornyfap yesporn xxbrits notfans pornlib youjizz anysex alotporn; do
+            pages=(scrapers/vega/data/${src}_pages/p*.html)
+            [ -e "${pages[0]}" ] || { echo "no pages for $src; skipping dates"; continue; }
+            python3 scrapers/vega/engine_dates.py --source "$src" \
+              --out "scrapers/vega/data/${src}_dates.json" \
+              --known scrapers/vega/data/vega_catalog.jsonc \
+              "${pages[@]}" || echo "::warning::date resolution failed for $src"
+          done
           python3 scrapers/vega/xg_dates.py \
             --out scrapers/vega/data/xgroovy_dates.json \
             --known scrapers/vega/data/vega_catalog.jsonc \
@@ -87,6 +120,15 @@ jobs:
           python3 scrapers/vega/vega_build_manifest.py scrapers/vega/data/vega_catalog.jsonc \
             --source xgroovy --dates scrapers/vega/data/xgroovy_dates.json \
             scrapers/vega/data/xgroovy_pages/p*.html
+          for src in justporn hornyfap yesporn xxbrits notfans pornlib drtuber porngo youjizz anysex alotporn; do
+            pages=(scrapers/vega/data/${src}_pages/p*.html)
+            [ -e "${pages[0]}" ] || { echo "no pages for $src; skipping build"; continue; }
+            dates="scrapers/vega/data/${src}_dates.json"
+            date_args=()
+            [ -f "$dates" ] && date_args=(--dates "$dates")
+            python3 scrapers/vega/vega_build_manifest.py scrapers/vega/data/vega_catalog.jsonc \
+              --source "$src" "${date_args[@]}" "${pages[@]}"
+          done
 
       - name: Bake the catalogue into the app
         run: |

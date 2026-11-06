@@ -17,7 +17,21 @@ from pathlib import Path
 NAMESPACE = uuid.NAMESPACE_URL
 
 # CloudTube SourceFlag per catalogue source id (see src/types/index.ts).
-FLAG_BY_SOURCE = {"vega": "Vega", "xgroovy": "XGroovy"}
+FLAG_BY_SOURCE = {
+    "vega": "Vega",
+    "xgroovy": "XGroovy",
+    "justporn": "JustPorn",
+    "hornyfap": "HornyFap",
+    "yesporn": "YesPorn",
+    "xxbrits": "XXBrits",
+    "notfans": "NotFans",
+    "pornlib": "PornLib",
+    "drtuber": "DrTuber",
+    "porngo": "PornGo",
+    "youjizz": "YouJizz",
+    "anysex": "AnySex",
+    "alotporn": "AlotPorn",
+}
 
 
 def to_iso_duration(seconds: int) -> str:

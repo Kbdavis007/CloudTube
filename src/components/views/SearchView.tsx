@@ -106,6 +106,17 @@ export const SearchView: React.FC<SearchViewProps> = ({
     Pornhub: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
     Xhamster: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
     Redtube: 'bg-red-600/20 text-red-300 border-red-600/30',
+    JustPorn: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+    HornyFap: 'bg-lime-500/20 text-lime-300 border-lime-500/30',
+    YesPorn: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+    XXBrits: 'bg-green-600/20 text-green-300 border-green-600/30',
+    NotFans: 'bg-slate-500/20 text-slate-300 border-slate-500/30',
+    PornLib: 'bg-blue-700/20 text-blue-300 border-blue-700/40',
+    DrTuber: 'bg-indigo-600/20 text-indigo-300 border-indigo-600/40',
+    PornGo: 'bg-purple-600/20 text-purple-300 border-purple-600/40',
+    YouJizz: 'bg-fuchsia-600/20 text-fuchsia-300 border-fuchsia-600/40',
+    AnySex: 'bg-rose-600/20 text-rose-300 border-rose-600/40',
+    AlotPorn: 'bg-amber-700/20 text-amber-300 border-amber-700/40',
   };
 
   // Reflect changes made in Settings (or another tab) without a reload.
@@ -348,6 +359,17 @@ export const SearchView: React.FC<SearchViewProps> = ({
                 'Pornhub',
                 'Xhamster',
                 'Redtube',
+                'JustPorn',
+                'HornyFap',
+                'YesPorn',
+                'XXBrits',
+                'NotFans',
+                'PornLib',
+                'DrTuber',
+                'PornGo',
+                'YouJizz',
+                'AnySex',
+                'AlotPorn',
               ] as SourceFlag[]
             ).map((flag) => {
               const count = combinedResults.filter((r) => r.sourceFlags.includes(flag)).length;

@@ -1,0 +1,5 @@
+# porngo "riding pov" search, newest first. Page number is the trailing path
+# segment; ~10 results per page.
+https://porngo.com/search/riding+pov/?sort_by=post_date
+https://porngo.com/search/riding+pov/2/?sort_by=post_date
+https://porngo.com/search/riding+pov/3/?sort_by=post_date

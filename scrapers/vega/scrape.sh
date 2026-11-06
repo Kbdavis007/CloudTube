@@ -34,10 +34,21 @@ have_firecrawl() {
   command -v firecrawl >/dev/null 2>&1 && [ -n "${FIRECRAWL_API_KEY:-}" ]
 }
 
-# A usable page is a results listing: xvideos uses `div id="video_<eid>"` cards,
-# xgroovy uses `data-video-id` attributes. Either marker means the page rendered.
+# A usable page is a results listing. The markers below cover every wired
+# source: xvideos uses `div id="video_<eid>"`, the KVS family (xgroovy, justporn,
+# hornyfap, yesporn, xxbrits, notfans, anysex) sets a `data-video-id`-style
+# attribute, pornlib/drtuber use `data-video_id`, youjizz uses `data-videoid`,
+# and porngo's cards carry a `thumb__top` link. Any one of them means the page
+# rendered.
 looks_like_results() {
-  grep -q -e 'div id="video_' -e 'data-video-id="' "$1" 2>/dev/null
+  grep -q -e 'div id="video_' \
+          -e 'data-video-id' \
+          -e 'data-video_id' \
+          -e 'data-videoid' \
+          -e 'data-fav-video-id' \
+          -e 'ch-video' \
+          -e 'thumb__top' \
+          "$1" 2>/dev/null
 }
 
 curl_fetch() {  # url dest

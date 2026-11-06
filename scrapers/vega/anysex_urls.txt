@@ -1,0 +1,4 @@
+# anysex "riding pov" search, newest first. KVS pagination via from_videos=N;
+# ~50 results per page.
+https://anysex.com/search/?q=riding+pov&sort_by=post_date
+https://anysex.com/search/?q=riding+pov&sort_by=post_date&from_videos=2

@@ -1,0 +1,3 @@
+# drtuber "riding pov" search. Large first page (~66) and its paging is
+# JS/AJAX-only, so a single page is scraped.
+https://drtuber.com/search/riding+pov/

@@ -29,3 +29,8 @@ scrapers/vega/data/vega_pages/
 # xgroovy scrape dumps + date cache (regenerated every run)
 scrapers/vega/data/xgroovy_pages/
 scrapers/vega/data/xgroovy_dates.json
+
+# The eleven added sources' scrape dumps + date caches (regenerated every run).
+# Only the built catalogue (data/vega_catalog.jsonc) is committed.
+scrapers/vega/data/*_pages/
+scrapers/vega/data/*_dates.json

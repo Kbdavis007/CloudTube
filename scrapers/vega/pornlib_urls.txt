@@ -1,0 +1,5 @@
+# pornlib "riding pov" search. Page number is the trailing path segment; ~36 per
+# page. The listing carries no date, so engine_dates.py reads each video page.
+https://pornlib.com/search/videos/riding+pov
+https://pornlib.com/search/videos/riding+pov/2
+https://pornlib.com/search/videos/riding+pov/3

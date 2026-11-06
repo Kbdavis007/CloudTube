@@ -1,0 +1,6 @@
+# justporn "riding pov" search, one page per line.
+# The listing carries exact upload dates, so no detail-page pass is needed.
+# /search/{q}/{n}/ paginates; ~27 results per page.
+https://justporn.com/search/riding+pov/
+https://justporn.com/search/riding+pov/2/
+https://justporn.com/search/riding+pov/3/

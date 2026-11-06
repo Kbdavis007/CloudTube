@@ -1,0 +1,3 @@
+# alotporn "riding pov" search. A thin long-tail archive for multi-word queries
+# (only a couple of hits), so a single page.
+https://alotporn.com/search?q=riding+pov

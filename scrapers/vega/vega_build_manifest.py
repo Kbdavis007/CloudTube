@@ -28,15 +28,38 @@ AGO = re.compile(r"(?:(\d+)\s*(minute|hour|day|week|month)s?|a\s+(minute|hour|da
 SOURCES = [
     {"id": "vega", "name": "Vega", "flag": "Vega", "tagline": "Web catalogue"},
     {"id": "xgroovy", "name": "Vortex", "flag": "XGroovy", "tagline": "Web catalogue"},
+    {"id": "justporn", "name": "Quasar", "flag": "JustPorn", "tagline": "Web catalogue"},
+    {"id": "hornyfap", "name": "Nebula", "flag": "HornyFap", "tagline": "Web catalogue"},
+    {"id": "yesporn", "name": "Zenith", "flag": "YesPorn", "tagline": "Web catalogue"},
+    {"id": "xxbrits", "name": "Pulsar", "flag": "XXBrits", "tagline": "Web catalogue"},
+    {"id": "notfans", "name": "Onyx", "flag": "NotFans", "tagline": "Web catalogue"},
+    {"id": "pornlib", "name": "Atlas", "flag": "PornLib", "tagline": "Web catalogue"},
+    {"id": "drtuber", "name": "Halo", "flag": "DrTuber", "tagline": "Web catalogue"},
+    {"id": "porngo", "name": "Prism", "flag": "PornGo", "tagline": "Web catalogue"},
+    {"id": "youjizz", "name": "Orbit", "flag": "YouJizz", "tagline": "Web catalogue"},
+    {"id": "anysex", "name": "Lumen", "flag": "AnySex", "tagline": "Web catalogue"},
+    {"id": "alotporn", "name": "Cinder", "flag": "AlotPorn", "tagline": "Web catalogue"},
 ]
 
-# How each source's pages are parsed. Both parsers return the same record shape,
+# Sources handled by the shared engine_parse.py (everything except the two
+# original, hand-written parsers).
+ENGINE_SOURCES = {
+    "justporn", "hornyfap", "yesporn", "xxbrits", "notfans",
+    "pornlib", "drtuber", "porngo", "youjizz", "anysex", "alotporn",
+}
+
+
+# How each source's pages are parsed. All parsers return the same record shape,
 # so everything downstream is source-agnostic.
 def _parse_source(source_id: str, path, dates: dict | None = None) -> list[dict]:
     if source_id == "xgroovy":
         from xg_parse import parse_page as parse_xg
 
         return parse_xg(path, dates)
+    if source_id in ENGINE_SOURCES:
+        from engine_parse import parse_page as parse_engine
+
+        return parse_engine(source_id, path, dates)
     from vega_parse import parse_page as parse_vega
 
     return parse_vega(path)
@@ -70,12 +93,19 @@ def approx_date(ago: str, now: datetime) -> str:
     return (now - delta).date().isoformat()
 
 
-def to_catalog_video(v: dict, now: datetime, source_id: str) -> dict:
+def to_catalog_video(v: dict, now: datetime, source_id: str, fallback_date: str = "") -> dict:
     uploader = (v.get("channel") or "").strip()
     quality = v.get("quality") or ""
-    # xgroovy carries an exact ISO date from the video page; vega only a relative
-    # age ("3 days ago"), which is approximated.
-    published = v.get("publishedDate") or approx_date(v.get("uploadedAgo") or "", now)
+    # Most sources carry an exact ISO date from the video page; vega only a
+    # relative age ("3 days ago"), which is approximated. A few (drtuber,
+    # porngo) expose neither, so they fall back to the day we first catalogued
+    # them — carried forward on later runs, so the value is stable.
+    published = (
+        v.get("publishedDate")
+        or approx_date(v.get("uploadedAgo") or "", now)
+        or fallback_date
+        or now.date().isoformat()
+    )
     return {
         "sourceId": source_id,
         "sourceVideoId": v["id"],
@@ -86,7 +116,7 @@ def to_catalog_video(v: dict, now: datetime, source_id: str) -> dict:
         "actors": [],
         "category": "",
         "quality": quality,
-        "durationSeconds": v["durationSeconds"],
+        "durationSeconds": v.get("durationSeconds") or 0,
         "thumbnail": v["thumbnail"],
         "previewThumbnail": v["thumbnail"],
         "embedUrl": v["embedUrl"],
@@ -164,13 +194,24 @@ def main() -> None:
 
         dates = load_dates(args.dates)
 
+    # Dates already committed for this source, keyed by page URL, so a video the
+    # listing exposes no date for keeps the day we first catalogued it.
+    carried_dates = {
+        (e.get("pageUrl") or e.get("sourceVideoId")): e["publishedDate"]
+        for e in existing
+        if e.get("sourceId") == args.source and e.get("publishedDate")
+    }
+
     # New scrapes first, then the videos already in the catalogue, so the fresh
     # listing wins any field that changed and older entries are carried forward
     # rather than dropped.
     fresh: list[dict] = []
     for p in pages:
         for v in _parse_source(args.source, p, dates):
-            fresh.append(to_catalog_video(v, now, args.source))
+            key = canonical_url(v["watchUrl"])
+            fresh.append(
+                to_catalog_video(v, now, args.source, carried_dates.get(key, ""))
+            )
 
     merged: list[dict] = []
     seen: set[str] = set()

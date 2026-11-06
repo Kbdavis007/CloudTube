@@ -1,0 +1,4 @@
+# notfans "riding pov" search, newest first. KVS pagination via from_videos=N.
+https://notfans.com/search/riding+pov/?sort_by=post_date
+https://notfans.com/search/riding+pov/?sort_by=post_date&from_videos=2
+https://notfans.com/search/riding+pov/?sort_by=post_date&from_videos=3

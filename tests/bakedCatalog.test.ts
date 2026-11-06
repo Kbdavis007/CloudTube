@@ -7,16 +7,52 @@ import {
   catalogToVideoMetadata,
   loadBakedCatalog,
 } from '../src/services/vegaApi';
+import { SOURCE_ALIASES } from '../src/data/sourceAliases';
+import { sourceFlagLabel } from '../src/data/sourceLabels';
 
 const catalog = loadBakedCatalog();
 
 test('the baked catalogue carries every wired source', () => {
   const ids = CATALOG_SOURCES.map((s) => s.id);
-  assert.ok(ids.includes('vega'), 'vega source is registered');
-  assert.ok(ids.includes('xgroovy'), 'xgroovy source is registered');
+  for (const id of [
+    'vega',
+    'xgroovy',
+    'justporn',
+    'hornyfap',
+    'yesporn',
+    'xxbrits',
+    'notfans',
+    'pornlib',
+    'drtuber',
+    'porngo',
+    'youjizz',
+    'anysex',
+    'alotporn',
+  ]) {
+    assert.ok(ids.includes(id), `${id} source is registered`);
+  }
   for (const source of CATALOG_SOURCES) {
     assert.ok(source.name.length > 0, `${source.id} has a display name`);
     assert.ok(source.flag.length > 0, `${source.id} has a SourceFlag`);
+  }
+});
+
+test('every catalogue source is aliased and labelled', () => {
+  for (const source of CATALOG_SOURCES) {
+    assert.ok(
+      SOURCE_ALIASES[source.flag],
+      `${source.id} (${source.flag}) has a cryptic alias`
+    );
+    assert.equal(
+      sourceFlagLabel(source.flag),
+      SOURCE_ALIASES[source.flag],
+      `${source.id} renders under its alias, not its real name`
+    );
+    // The rendered label must be a bare cryptic name, never a host or URL.
+    assert.ok(
+      !/[./]/.test(sourceFlagLabel(source.flag)),
+      `${source.id} renders a bare alias, not a host`
+    );
   }
 });
 

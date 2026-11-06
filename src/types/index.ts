@@ -16,7 +16,18 @@ export type SourceFlag =
   | 'RedGifs'
   | 'Pornhub'
   | 'Xhamster'
-  | 'Redtube';
+  | 'Redtube'
+  | 'JustPorn'
+  | 'HornyFap'
+  | 'YesPorn'
+  | 'XXBrits'
+  | 'NotFans'
+  | 'PornLib'
+  | 'DrTuber'
+  | 'PornGo'
+  | 'YouJizz'
+  | 'AnySex'
+  | 'AlotPorn';
 
 /**
  * Where a video can be played. YouTube videos derive their embed URL from

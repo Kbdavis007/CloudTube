@@ -25,6 +25,17 @@ export const SOURCE_FLAG_LABELS: Record<SourceFlag, string> = {
   Pornhub: SOURCE_ALIASES.Pornhub!,
   Xhamster: SOURCE_ALIASES.Xhamster!,
   Redtube: SOURCE_ALIASES.Redtube!,
+  JustPorn: SOURCE_ALIASES.JustPorn!,
+  HornyFap: SOURCE_ALIASES.HornyFap!,
+  YesPorn: SOURCE_ALIASES.YesPorn!,
+  XXBrits: SOURCE_ALIASES.XXBrits!,
+  NotFans: SOURCE_ALIASES.NotFans!,
+  PornLib: SOURCE_ALIASES.PornLib!,
+  DrTuber: SOURCE_ALIASES.DrTuber!,
+  PornGo: SOURCE_ALIASES.PornGo!,
+  YouJizz: SOURCE_ALIASES.YouJizz!,
+  AnySex: SOURCE_ALIASES.AnySex!,
+  AlotPorn: SOURCE_ALIASES.AlotPorn!,
 };
 
 export const sourceFlagLabel = (flag: SourceFlag): string =>

@@ -16,7 +16,7 @@ import type { PageTab } from './Sidebar';
 import type { SourceFlag } from '../types';
 import { SOURCE_ALIASES } from '../data/sourceAliases';
 import { idbService } from '../services/indexedDB';
-import { countBakedCatalog } from '../services/vegaApi';
+import { CATALOG_SOURCES, countBakedCatalog } from '../services/vegaApi';
 
 export interface VideoSourceDefinition {
   /** Doubles as the tab the source opens. */
@@ -133,13 +133,15 @@ const useSourceStats = (isYouTubeConnected: boolean) => {
       const catalogCount = countBakedCatalog();
       const countByFlag = (flag: SourceFlag) =>
         videos.filter((v) => (v.sourceFlags || []).includes(flag)).length;
+      // The baked catalogue carries every wired source (Vega, Vortex, and the
+      // newer ones), so count a saved video as "from the catalogue" when its
+      // flag is one the catalogue declares.
+      const catalogFlags = CATALOG_SOURCES.map((s) => s.flag);
 
       setStats({
         search: { videoCount: countByFlag('YouTubeSearch'), connected: isYouTubeConnected },
         vega: {
-          // The built-in catalogue holds several sources (Vega, Vortex); count
-          // everything saved from it, not just one flag.
-          videoCount: countByFlag('Vega') + countByFlag('XGroovy'),
+          videoCount: catalogFlags.reduce((sum, flag) => sum + countByFlag(flag), 0),
           connected: catalogCount > 0,
           detail: `${catalogCount.toLocaleString()} in catalogue`,
         },

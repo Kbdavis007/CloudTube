@@ -1,0 +1,4 @@
+# yesporn "riding pov" search, newest first. KVS pagination via from_videos=N.
+https://yesporn.vip/search/riding+pov/?sort_by=post_date
+https://yesporn.vip/search/riding+pov/?sort_by=post_date&from_videos=2
+https://yesporn.vip/search/riding+pov/?sort_by=post_date&from_videos=3
