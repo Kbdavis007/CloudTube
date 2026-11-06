@@ -468,3 +468,19 @@ in-app Play button automatically. `SourceFlag` is defined in `src/types/index.ts
   a per-source entry; `userTags` derives from it.
 - Vortex's 4-page window spans ~2 weeks (~50–57 videos/week), so a 7-day window
   has margin; `xg_dates.py` skips already-dated ids so re-runs are cheap.
+
+## Source discovery survey (v0.2.37, 2026-11-06)
+- Findings live in `docs/SOURCE_DISCOVERY.md`. Method: probe a search URL, confirm
+  results change for a second query, open a detail page, extract the real embed,
+  check `X-Frame-Options`/CSP `frame-ancestors` + a player marker.
+- **Web-search notes:** Tavily quota exhausted; DDG/Mojeek block scraping; **Bing
+  via curl works** (`bing.com/search?q=`, parse `<cite>`) but censors adult
+  queries. `theporndude.com/` is a good tube-domain source.
+- **11 framable, query-filtering candidates:** justporn.com (only one with exact
+  dates in the listing), hornyfap.tv, xxbrits.com, yesporn.vip, notfans.com,
+  pornlib.com, drtuber.com, porngo.com, youjizz.com (`/videos/embed/{id}`),
+  anysex.com, alotporn.com (thin for multi-word queries). 3movs.com is framable
+  but ignores the query. KVS family (hclips/txxx/upornia/voyeurhit) search works
+  but `/embed/{id}/` returned no player (path unknown).
+- **Rule reinforced:** framable-from-sandbox is NOT sufficient — must re-check
+  from the Cloudflare Worker egress (xvideos-proxy / RedGifs lesson).
