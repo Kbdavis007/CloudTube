@@ -47,6 +47,14 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 
 
+
+## [0.2.38] - 2026-11-06
+
+**Tag:** `v0.2.38` · **Branch:** `main` · **Deployed:** pending
+
+### Documentation
+- record the source discovery survey notes (bc7b9f4)
+
 ## [0.2.37] - 2026-11-06
 
 **Tag:** `v0.2.37` · **Branch:** `main` · **Deployed:** 2026-11-06 06:45 UTC (production)
