@@ -50,6 +50,14 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 
 
+
+## [0.2.41] - 2026-11-06
+
+**Tag:** `v0.2.41` · **Branch:** `main` · **Deployed:** pending
+
+### Documentation
+- plan the client-side video editor in four phases (76d0773)
+
 ## [0.2.40] - 2026-11-06
 
 **Tag:** `v0.2.40` · **Branch:** `main` · **Deployed:** 2026-11-06 07:54 UTC (production)
