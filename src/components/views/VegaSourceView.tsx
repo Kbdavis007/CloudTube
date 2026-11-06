@@ -2,6 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { Check, ExternalLink, Play, Plus, Search, ShieldAlert } from 'lucide-react';
 import { VideoMetadata } from '../../types';
 import { SOURCE_ALIASES } from '../../data/sourceAliases';
+import { HoverPreview } from '../HoverPreview';
+import { hoverPreviewEmbedUrl } from '../../services/preview';
 import {
   CATALOG_GENERATED_AT,
   CATALOG_SOURCES,
@@ -17,7 +19,7 @@ const SOURCE_NAME = SOURCE_ALIASES.Vega!;
 
 interface VegaSourceViewProps {
   onIndexVideo: (video: VideoMetadata) => void;
-  /** Indexes the video if needed, then opens it in the player. */
+  /** Opens the video in the player; watching it does not add it to the library. */
   onPlayVideo: (video: VideoMetadata) => void;
   indexedVideoIds: Set<string>;
 }
@@ -119,6 +121,7 @@ export const VegaSourceView: React.FC<VegaSourceViewProps> = ({
             const key = catalogKey(record);
             const isIndexed = indexedVideoIds.has(key);
             const thumb = record.thumbnail || record.previewThumbnail;
+            const video = catalogToVideoMetadata(record);
 
             return (
               <div
@@ -127,28 +130,30 @@ export const VegaSourceView: React.FC<VegaSourceViewProps> = ({
               >
                 <div className="relative aspect-video w-full bg-slate-950 overflow-hidden">
                   {thumb ? (
-                    <img
-                      src={thumb}
+                    <HoverPreview
+                      poster={thumb}
                       alt={record.title}
-                      loading="lazy"
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                    />
+                      embedUrl={hoverPreviewEmbedUrl(video)}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80 pointer-events-none" />
+
+                      {/* The play overlay is a child of the preview, so resting
+                          the pointer here still starts the preview. */}
+                      <button
+                        onClick={() => onPlayVideo(video)}
+                        className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition bg-black/40"
+                        title="Play without saving"
+                      >
+                        <div className="w-12 h-12 rounded-full bg-orange-600 flex items-center justify-center text-white shadow-xl hover:scale-110 transition">
+                          <Play className="w-6 h-6 fill-current ml-0.5" />
+                        </div>
+                      </button>
+                    </HoverPreview>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-slate-600">
                       <Play className="w-6 h-6" />
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80" />
-
-                  <button
-                    onClick={() => onPlayVideo(catalogToVideoMetadata(record))}
-                    className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition bg-black/40"
-                    title="Add to library and play"
-                  >
-                    <div className="w-12 h-12 rounded-full bg-orange-600 flex items-center justify-center text-white shadow-xl hover:scale-110 transition">
-                      <Play className="w-6 h-6 fill-current ml-0.5" />
-                    </div>
-                  </button>
 
                   <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-black/80 font-mono text-[11px] font-semibold text-white">
                     {Math.floor(record.durationSeconds / 60)}:
@@ -181,7 +186,7 @@ export const VegaSourceView: React.FC<VegaSourceViewProps> = ({
 
                   <div className="pt-2 flex items-center gap-2 border-t border-slate-800/80">
                     <button
-                      onClick={() => onIndexVideo(catalogToVideoMetadata(record))}
+                      onClick={() => onIndexVideo(video)}
                       disabled={isIndexed}
                       className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold transition active:scale-95 ${
                         isIndexed

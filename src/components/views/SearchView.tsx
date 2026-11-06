@@ -35,20 +35,16 @@ import {
 } from '../../services/searchSources';
 import { rankCandidates } from '../../services/tasteProfile';
 import { sourceFlagLabel } from '../../data/sourceLabels';
+import { hoverPreviewEmbedUrl } from '../../services/preview';
 import { HoverPreview } from '../HoverPreview';
 import { ApiErrorCard } from '../ApiErrorCard';
 
-/** Add muted-autoplay hints to a source embed so the hover preview starts itself. */
-const withAutoplay = (embedUrl?: string): string | undefined => {
-  if (!embedUrl) return undefined;
-  const join = embedUrl.includes('?') ? '&' : '?';
-  return `${embedUrl}${join}autoplay=1&mute=1`;
-};
-
 interface SearchViewProps {
+  /** Saves a result to the library; only the Save button calls this. */
   onIndexVideo: (video: VideoMetadata) => void;
   onExpandChannel: (channelId: string, channelTitle: string) => void;
-  onPlayVideo: (youtubeId: string) => void;
+  /** Opens a result in the player without saving it. */
+  onPlayVideo: (video: VideoMetadata) => void;
   indexedVideoIds: Set<string>;
   accessToken?: string | null;
   userEmail?: string | null;
@@ -402,10 +398,9 @@ export const SearchView: React.FC<SearchViewProps> = ({
             // Open-source results carry their own embed and have no YouTube
             // channel to expand, so they play in-app without a sign-in.
             const isOpenSource = !!video.playback;
-            const playVideo = () => {
-              if (isOpenSource && !isIndexed) onIndexVideo(video);
-              onPlayVideo(video.youtubeId);
-            };
+            // Playing a result must not add it to the library; only the Save
+            // button does that.
+            const playVideo = () => onPlayVideo(video);
 
             return (
               <div
@@ -423,11 +418,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
                     alt={video.title}
                     previewUrl={video.playback?.previewUrl}
                     previewFrames={video.playback?.previewFrames}
-                    embedUrl={
-                      isOpenSource
-                        ? withAutoplay(video.playback?.embedUrl)
-                        : `https://www.youtube-nocookie.com/embed/${video.youtubeId}?autoplay=1&mute=1&controls=0&modestbranding=1&playsinline=1&rel=0`
-                    }
+                    embedUrl={hoverPreviewEmbedUrl(video)}
                   >
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80 pointer-events-none" />
 

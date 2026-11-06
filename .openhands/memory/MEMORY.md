@@ -297,6 +297,31 @@ in-app Play button automatically. `SourceFlag` is defined in `src/types/index.ts
   youporn (302 -> `/`), spankbang (403), tube8/beeg/porntrex/pornhd/tnaflix/hqporner (HTML or 403/404). Hubtraffic
   (MindGeek webmaster feed) exists but needs a key and is Pornhub/RedTube only.
 
+## Watching vs saving, and hover previews (issue #11, 2026-11-05)
+- **Watching must not save.** `handleIndexVideo` in `src/App.tsx` is the ONLY writer that adds a
+  video to the library (it calls `idbService.saveVideo`). Play paths must never call it. The bug was
+  `SearchView.playVideo` calling `onIndexVideo(video)` for open-source results, plus
+  `handleIndexAndPlay` (index-then-play) used by Vega.
+- **Transient playback:** `ephemeralVideo` state in `App.tsx` holds a video that is being watched but
+  is not in the library. `resolvePlayerSelection(videos, selectedVideoId, ephemeral)` in
+  `src/services/playerSelection.ts` returns `{video, isInLibrary}`. `SelectedVideoPage` shows
+  **Save to Library** when `!isInLibrary` and hides the removal button (removal is library-only).
+  Clear `ephemeralVideo` in `navigate('player')`, `handleSelectVideo`, `handleBackToVideos`,
+  removal and restore.
+- **`VideosPage`/`SelectedVideoPage` props are load-bearing:** adding a required prop to
+  `SelectedVideoPage` means updating `VideosPage`, which means updating the `App.tsx` call site.
+  Tests render `VideosPage` directly (SSR via `renderToStaticMarkup`) to cover that wiring.
+- **Hover previews:** rules live in `src/services/preview.ts` — `withAutoplay(embedUrl)`,
+  `youtubeEmbedUrl(id)`, `hoverPreviewEmbedUrl(video)` (source embed → external page → YouTube
+  embed derived from `youtubeId`, since YouTube results have no `playback`). `SearchView`,
+  `VegaSourceView` and `VideosPage` library cards all render `HoverPreview`. Put the clickable
+  overlay button as a **child** of `HoverPreview`, never wrapping it — otherwise `mouseenter` never
+  fires on the wrapper (the iframe covers it) and the preview silently never starts.
+- **Tests:** `npx tsx --test tests/x.test.tsx` runs a single file. SSR rendering of React
+  components works with no DOM/jsdom. `npm test` = `tsx --test tests/**/*.test.ts(x)`.
+- **`package-lock.json` reappears** after `npm install --legacy-peer-deps`; delete before committing
+  (project tracks `bun.lock`).
+
 ## Legal pages: /privacy and /tos (v0.2.x, 2026-11-05)
 - **Why:** Google OAuth consent screen (branding) requires a privacy policy + TOS on a domain
   you own, as a **dedicated HTML page**, **linked on the app homepage**, with a **Limited Use

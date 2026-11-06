@@ -29,6 +29,10 @@ import { sourceFlagLabel } from '../../data/sourceLabels';
 
 interface SelectedVideoPageProps {
   currentVideo: VideoMetadata;
+  /** Whether this video is saved in the library. */
+  isInLibrary: boolean;
+  /** Saves the video being watched to the library. */
+  onSaveToLibrary: (video: VideoMetadata) => Promise<void>;
   allVideos: VideoMetadata[];
   comments: VideoComment[];
   onSelectVideo: (youtubeId: string) => void;
@@ -44,9 +48,14 @@ interface SelectedVideoPageProps {
  * embed, title, uploader, views, likes, date, summary, notes and tags — and the
  * saved comments. It is rendered only after a video is chosen, so the Videos
  * page itself stays a listing.
+ *
+ * A video opened from search is not in the library yet: watching it is not
+ * saving it, so the page shows "Save to Library" until the user presses it.
  */
 export const SelectedVideoPage: React.FC<SelectedVideoPageProps> = ({
   currentVideo,
+  isInLibrary,
+  onSaveToLibrary,
   allVideos,
   comments,
   onSelectVideo,
@@ -150,6 +159,17 @@ export const SelectedVideoPage: React.FC<SelectedVideoPageProps> = ({
     onUpdatePersonal(currentVideo.youtubeId, { isFavorite: updated });
   };
 
+  // Saving is the only action that adds a watched video to the library.
+  const [isSavingToLibrary, setIsSavingToLibrary] = useState(false);
+  const handleSaveToLibrary = async () => {
+    setIsSavingToLibrary(true);
+    try {
+      await onSaveToLibrary(currentVideo);
+    } finally {
+      setIsSavingToLibrary(false);
+    }
+  };
+
   const sourceFlagColors: Record<SourceFlag, string> = {
     YouTubeSearch: 'bg-red-500/20 text-red-400 border-red-500/30',
     ChannelUploads: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
@@ -192,7 +212,11 @@ export const SelectedVideoPage: React.FC<SelectedVideoPageProps> = ({
         </button>
 
         <span className="text-xs text-slate-400 font-mono">
-          Video {currentIndex + 1} of {allVideos.length} in Library
+          {currentIndex >= 0
+            ? `Video ${currentIndex + 1} of ${allVideos.length} in Library`
+            : isInLibrary
+              ? 'Video in Library'
+              : 'Not in Library'}
         </span>
 
         <button
@@ -276,6 +300,21 @@ export const SelectedVideoPage: React.FC<SelectedVideoPageProps> = ({
                   </a>
                 )}
 
+                {/* A video opened from search is not in the library yet. Saving
+                    is explicit; removal and library-only actions wait until it
+                    is saved. */}
+                {!isInLibrary && (
+                  <button
+                    onClick={handleSaveToLibrary}
+                    disabled={isSavingToLibrary}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-500 disabled:opacity-60 text-white text-xs font-semibold shadow-sm transition active:scale-95"
+                    title="Add this video to your library"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>{isSavingToLibrary ? 'Saving...' : 'Save to Library'}</span>
+                  </button>
+                )}
+
                 <button
                   onClick={() => setShowAiModal(true)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white text-xs font-semibold shadow-sm transition active:scale-95"
@@ -297,13 +336,15 @@ export const SelectedVideoPage: React.FC<SelectedVideoPageProps> = ({
                   <Bookmark className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
                 </button>
 
-                <button
-                  onClick={() => onRequestRemoval(currentVideo.youtubeId)}
-                  className="p-2 rounded-xl border bg-slate-800 text-slate-400 border-slate-700 hover:text-red-300 hover:border-red-800/70 hover:bg-red-900/30 transition"
-                  title="Remove this video and record why it should not be recommended again"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {isInLibrary && (
+                  <button
+                    onClick={() => onRequestRemoval(currentVideo.youtubeId)}
+                    className="p-2 rounded-xl border bg-slate-800 text-slate-400 border-slate-700 hover:text-red-300 hover:border-red-800/70 hover:bg-red-900/30 transition"
+                    title="Remove this video and record why it should not be recommended again"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
 
