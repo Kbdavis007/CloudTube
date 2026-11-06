@@ -47,3 +47,4 @@ npm run deploy:log -- --env production --url https://your-app.example --notes "w
 | 2026-11-06 05:13 UTC | `v0.2.35` | `cde7f13` | production | https://ct.devmatrix.top | local | docs: Vortex (xgroovy) source notes |
 | 2026-11-06 05:15 UTC | `v0.2.36` | `3741b05` | production | https://ct.devmatrix.top | Kbdavis007 | daily Vega catalogue refresh |
 | 2026-11-06 06:45 UTC | `v0.2.37` | `b7cf73d` | production | https://ct.devmatrix.top | local | docs: source discovery survey |
+| 2026-11-06 06:46 UTC | `v0.2.38` | `50545ca` | production | https://ct.devmatrix.top | local | docs: source discovery notes |
