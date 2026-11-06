@@ -41,3 +41,4 @@ npm run deploy:log -- --env production --url https://your-app.example --notes "w
 | 2026-11-06 02:10 UTC | `v0.2.29` | `24fbf71` | production | https://ct.devmatrix.top | Kbdavis007 | daily Vega catalogue refresh |
 | 2026-11-06 02:12 UTC | `v0.2.30` | `fe48740` | production | https://ct.devmatrix.top | local | record v0.2.28 deploy + CI release lessons |
 | 2026-11-06 02:43 UTC | `v0.2.32` | `ac92675` | production | https://ct.devmatrix.top | Kbdavis007 | daily Vega catalogue refresh |
+| 2026-11-06 02:46 UTC | `v0.2.32` | `8515b1f` | production | https://ct.devmatrix.top | local | curl-first scraper with Firecrawl fallback |

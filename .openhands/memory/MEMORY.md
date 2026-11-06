@@ -419,3 +419,18 @@ in-app Play button automatically. `SourceFlag` is defined in `src/types/index.ts
   and re-fetch tags before releasing, or it picks a version a concurrent session
   already tagged and the tag push is rejected. Push commit+tag with
   `git push --atomic` so a collision cannot leave an untagged release commit on main.
+
+## Vega scraper: curl-first, Firecrawl fallback (2026-11-06)
+- **GitHub Actions runner IP is NOT blocked by xvideos** (the CF Worker IP is —
+  that's why Firecrawl was bought). So `scrape.sh` fetches the listing directly
+  with curl + a browser UA, and only falls back to the Firecrawl CLI if curl
+  returns blocked/no result cards. curl path: 15 pages in ~11s, no key, no limit.
+- Parser reads raw HTML (BeautifulSoup) *or* Firecrawl markdown, so both backends
+  feed the same records. Raw HTML has everything Firecrawl's markdown did.
+- Raw HTML uses a literal `THUMBNUM` placeholder in thumbnails and the
+  `/video.<id>/THUMBNUM/<slug>` watch path; use `data-sfwthumb` (resolved) or swap
+  `THUMBNUM->1`. `pageUrl` drops the frame segment entirely (canonical).
+- **Catalogue is append + dedupe by canonical `pageUrl`, not by id** — the same
+  video can be listed under different ids. Older entries carry forward.
+- Raw page dumps (`scrapers/vega/data/vega_pages/`) are git-ignored (HTML is ~4x
+  the JSON and regenerated every run); only the built catalogue is committed.

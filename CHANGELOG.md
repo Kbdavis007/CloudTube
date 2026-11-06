@@ -51,7 +51,7 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 ## [0.2.31] - 2026-11-06
 
-**Tag:** `v0.2.31` · **Branch:** `main` · **Deployed:** pending
+**Tag:** `v0.2.31` · **Branch:** `main` · **Deployed:** 2026-11-06 02:46 UTC (production)
 
 ### Features
 - scrape with curl, fall back to Firecrawl (0d60c56)
