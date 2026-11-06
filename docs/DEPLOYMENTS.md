@@ -40,3 +40,4 @@ npm run deploy:log -- --env production --url https://your-app.example --notes "w
 | 2026-11-06 02:08 UTC | `v0.2.28` | `c1cb914` | production | https://ct.devmatrix.top | local | stop the daily release colliding on the version tag |
 | 2026-11-06 02:10 UTC | `v0.2.29` | `24fbf71` | production | https://ct.devmatrix.top | Kbdavis007 | daily Vega catalogue refresh |
 | 2026-11-06 02:12 UTC | `v0.2.30` | `fe48740` | production | https://ct.devmatrix.top | local | record v0.2.28 deploy + CI release lessons |
+| 2026-11-06 02:43 UTC | `v0.2.32` | `ac92675` | production | https://ct.devmatrix.top | Kbdavis007 | daily Vega catalogue refresh |
