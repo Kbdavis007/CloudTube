@@ -48,3 +48,4 @@ npm run deploy:log -- --env production --url https://your-app.example --notes "w
 | 2026-11-06 05:15 UTC | `v0.2.36` | `3741b05` | production | https://ct.devmatrix.top | Kbdavis007 | daily Vega catalogue refresh |
 | 2026-11-06 06:45 UTC | `v0.2.37` | `b7cf73d` | production | https://ct.devmatrix.top | local | docs: source discovery survey |
 | 2026-11-06 06:46 UTC | `v0.2.38` | `50545ca` | production | https://ct.devmatrix.top | local | docs: source discovery notes |
+| 2026-11-06 07:52 UTC | `v0.2.39` | `ea3b47c` | production | https://ct.devmatrix.top | local | eleven screened sources added to the Vega catalogue (Vega+Vortex+11; 1221 videos) |
