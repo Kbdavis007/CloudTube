@@ -47,7 +47,7 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 ## [0.2.35] - 2026-11-06
 
-**Tag:** `v0.2.35` · **Branch:** `main` · **Deployed:** pending
+**Tag:** `v0.2.35` · **Branch:** `main` · **Deployed:** 2026-11-06 05:13 UTC (production)
 
 ### Documentation
 - record the Vortex (xgroovy) source notes (7a80d93)
