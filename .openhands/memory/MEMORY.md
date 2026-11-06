@@ -408,3 +408,14 @@ in-app Play button automatically. `SourceFlag` is defined in `src/types/index.ts
   stays green (a `::notice::` explains). `CF_DEPLOY_HOOK` is optional.
 - If a push ever fails with `remote: fatal error in commit_refs` + `! [remote rejected] (failure)`
   while reads work, it is a transient GitHub write outage — wait a few minutes and retry.
+
+## Firecrawl quota + CI release gotchas (2026-11-06)
+- **Firecrawl free plan = 10 requests/minute.** Batch scrapes must be paced or the
+  11th+ request fails `Rate limit exceeded` (the free tier rejects, it does not
+  queue). `scrapers/vega/scrape.sh` paces with a sliding window and shows the CLI's
+  stderr. There is no `--timeout`/`--retry` flag on `firecrawl scrape`.
+- **`actions/checkout` does not fetch tags by default.** A workflow that runs
+  `scripts/release.mjs` (uses `git describe` + tag list) must set `fetch-tags: true`
+  and re-fetch tags before releasing, or it picks a version a concurrent session
+  already tagged and the tag push is rejected. Push commit+tag with
+  `git push --atomic` so a collision cannot leave an untagged release commit on main.
