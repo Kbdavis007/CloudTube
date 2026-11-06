@@ -34,6 +34,20 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 
 
+
+## [0.2.26] - 2026-11-06
+
+**Tag:** `v0.2.26` · **Branch:** `main` · **Deployed:** pending
+
+### Fixes
+- pace the scrape under Firecrawl's rate limit (4143ccc)
+
+### Documentation
+- pin PR screenshot evidence to a commit SHA, not a branch (99e80e9)
+
+### Other Changes
+- Only save a video when Save is pressed, and preview on hover (#13) (6d57fe1)
+
 ## [0.2.25] - 2026-11-05
 
 **Tag:** `v0.2.25` · **Branch:** `main` · **Deployed:** 2026-11-05 23:33 UTC (production)
