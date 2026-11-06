@@ -529,3 +529,25 @@ in-app Play button automatically. `SourceFlag` is defined in `src/types/index.ts
   `git push --atomic "https://${GITHUB_TOKEN}@github.com/Kbdavis007/CloudTube.git"
   main vX.Y.Z` (or plain `main` for the deploy-record commit). Verify with
   `curl -s https://ct.devmatrix.top/api/health` (version flips in ~1 min).
+## Video editor: research + spec (add-video-editor, 2026-11-06)
+- **The editor must be client-side.** CT deploys as a Cloudflare Worker serving static
+  assets (`wrangler.jsonc` + `worker/index.ts`); there is no transcode backend, and the
+  media it plays is mostly **cross-origin iframes** (YouTube/xgroovy/RedGifs) whose bytes
+  cannot be read in the browser. Editable inputs = a **local file** or a **direct media
+  URL** (Vega/Vortex catalogue already has `previewUrl` mp4s).
+- **Engine choice: Mediabunny** (`Vanilagy/mediabunny`, **MPL-2.0**, pure TS, tree-shakable,
+  no ffmpeg, **no COOP/COEP**). Rejected: **ffmpeg.wasm** (mt build needs
+  COOP/COEP → would break the third-party iframe embeds; wrapper MIT but core LGPL/GPL;
+  2GB wasm cap), **WebAV** (MIT, WebCodecs, ~50KB, fine but lower-level), **Etro** (GPL-3.0
+  copyleft), **Remotion** + **OpenVideo/react-video-editor** (tiered "free for individuals,
+  paid above a company-size threshold" — NOT OSI-open; OpenVideo is Next.js/PixiJS).
+- **Spec landed as `openspec/changes/add-video-editor/`** (2 capabilities: `video-editor`,
+  `video-export`; 4 phases: 1 trim+combine local files, 2 export options/progress/cancel,
+  3 direct-URL clips + recent exports (IndexedDB `videoExports`, v4→v5), 4 optional
+  ffmpeg.wasm fallback). Validated with `openspec validate add-video-editor --strict`.
+- **openspec CLI** reinstall: `curl -fsSL https://openspec.dev/cli/install.sh -o /tmp/x.sh`
+  then `sh /tmp/x.sh` (SHA256-verified) → `~/.local/bin/openspec`; schema templates are
+  unpacked at `~/.local/share/openspec/binary-schemas/*/spec-driven/templates/`.
+- **Spec format that passes `--strict`:** `### Requirement:` (desc ≤500 chars) + at least
+  one `#### Scenario:` (exactly 4 `#`) with a WHEN/GIVEN and a THEN step; new capabilities
+  start with a `## Purpose` of 50+ chars. Validated clean.
