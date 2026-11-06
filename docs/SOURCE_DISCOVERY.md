@@ -2,7 +2,13 @@
 
 A survey of tube sites that could be wired into the app the way Vega (xvideos)
 and Vortex (xgroovy) are: a **searchable listing**, an **embeddable player**, and
-ideally a **date**. This is reconnaissance only — nothing here is wired up.
+ideally a **date**.
+
+> **Status:** the eleven "Recommended candidates" below are now wired — each has
+> a cryptic alias, a `SourceFlag`, and a parser in `scrapers/vega/engine_parse.py`
+> (see `scrapers/vega/README.md`). drtuber and porngo expose no date anywhere, so
+> their entries carry a first-seen fallback date. The rest of this document is the
+> original reconnaissance that selected them.
 
 Method: for each host, probe a search URL for the query `riding pov`, confirm the
 results actually change for a different query (`missionary`), pull a real detail
