@@ -36,6 +36,10 @@ test.describe('pull request template', () => {
     expect(template).toContain('harness-starter-kit');
     expect(template).toContain('Playwright');
     expect(template).toContain('CHANGELOG.md');
+    // Evidence must not be linked by branch name: the URL 404s once the branch
+    // is deleted on merge. Pin it to a commit SHA or a GitHub-uploaded image.
+    expect(template).toContain('never by branch name');
+    expect(template).toContain('<full-commit-sha>');
     // A PR body is filled by an agent: it must tell the agent to close the issue.
     expect(template).toMatch(/Closes #<issue-number>/);
   });

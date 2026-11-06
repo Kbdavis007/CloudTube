@@ -95,8 +95,16 @@ Add only the smallest useful piece; prefer updating existing docs over duplicati
 
 <!--
 A green type-check is not proof the change works. Drive the real app in a browser
-with Playwright and attach screenshots — drag the images into this description, or
-commit them under `docs/screenshots/` and link them here.
+with Playwright and attach screenshots.
+
+Drag the images into this description (easiest: GitHub uploads them to a
+user-images URL that survives branch deletion), or commit them under
+`docs/screenshots/` and link them by COMMIT SHA, never by branch name:
+
+    https://raw.githubusercontent.com/<owner>/<repo>/<full-commit-sha>/docs/screenshots/<file>.png
+
+A branch URL 404s the moment the branch is deleted on merge, so the evidence
+disappears from the PR you were trying to prove.
 
   UI change        -> drive the actual flow; capture before/after.
   Docs/config      -> capture the rendered result (e.g. this PR body) plus the
