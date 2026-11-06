@@ -49,6 +49,15 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 
 
+
+## [0.2.40] - 2026-11-06
+
+**Tag:** `v0.2.40` · **Branch:** `main` · **Deployed:** pending
+
+### Documentation
+- record the eleven-source integration notes (e55e415)
+- mark the eleven discovered sources as wired (09a7dd4)
+
 ## [0.2.39] - 2026-11-06
 
 **Tag:** `v0.2.39` · **Branch:** `main` · **Deployed:** 2026-11-06 07:52 UTC (production)
