@@ -47,13 +47,6 @@ working tree has uncommitted changes the badge turns amber and shows the
 ### Maintenance
 - refresh the baked catalogue (e1c357a)
 
-## [0.2.27] - 2026-11-06
-
-**Tag:** `v0.2.27` · **Branch:** `main` · **Deployed:** pending
-
-### Documentation
-- require permanent screenshot URLs and keep e2e from dirtying the tree (d355d8d)
-
 ## [0.2.26] - 2026-11-06
 
 **Tag:** `v0.2.26` · **Branch:** `main` · **Deployed:** pending
