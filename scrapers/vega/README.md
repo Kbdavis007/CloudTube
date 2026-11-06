@@ -35,12 +35,17 @@ firecrawl scrape "$url" -f markdown,links --max-age 0 -o data/vega_pages/p01.jso
 
 Firecrawl caches to `.firecrawl/` in the working directory — it is git-ignored.
 
+Firecrawl rate-limits requests (10 per minute on the free plan), so `scrape.sh`
+paces them and waits out the window between batches. The limit and window can be
+overridden with `FIRECRAWL_RATE_LIMIT` / `FIRECRAWL_RATE_WINDOW` if the plan
+changes.
+
 ### Automated daily refresh
 
 `.github/workflows/refresh-vega-catalogue.yml` runs the whole pipeline once a
 day (06:17 UTC) and can be run by hand from the Actions tab. It scrapes, rebuilds
-the catalogue, bakes it into `src/data/vegaCatalog.json`, and commits the result;
-that push makes Cloudflare rebuild and redeploy the app.
+the catalogue, bakes it into `src/data/vegaCatalog.json`, and cuts a patch
+release; the release push makes Cloudflare rebuild and redeploy the app.
 
 It needs one repository secret: `FIRECRAWL_API_KEY`
 (Settings → Secrets and variables → Actions). If Cloudflare's own git
