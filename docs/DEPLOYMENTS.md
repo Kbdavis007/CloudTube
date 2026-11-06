@@ -37,3 +37,4 @@ npm run deploy:log -- --env production --url https://your-app.example --notes "w
 | 2026-11-05 23:30 UTC | `v0.2.24` | `834d5ba` | production | https://ct.devmatrix.top | local | memory notes |
 | 2026-11-05 23:33 UTC | `v0.2.25` | `efa6921` | production | https://ct.devmatrix.top | local | Agent-first PR template, OpenSpec scaffold, harness kit pin, Playwright e2e proof |
 | 2026-11-06 01:59 UTC | `v0.2.27` | `a84390e` | production | https://ct.devmatrix.top | local | PR template: permanent evidence URLs; e2e no longer dirties the tree |
+| 2026-11-06 02:10 UTC | `v0.2.29` | `24fbf71` | production | https://ct.devmatrix.top | Kbdavis007 | daily Vega catalogue refresh |
