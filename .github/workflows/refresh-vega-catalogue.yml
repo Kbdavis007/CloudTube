@@ -8,9 +8,10 @@ name: Refresh Vega catalogue
 # `scripts/release.mjs patch` flow a human would rather than pushing a bare data
 # commit.
 #
-# Needs one repository secret: FIRECRAWL_API_KEY (Settings -> Secrets and
-# variables -> Actions). Without it the run skips the scrape and says so in the
-# log rather than failing.
+# Scraping needs no secret: scrape.sh fetches with curl first, and only falls
+# back to the Firecrawl CLI (which needs FIRECRAWL_API_KEY) if curl stops
+# returning results. Add FIRECRAWL_API_KEY under Settings -> Secrets and
+# variables -> Actions to arm that fallback; without it the curl path still runs.
 #
 # Cloudflare Workers Builds rebuild on a push only when "Builds" is enabled for
 # the project. If it is not, set a deploy hook URL as the CF_DEPLOY_HOOK secret
@@ -53,33 +54,24 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install Firecrawl CLI
+      - name: Install the HTML parser
+        run: python3 -m pip install --quiet beautifulsoup4
+
+      # Only used when curl cannot reach the listing. Best effort: a failure
+      # here must not stop the curl path from running.
+      - name: Install the Firecrawl CLI (fallback)
+        continue-on-error: true
         run: npm install -g firecrawl-cli
 
-      - name: Check for the Firecrawl key
-        id: key
-        env:
-          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
-        run: |
-          if [ -n "${FIRECRAWL_API_KEY:-}" ]; then
-            echo "has_key=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_key=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::FIRECRAWL_API_KEY is not set, so there is nothing to scrape. Add it under Settings -> Secrets and variables -> Actions."
-          fi
-
       - name: Scrape the search pages
-        if: steps.key.outputs.has_key == 'true'
         env:
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
         run: bash scrapers/vega/scrape.sh
 
       - name: Rebuild the baked catalogue
-        if: steps.key.outputs.has_key == 'true'
-        run: python3 scrapers/vega/vega_build_manifest.py scrapers/vega/data/vega_catalog.jsonc scrapers/vega/data/vega_pages/p*.json
+        run: python3 scrapers/vega/vega_build_manifest.py scrapers/vega/data/vega_catalog.jsonc scrapers/vega/data/vega_pages/p*.html
 
       - name: Bake the catalogue into the app
-        if: steps.key.outputs.has_key == 'true'
         run: |
           python3 - <<'PY'
           import json, shutil
@@ -94,7 +86,6 @@ jobs:
 
       - name: Commit the refreshed catalogue
         id: data
-        if: steps.key.outputs.has_key == 'true'
         run: |
           git config user.name  'cloudtube-bot'
           git config user.email 'cloudtube-bot@users.noreply.github.com'

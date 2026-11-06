@@ -9,7 +9,7 @@ is what the library filters on. Adding another source means adding an entry to
 `sources` and emitting records with a matching `sourceId`; nothing else changes.
 
 ```
-vega_urls.txt ──► firecrawl scrape ──► data/vega_pages/pNN.json
+vega_urls.txt ──► curl (Firecrawl fallback) ──► data/vega_pages/pNN.html
                                             │
                                             ▼
                                       vega_parse.py
@@ -23,22 +23,27 @@ vega_urls.txt ──► firecrawl scrape ──► data/vega_pages/pNN.json
 
 ## 1. Scrape
 
-`vega_urls.txt` lists the search-result pages to fetch. Scrape each with the
-[Firecrawl CLI](https://docs.firecrawl.dev/sdks/cli) and save the JSON under
-`data/vega_pages/` (one file per page, `p01.json`, `p02.json`, …):
+`vega_urls.txt` lists the search-result pages to fetch. `scrape.sh` fetches each
+with `curl` and a browser User-Agent and saves the raw HTML under
+`data/vega_pages/` (one file per page, `p01.html`, `p02.html`, …):
 
 ```bash
 bash scrape.sh                       # all URLs -> data/vega_pages/
 # or a single page:
-firecrawl scrape "$url" -f markdown,links --max-age 0 -o data/vega_pages/p01.json
+curl -sSL -A "Mozilla/5.0 …" "$url" -o data/vega_pages/p01.html
 ```
 
-Firecrawl caches to `.firecrawl/` in the working directory — it is git-ignored.
+The listing is fetched directly; the raw HTML carries every field the catalogue
+needs, so no rendering service is involved. The pages are intermediates and are
+git-ignored — only the built catalogue is committed.
 
-Firecrawl rate-limits requests (10 per minute on the free plan), so `scrape.sh`
-paces them and waits out the window between batches. The limit and window can be
-overridden with `FIRECRAWL_RATE_LIMIT` / `FIRECRAWL_RATE_WINDOW` if the plan
-changes.
+If `curl` comes back blocked or without result cards, `scrape.sh` re-fetches
+through the [Firecrawl CLI](https://docs.firecrawl.dev/sdks/cli) and switches to
+it for the rest of the run. Firecrawl's free plan allows 10 requests/minute, so
+that mode is paced (`FIRECRAWL_RATE_LIMIT` / `FIRECRAWL_RATE_WINDOW` override the
+window). Firecrawl caches to `.firecrawl/`, which is also git-ignored. The
+fallback needs the `FIRECRAWL_API_KEY` environment variable; without it only the
+curl path runs.
 
 ### Automated daily refresh
 
@@ -47,7 +52,7 @@ day (06:17 UTC) and can be run by hand from the Actions tab. It scrapes, rebuild
 the catalogue, bakes it into `src/data/vegaCatalog.json`, and cuts a patch
 release; the release push makes Cloudflare rebuild and redeploy the app.
 
-It needs one repository secret: `FIRECRAWL_API_KEY`
+It needs no secret for the normal path. Add `FIRECRAWL_API_KEY`
 (Settings → Secrets and variables → Actions). If Cloudflare's own git
 integration does not rebuild on the push, add a deploy hook URL as the
 `CF_DEPLOY_HOOK` secret and the workflow triggers it directly.
@@ -81,15 +86,19 @@ for carrying the same videos into another CloudTube instance.
 - The listing exposes neither cast nor category, so `actors` and `category` are
   left empty rather than guessed.
 - `publishedDate` is approximated from the listing's relative age ("3 days ago").
+- New scrapes are appended to the existing catalogue and deduped by canonical
+  `pageUrl` (the `/video.<id>/<frame>/<slug>` frame segment is dropped), so a
+  video re-listed under a different id is not stored twice and older entries are
+  carried forward rather than dropped.
 
 ## Layout
 
 ```
 vega_urls.txt              search pages to scrape
-vega_parse.py              markdown listing-card -> record
+vega_parse.py              HTML or Firecrawl-markdown listing card -> record
 vega_build_manifest.py     records -> baked multi-source catalogue
 vega_to_cloudtube.py       catalogue -> CloudTube library backup
-data/vega_pages/           raw Firecrawl dumps (one per page)
+data/vega_pages/           raw scrape dumps (one per page, git-ignored)
 data/vega_catalog.jsonc    generated catalogue (commented twin)
 data/vega_cloudtube_backup.jsonc  generated CloudTube backup
 data/raw/                  exploratory dumps (home / search / week)

@@ -22,3 +22,6 @@ blob-report/
 
 # Firecrawl CLI cache (scrapers/vega)
 .firecrawl/
+
+# Raw scrape dumps (scrapers/vega) - regenerated every run, not source
+scrapers/vega/data/vega_pages/

@@ -26,6 +26,18 @@ SOURCES = [
 ]
 
 
+def canonical_url(url: str) -> str:
+    """Drop the frame segment from a watch URL so the same video dedupes.
+
+    xvideos serves `/video.<id>/<frame>/<slug>`, where <frame> is a thumbnail
+    frame that varies between scrapes (the raw listing has the literal
+    `THUMBNUM` placeholder, Firecrawl resolves it to a number). It is not part of
+    the video's identity, so it is removed; `/video.<id>/<slug>` is canonical and
+    resolves 200.
+    """
+    return re.sub(r"(/video\.[A-Za-z0-9]+)/[^/]+/", r"\1/", url)
+
+
 def approx_date(ago: str, now: datetime) -> str:
     m = AGO.search(ago.lower())
     if not m:
@@ -59,7 +71,7 @@ def to_catalog_video(v: dict, now: datetime) -> dict:
         "thumbnail": v["thumbnail"],
         "previewThumbnail": v["thumbnail"],
         "embedUrl": v["embedUrl"],
-        "pageUrl": v["watchUrl"],
+        "pageUrl": canonical_url(v["watchUrl"]),
         "uploader": uploader,
         "publishedDate": approx_date(v["uploadedAgo"], now),
         "viewCount": v.get("views") or 0,
@@ -92,27 +104,63 @@ HEADER = """// Baked video catalogue - committed to the repo, bundled into the b
 """
 
 
+def load_existing(path: Path) -> list[dict]:
+    """Existing catalogue videos, or [] when there is nothing to carry forward."""
+    if not path.exists():
+        return []
+    text = path.read_text(encoding="utf-8")
+    # The catalogue path is the .jsonc, whose leading `//` header is not valid
+    # JSON; strip comment lines before parsing.
+    payload = "\n".join(l for l in text.splitlines() if not l.lstrip().startswith("//"))
+    try:
+        data = json.loads(payload)
+    except ValueError:
+        return []
+    videos = data.get("videos") or []
+    # Older catalogues stored the thumbnail-frame segment in pageUrl; drop it so
+    # those entries dedupe against freshly scraped ones.
+    for v in videos:
+        if v.get("pageUrl"):
+            v["pageUrl"] = canonical_url(v["pageUrl"])
+    return videos
+
+
 def main() -> None:
     out = Path(sys.argv[1])
     pages = [Path(p) for p in sys.argv[2:]]
     now = datetime.now(timezone.utc)
+    existing = load_existing(out)
+    existing_keys = {(e.get("pageUrl") or e.get("sourceVideoId")) for e in existing}
 
-    videos: list[dict] = []
-    seen: set[str] = set()
+    # New scrapes first, then the videos already in the catalogue, so the fresh
+    # listing wins any field that changed and older entries are carried forward
+    # rather than dropped.
+    fresh: list[dict] = []
     for p in pages:
         for v in parse_page(p):
-            if v["id"] in seen:
-                continue
-            seen.add(v["id"])
-            videos.append(to_catalog_video(v, now))
+            fresh.append(to_catalog_video(v, now))
 
-    videos.sort(key=lambda v: v["publishedDate"], reverse=True)
+    merged: list[dict] = []
+    seen: set[str] = set()
+    for v in fresh + existing:
+        # Dedupe on the canonical URL, not the id: the same video can be served
+        # under more than one id, and its URL is what actually identifies it.
+        key = v.get("pageUrl") or v.get("sourceVideoId")
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        merged.append(v)
+
+    merged.sort(key=lambda v: (v.get("publishedDate") or ""), reverse=True)
+    fresh_keys = {(v.get("pageUrl") or v.get("sourceVideoId")) for v in fresh}
+    new_count = len(fresh_keys - existing_keys)
+    carried = len(existing_keys - fresh_keys)
 
     catalog = {
         "schemaVersion": 1,
         "generatedAt": now.isoformat(timespec="seconds"),
         "sources": SOURCES,
-        "videos": videos,
+        "videos": merged,
     }
 
     payload = json.dumps(catalog, indent=2, ensure_ascii=False)
@@ -120,7 +168,10 @@ def main() -> None:
         HEADER.format(generated=now.isoformat(timespec="seconds")) + payload + "\n"
     )
     out.with_suffix(".json").write_text(payload + "\n")
-    print(f"wrote {out} + .json ({len(videos)} videos, {len(SOURCES)} source(s))")
+    print(
+        f"wrote {out} + .json ({len(merged)} videos, {len(SOURCES)} source(s); "
+        f"{new_count} new, {carried} carried forward)"
+    )
 
 
 if __name__ == "__main__":
