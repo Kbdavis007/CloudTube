@@ -46,3 +46,4 @@ npm run deploy:log -- --env production --url https://your-app.example --notes "w
 | 2026-11-06 05:11 UTC | `v0.2.34` | `98f421a` | production | https://ct.devmatrix.top | local | Vortex (xgroovy) added as a second baked source; 548 videos |
 | 2026-11-06 05:13 UTC | `v0.2.35` | `cde7f13` | production | https://ct.devmatrix.top | local | docs: Vortex (xgroovy) source notes |
 | 2026-11-06 05:15 UTC | `v0.2.36` | `3741b05` | production | https://ct.devmatrix.top | Kbdavis007 | daily Vega catalogue refresh |
+| 2026-11-06 06:45 UTC | `v0.2.37` | `b7cf73d` | production | https://ct.devmatrix.top | local | docs: source discovery survey |
