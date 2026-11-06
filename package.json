@@ -1,7 +1,7 @@
 {
   "name": "react-example",
   "private": true,
-  "version": "0.2.19",
+  "version": "0.2.25",
   "type": "module",
   "scripts": {
     "dev": "node scripts/version.mjs && tsx server.ts",
@@ -11,6 +11,7 @@
     "clean": "rm -rf dist server.js",
     "lint": "node scripts/version.mjs && tsc --noEmit",
     "test": "node scripts/version.mjs && tsx --test tests/**/*.test.ts tests/**/*.test.tsx",
+    "e2e": "node scripts/version.mjs && playwright test",
     "version:sync": "node scripts/version.mjs",
     "release:patch": "node scripts/release.mjs patch",
     "release:minor": "node scripts/release.mjs minor",
@@ -35,6 +36,7 @@
     "vite": "^8.3.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.0",
     "@types/node": "^22.14.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

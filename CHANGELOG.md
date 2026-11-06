@@ -28,6 +28,66 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 
 
+
+
+
+
+
+
+## [0.2.25] - 2026-11-05
+
+**Tag:** `v0.2.25` · **Branch:** `main` · **Deployed:** 2026-11-05 23:33 UTC (production)
+
+### Documentation
+- add an agent-first pull request template (OpenSpec + harness + Playwright proof) (#12) (676b745)
+
+## [0.2.24] - 2026-11-05
+
+**Tag:** `v0.2.24` · **Branch:** `main` · **Deployed:** 2026-11-05 23:30 UTC (production)
+
+### Documentation
+- note the daily refresh workflow and its secret (135bc4a)
+
+## [0.2.23] - 2026-11-05
+
+**Tag:** `v0.2.23` · **Branch:** `main` · **Deployed:** 2026-11-05 23:28 UTC (production)
+
+### Documentation
+- record the daily refresh workflow and the GitHub write outage (3188f2f)
+
+## [0.2.22] - 2026-11-05
+
+**Tag:** `v0.2.22` · **Branch:** `main` · **Deployed:** 2026-11-05 23:21 UTC (production)
+
+### Documentation
+- record the direct-to-main landing flow and release steps (068ae82)
+
+### Other Changes
+- land the daily catalogue refresh as a release (9795ac8)
+
+## [0.2.21] - 2026-11-05
+
+**Tag:** `v0.2.21` · **Branch:** `main` · **Deployed:** 2026-11-05 23:18 UTC (production)
+
+### Features
+- add /privacy and /tos pages for Google OAuth verification (7dc8052)
+
+### Documentation
+- record the legal pages setup and the SPA-fallback gotcha (4ec3417)
+
+## [0.2.20] - 2026-11-05
+
+**Tag:** `v0.2.20` · **Branch:** `main` · **Deployed:** 2026-11-05 23:16 UTC (production)
+
+### Fixes
+- track expanded channels and restore the view on reload (#7) (a467928)
+
+### Documentation
+- record the lockfile fix and the Vega search source (b30130f)
+
+### Other Changes
+- refresh the baked Vega catalogue daily (d5368f5)
+
 ## [0.2.19] - 2026-11-05
 
 **Tag:** `v0.2.19` · **Branch:** `main` · **Deployed:** 2026-11-05 15:31 UTC (production)

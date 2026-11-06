@@ -1,0 +1,150 @@
+name: Refresh Vega catalogue
+
+# Scrapes the Vega search pages once a day, rebuilds the baked catalogue, and
+# lands it as a tagged release. The release push is what makes Cloudflare
+# rebuild and redeploy the app, so the site picks up the fresh catalogue.
+#
+# Every push to main must be a release (see AGENTS.md), so this runs the same
+# `scripts/release.mjs patch` flow a human would rather than pushing a bare data
+# commit.
+#
+# Needs one repository secret: FIRECRAWL_API_KEY (Settings -> Secrets and
+# variables -> Actions). Without it the run skips the scrape and says so in the
+# log rather than failing.
+#
+# Cloudflare Workers Builds rebuild on a push only when "Builds" is enabled for
+# the project. If it is not, set a deploy hook URL as the CF_DEPLOY_HOOK secret
+# (Workers & Pages -> the project -> Settings -> Builds -> Deploy hooks) and the
+# workflow will trigger the rebuild itself.
+
+on:
+  schedule:
+    # 06:17 UTC daily. A few minutes past the hour avoids the top-of-hour rush
+    # on GitHub's scheduler.
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: refresh-vega-catalogue
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # release.mjs resolves the next version and writes the changelog from
+          # `git describe` and the tag list, so it needs the full history.
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Firecrawl CLI
+        run: npm install -g firecrawl-cli
+
+      - name: Check for the Firecrawl key
+        id: key
+        env:
+          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+        run: |
+          if [ -n "${FIRECRAWL_API_KEY:-}" ]; then
+            echo "has_key=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_key=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::FIRECRAWL_API_KEY is not set, so there is nothing to scrape. Add it under Settings -> Secrets and variables -> Actions."
+          fi
+
+      - name: Scrape the search pages
+        if: steps.key.outputs.has_key == 'true'
+        env:
+          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+        run: bash scrapers/vega/scrape.sh
+
+      - name: Rebuild the baked catalogue
+        if: steps.key.outputs.has_key == 'true'
+        run: python3 scrapers/vega/vega_build_manifest.py scrapers/vega/data/vega_catalog.jsonc scrapers/vega/data/vega_pages/p*.json
+
+      - name: Bake the catalogue into the app
+        if: steps.key.outputs.has_key == 'true'
+        run: |
+          python3 - <<'PY'
+          import json, shutil
+          catalog = json.load(open('scrapers/vega/data/vega_catalog.json'))
+          videos = catalog.get('videos') or []
+          if not videos:
+              raise SystemExit('catalogue is empty; refusing to replace the baked file')
+          # The app imports this path directly, so it must be present and valid.
+          shutil.copyfile('scrapers/vega/data/vega_catalog.json', 'src/data/vegaCatalog.json')
+          print(f'baked {len(videos)} videos')
+          PY
+
+      - name: Commit the refreshed catalogue
+        id: data
+        if: steps.key.outputs.has_key == 'true'
+        run: |
+          git config user.name  'cloudtube-bot'
+          git config user.email 'cloudtube-bot@users.noreply.github.com'
+          git add scrapers/vega/data src/data/vegaCatalog.json
+          if git diff --cached --quiet; then
+            echo "Catalogue unchanged; nothing to release."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "chore(vega): refresh the baked catalogue"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Cut the release
+        id: release
+        if: steps.data.outputs.changed == 'true'
+        run: |
+          # Rebase onto anything that landed while we scraped, so the release
+          # push does not race a concurrent session.
+          git pull --rebase origin main
+          node scripts/release.mjs patch --push
+          echo "version=$(git describe --tags --abbrev=0)" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger a Cloudflare rebuild
+        if: steps.data.outputs.changed == 'true'
+        env:
+          CF_DEPLOY_HOOK: ${{ secrets.CF_DEPLOY_HOOK }}
+        run: |
+          if [ -n "${CF_DEPLOY_HOOK:-}" ]; then
+            curl -fsS -X POST "$CF_DEPLOY_HOOK" >/dev/null
+            echo "triggered the Cloudflare deploy hook"
+          else
+            echo "no CF_DEPLOY_HOOK secret; relying on Cloudflare's git integration"
+          fi
+
+      - name: Record the deploy
+        if: steps.data.outputs.changed == 'true'
+        continue-on-error: true
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          # Best effort: wait briefly for the new version to serve, then stamp
+          # the changelog entry. A failure here does not fail the run.
+          for _ in $(seq 1 6); do
+            serving=$(curl -fsS --max-time 15 https://ct.devmatrix.top/api/health \
+              | python3 -c "import sys,json;print(json.load(sys.stdin).get('version',''))" 2>/dev/null || true)
+            [ "$serving" = "${VERSION#v}" ] && break
+            sleep 20
+          done
+          npm run deploy:log -- --env production --url https://ct.devmatrix.top \
+            --notes "daily Vega catalogue refresh"
+          git config user.name  'cloudtube-bot'
+          git config user.email 'cloudtube-bot@users.noreply.github.com'
+          git add CHANGELOG.md docs/DEPLOYMENTS.md
+          git commit -m "chore(deploy): record $VERSION ship"
+          git pull --rebase origin main
+          git push

@@ -12,6 +12,10 @@
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
+    // Serve the standalone legal pages at their extensionless paths: /privacy
+    // resolves to /privacy.html and /tos to /tos.html. This is also the default,
+    // but stating it keeps the friendly URLs working if the default ever moves.
+    "html_handling": "auto-trailing-slash",
     // Send API calls to the Worker before the asset layer. Without this, /api/* can
     // be answered by the static asset handler (which returns 405 for POST), which is
     // exactly the failure this Worker exists to fix.

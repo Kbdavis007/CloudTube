@@ -13,6 +13,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { searchRedGifsGifs } from './src/services/redgifsApi';
 import { searchWorkerSource } from './worker/searchSources';
+import { resolveLegalPage } from './worker/legalPages';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -173,6 +174,14 @@ async function startServer() {
   });
 
   if (!isProd) {
+    // Legal pages are standalone HTML with no build step, so serve them straight
+    // from public/ before Vite. Vite's dev server answers unknown HTML routes
+    // with the app shell, which would otherwise hide these pages in development.
+    app.get(/^\/(privacy|tos)\/?$/, (req, res) => {
+      const file = resolveLegalPage(req.path)!;
+      res.sendFile(path.resolve(__dirname, 'public', file));
+    });
+
     // In development mode, mount Vite as middleware
     const vite = await createViteServer({
       server: { middlewareMode: true },
