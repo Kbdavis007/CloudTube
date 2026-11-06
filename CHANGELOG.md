@@ -46,6 +46,14 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 
 
+
+## [0.2.37] - 2026-11-06
+
+**Tag:** `v0.2.37` · **Branch:** `main` · **Deployed:** pending
+
+### Documentation
+- survey candidate video sources for future integration (d1a987d)
+
 ## [0.2.36] - 2026-11-06
 
 **Tag:** `v0.2.36` · **Branch:** `main` · **Deployed:** 2026-11-06 05:15 UTC (production)
