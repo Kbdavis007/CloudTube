@@ -1,20 +1,24 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { VideoMetadata, VideoComment, PersonalMetadata, SourceFlag } from '../../types';
 import {
-  ChevronLeft,
-  ChevronRight,
   Star,
   Trash2,
   Tv,
-  Search,
   ListFilter,
-  X,
-  ArrowUpDown,
 } from 'lucide-react';
 import { sourceFlagLabel } from '../../data/sourceLabels';
 import { HoverPreview } from '../HoverPreview';
 import { hoverPreviewEmbedUrl } from '../../services/preview';
 import { SelectedVideoPage } from './SelectedVideoPage';
+import { VideoFilterBar } from '../VideoFilterBar';
+import { VideoPagination } from '../VideoPagination';
+import {
+  DEFAULT_VIDEO_FILTERS,
+  filterAndSortVideos,
+  hasActiveVideoFilters,
+  paginate,
+  type VideoFilterState,
+} from '../../services/videoFilter';
 
 /** Cards per page in the library browser. */
 const LIBRARY_PAGE_SIZE = 24;
@@ -54,135 +58,21 @@ export const VideosPage: React.FC<VideosPageProps> = ({
   onRequestRemoval,
   onBackToVideos,
 }) => {
-  const [libraryQuery, setLibraryQuery] = useState('');
-  const [filterSource, setFilterSource] = useState<SourceFlag | 'ALL'>('ALL');
-  const [filterChannel, setFilterChannel] = useState<string>('ALL');
-  const [filterScore, setFilterScore] = useState<'all' | 'elite' | 'good' | 'low'>('all');
-  const [filterRating, setFilterRating] = useState<'all' | 'rated' | 'unrated' | 'favorites'>('all');
-  const [filterDuration, setFilterDuration] = useState<'all' | 'short' | 'medium' | 'long'>('all');
-  const [filterPublishedFrom, setFilterPublishedFrom] = useState('');
-  const [filterPublishedTo, setFilterPublishedTo] = useState('');
-  const [filterTag, setFilterTag] = useState<string>('ALL');
-  const [sortBy, setSortBy] = useState<
-    'score' | 'rating' | 'date_desc' | 'date_asc' | 'title' | 'channel' | 'duration'
-  >('score');
+  const [filters, setFilters] = useState<VideoFilterState>(DEFAULT_VIDEO_FILTERS);
   const [libraryPage, setLibraryPage] = useState(0);
   const [selectedLibraryIds, setSelectedLibraryIds] = useState<Set<string>>(new Set());
 
-  const channelOptions = useMemo(() => {
-    const seen = new Map<string, string>();
-    for (const v of allVideos) {
-      if (!seen.has(v.channelId)) seen.set(v.channelId, v.channelTitle);
-    }
-    return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]));
-  }, [allVideos]);
-
-  const sourceOptions = useMemo(() => {
-    const counts = new Map<SourceFlag, number>();
-    for (const v of allVideos) {
-      for (const flag of v.sourceFlags) counts.set(flag, (counts.get(flag) ?? 0) + 1);
-    }
-    return [...counts.entries()].sort((a, b) => b[1] - a[1]);
-  }, [allVideos]);
-
-  // Tags across the library, so a tag filter never hides a value that only
-  // appears outside the current page.
-  const tagOptions = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const v of allVideos) {
-      for (const tag of [...v.tags, ...(v.personal?.userTags ?? [])]) {
-        const key = tag.trim();
-        if (key) counts.set(key, (counts.get(key) ?? 0) + 1);
-      }
-    }
-    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-  }, [allVideos]);
-
-  const filteredLibrary = useMemo(() => {
-    const query = libraryQuery.trim().toLowerCase();
-    const from = filterPublishedFrom ? new Date(filterPublishedFrom).getTime() : null;
-    const to = filterPublishedTo ? new Date(filterPublishedTo).getTime() : null;
-
-    const matching = allVideos.filter((v) => {
-      if (query) {
-        const haystack = `${v.title} ${v.channelTitle} ${v.description} ${(v.tags || []).join(' ')}`.toLowerCase();
-        if (!haystack.includes(query)) return false;
-      }
-      if (filterSource !== 'ALL' && !v.sourceFlags.includes(filterSource)) return false;
-      if (filterChannel !== 'ALL' && v.channelId !== filterChannel) return false;
-
-      if (filterTag !== 'ALL') {
-        const videoTags = [...(v.tags || []), ...(v.personal?.userTags ?? [])];
-        if (!videoTags.some((t) => t.trim() === filterTag)) return false;
-      }
-
-      const score = v.personal?.indexScore ?? 50;
-      if (filterScore === 'elite' && score > 20) return false;
-      if (filterScore === 'good' && score > 50) return false;
-      if (filterScore === 'low' && score < 70) return false;
-
-      const rating = v.personal?.userRating ?? 0;
-      if (filterRating === 'rated' && rating <= 0) return false;
-      if (filterRating === 'unrated' && rating > 0) return false;
-      if (filterRating === 'favorites' && !v.personal?.isFavorite) return false;
-
-      const seconds = v.durationSeconds || 0;
-      if (filterDuration === 'short' && seconds >= 300) return false;
-      if (filterDuration === 'medium' && (seconds < 300 || seconds > 1200)) return false;
-      if (filterDuration === 'long' && seconds <= 1200) return false;
-
-      if (from !== null || to !== null) {
-        const published = new Date(v.publishedAt).getTime();
-        if (from !== null && published < from) return false;
-        if (to !== null && published > to) return false;
-      }
-      return true;
-    });
-
-    const sorted = [...matching];
-    sorted.sort((a, b) => {
-      const aScore = a.personal?.indexScore ?? 50;
-      const bScore = b.personal?.indexScore ?? 50;
-      switch (sortBy) {
-        case 'rating':
-          return (b.personal?.userRating ?? 0) - (a.personal?.userRating ?? 0);
-        case 'date_desc':
-          return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
-        case 'date_asc':
-          return new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime();
-        case 'title':
-          return a.title.localeCompare(b.title);
-        case 'channel':
-          return a.channelTitle.localeCompare(b.channelTitle);
-        case 'duration':
-          return (b.durationSeconds || 0) - (a.durationSeconds || 0);
-        case 'score':
-        default:
-          return aScore - bScore;
-      }
-    });
-    return sorted;
-  }, [
-    allVideos,
-    libraryQuery,
-    filterSource,
-    filterChannel,
-    filterScore,
-    filterRating,
-    filterDuration,
-    filterPublishedFrom,
-    filterPublishedTo,
-    filterTag,
-    sortBy,
-  ]);
+  const filteredLibrary = useMemo(
+    () => filterAndSortVideos(allVideos, filters),
+    [allVideos, filters]
+  );
 
   // Page the filtered list so a large library stays quick to scan.
-  const libraryPageCount = Math.max(1, Math.ceil(filteredLibrary.length / LIBRARY_PAGE_SIZE));
-  const safeLibraryPage = Math.min(libraryPage, libraryPageCount - 1);
-  const visibleLibrary = filteredLibrary.slice(
-    safeLibraryPage * LIBRARY_PAGE_SIZE,
-    safeLibraryPage * LIBRARY_PAGE_SIZE + LIBRARY_PAGE_SIZE
-  );
+  const {
+    page: safeLibraryPage,
+    pageCount: libraryPageCount,
+    items: visibleLibrary,
+  } = paginate(filteredLibrary, libraryPage, LIBRARY_PAGE_SIZE);
 
   const allVisibleLibrarySelected =
     visibleLibrary.length > 0 && visibleLibrary.every((v) => selectedLibraryIds.has(v.youtubeId));
@@ -240,47 +130,17 @@ export const VideosPage: React.FC<VideosPageProps> = ({
     setSelectedLibraryIds(new Set());
   };
 
-  const hasActiveLibraryFilters =
-    libraryQuery.trim().length > 0 ||
-    filterSource !== 'ALL' ||
-    filterChannel !== 'ALL' ||
-    filterTag !== 'ALL' ||
-    filterScore !== 'all' ||
-    filterRating !== 'all' ||
-    filterDuration !== 'all' ||
-    filterPublishedFrom !== '' ||
-    filterPublishedTo !== '' ||
-    sortBy !== 'score';
+  const hasActiveLibraryFilters = hasActiveVideoFilters(filters);
 
-  const clearLibraryFilters = () => {
-    setLibraryQuery('');
-    setFilterSource('ALL');
-    setFilterChannel('ALL');
-    setFilterTag('ALL');
-    setFilterScore('all');
-    setFilterRating('all');
-    setFilterDuration('all');
-    setFilterPublishedFrom('');
-    setFilterPublishedTo('');
-    setSortBy('score');
+  const updateFilters = (patch: Partial<VideoFilterState>) => {
+    setFilters((prev) => ({ ...prev, ...patch }));
     setLibraryPage(0);
   };
 
-  // Any filter or sort change invalidates the current page number.
-  useEffect(() => {
+  const clearLibraryFilters = () => {
+    setFilters(DEFAULT_VIDEO_FILTERS);
     setLibraryPage(0);
-  }, [
-    libraryQuery,
-    filterSource,
-    filterChannel,
-    filterTag,
-    filterScore,
-    filterRating,
-    filterDuration,
-    filterPublishedFrom,
-    filterPublishedTo,
-    sortBy,
-  ]);
+  };
 
   const formatDuration = (seconds: number) => {
     if (!seconds) return '—';
@@ -358,159 +218,16 @@ export const VideosPage: React.FC<VideosPageProps> = ({
               Page <span className="font-mono font-bold text-slate-200">{safeLibraryPage + 1}</span>{' '}
               / {libraryPageCount}
             </span>
-            {hasActiveLibraryFilters && (
-              <button
-                onClick={clearLibraryFilters}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold transition border border-slate-700"
-              >
-                <X className="w-3 h-3" /> Clear
-              </button>
-            )}
           </div>
         </div>
 
-        {/* Search + filter controls */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="relative sm:col-span-2 lg:col-span-4">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              value={libraryQuery}
-              onChange={(e) => setLibraryQuery(e.target.value)}
-              placeholder="Search your library by title, channel, description or tag..."
-              className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-orange-500"
-            />
-          </div>
-
-          <label className="space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Source</span>
-            <select
-              value={filterSource}
-              onChange={(e) => setFilterSource(e.target.value as SourceFlag | 'ALL')}
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-hidden focus:border-orange-500"
-            >
-              <option value="ALL">All sources</option>
-              {sourceOptions.map(([flag, count]) => (
-                <option key={flag} value={flag}>
-                  {sourceFlagLabel(flag)} ({count})
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Channel</span>
-            <select
-              value={filterChannel}
-              onChange={(e) => setFilterChannel(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-hidden focus:border-orange-500"
-            >
-              <option value="ALL">All channels</option>
-              {channelOptions.map(([id, title]) => (
-                <option key={id} value={id}>
-                  {title}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Tag</span>
-            <select
-              value={filterTag}
-              onChange={(e) => setFilterTag(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-hidden focus:border-orange-500"
-            >
-              <option value="ALL">All tags</option>
-              {tagOptions.map(([tag, count]) => (
-                <option key={tag} value={tag}>
-                  {tag} ({count})
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Score</span>
-            <select
-              value={filterScore}
-              onChange={(e) => setFilterScore(e.target.value as typeof filterScore)}
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-hidden focus:border-orange-500"
-            >
-              <option value="all">Any score</option>
-              <option value="elite">Top tier (≤ 20)</option>
-              <option value="good">Good (≤ 50)</option>
-              <option value="low">Low priority (≥ 70)</option>
-            </select>
-          </label>
-
-          <label className="space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Rating</span>
-            <select
-              value={filterRating}
-              onChange={(e) => setFilterRating(e.target.value as typeof filterRating)}
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-hidden focus:border-orange-500"
-            >
-              <option value="all">Any rating</option>
-              <option value="rated">Rated</option>
-              <option value="unrated">Unrated</option>
-              <option value="favorites">Favorites</option>
-            </select>
-          </label>
-
-          <label className="space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Duration</span>
-            <select
-              value={filterDuration}
-              onChange={(e) => setFilterDuration(e.target.value as typeof filterDuration)}
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-hidden focus:border-orange-500"
-            >
-              <option value="all">Any length</option>
-              <option value="short">Short (&lt; 5 min)</option>
-              <option value="medium">Medium (5–20 min)</option>
-              <option value="long">Long (&gt; 20 min)</option>
-            </select>
-          </label>
-
-          <label className="space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Published from</span>
-            <input
-              type="date"
-              value={filterPublishedFrom}
-              onChange={(e) => setFilterPublishedFrom(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-hidden focus:border-orange-500"
-            />
-          </label>
-
-          <label className="space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Published to</span>
-            <input
-              type="date"
-              value={filterPublishedTo}
-              onChange={(e) => setFilterPublishedTo(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-hidden focus:border-orange-500"
-            />
-          </label>
-
-          <label className="space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-              <ArrowUpDown className="w-3 h-3" /> Sort by
-            </span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-hidden focus:border-orange-500"
-            >
-              <option value="score">Score (best first)</option>
-              <option value="rating">Rating (highest)</option>
-              <option value="date_desc">Published (newest)</option>
-              <option value="date_asc">Published (oldest)</option>
-              <option value="title">Title (A–Z)</option>
-              <option value="channel">Channel (A–Z)</option>
-              <option value="duration">Duration (longest)</option>
-            </select>
-          </label>
-        </div>
+        <VideoFilterBar
+          videos={allVideos}
+          filters={filters}
+          onChange={updateFilters}
+          onClear={clearLibraryFilters}
+          searchPlaceholder="Search your library by title, channel, description or tag..."
+        />
 
         {/* Bulk actions, scoped to the page or to every match */}
         <div className="flex flex-wrap items-center gap-2">
@@ -669,43 +386,11 @@ export const VideosPage: React.FC<VideosPageProps> = ({
           )}
         </div>
 
-        {/* Pagination */}
-        {filteredLibrary.length > 0 && (
-          <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-            <button
-              onClick={() => setLibraryPage(0)}
-              disabled={safeLibraryPage === 0}
-              className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 text-xs font-semibold border border-slate-700 transition"
-            >
-              « First
-            </button>
-            <button
-              onClick={() => setLibraryPage(safeLibraryPage - 1)}
-              disabled={safeLibraryPage === 0}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 text-xs font-semibold border border-slate-700 transition"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" /> Prev
-            </button>
-            <span className="px-2 text-xs text-slate-400">
-              Page <span className="font-mono font-bold text-slate-200">{safeLibraryPage + 1}</span>{' '}
-              of <span className="font-mono font-bold text-slate-200">{libraryPageCount}</span>
-            </span>
-            <button
-              onClick={() => setLibraryPage(safeLibraryPage + 1)}
-              disabled={safeLibraryPage >= libraryPageCount - 1}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 text-xs font-semibold border border-slate-700 transition"
-            >
-              Next <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setLibraryPage(libraryPageCount - 1)}
-              disabled={safeLibraryPage >= libraryPageCount - 1}
-              className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 text-xs font-semibold border border-slate-700 transition"
-            >
-              Last »
-            </button>
-          </div>
-        )}
+        <VideoPagination
+          page={safeLibraryPage}
+          pageCount={libraryPageCount}
+          onPage={setLibraryPage}
+        />
       </div>
     </div>
   );

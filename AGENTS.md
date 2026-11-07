@@ -59,6 +59,20 @@
   catalogue) live in a cross-origin iframe whose bytes the page cannot read, so they are not
   editor inputs — the editor says so rather than failing silently.
 
+## Browsing videos
+
+- Every list of videos — the saved **Videos** library, **Search & Collect** results, and the
+  baked **catalogue** — offers the same search, filter, sort and pagination controls, so they
+  behave the same wherever videos appear. The model lives in `src/services/videoFilter.ts`
+  (`VideoFilterState`, `filterAndSortVideos`, `paginate`); the UI is `VideoFilterBar` +
+  `VideoPagination` in `src/components/`. Change the behaviour there once, not per view.
+- Free-text search matches every whitespace-separated term against title, channel, description
+  and tags, so adding a term narrows. The catalogue passes an `extraSearchText` hook so its
+  search also reaches `actors` and `category`, which `VideoMetadata` does not carry.
+- List-specific bits stay in their view: the library keeps bulk actions, search results keep the
+  personalized-ranking toggle (rendered into the bar's `headerExtra`), and the catalogue keys
+  cards by canonical page URL because its store key (`sourceId:sourceVideoId`) can repeat.
+
 ## Pull requests and OpenSpec
 
 - Every PR is described with `.github/pull_request_template.md`. Fill every section; the

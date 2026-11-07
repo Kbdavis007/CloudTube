@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CloudTube catalogue harness</title>
+    <style>
+      body { margin: 0; background: #020617; color: #e2e8f0; font-family: system-ui, sans-serif; }
+      #root { max-width: 1200px; margin: 0 auto; padding: 16px; }
+    </style>
+  </head>
+  <body>
+    <!--
+      Mounts the real catalogue view on its own. It needs no sign-in and reads
+      the baked catalogue, so Playwright can drive the shared search/filter/sort
+      controls without the app's Google gate. Served by the Vite dev server at
+      /tests/harness/catalog.html.
+    -->
+    <div id="root"></div>
+    <script type="module">
+      import React from 'react';
+      import { createRoot } from 'react-dom/client';
+      import { VegaSourceView } from '/src/components/views/VegaSourceView.tsx';
+
+      createRoot(document.getElementById('root')).render(
+        React.createElement(VegaSourceView, {
+          onIndexVideo: () => {},
+          onPlayVideo: () => {},
+          indexedVideoIds: new Set(),
+        })
+      );
+    </script>
+  </body>
+</html>

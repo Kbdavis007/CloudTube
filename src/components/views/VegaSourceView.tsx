@@ -1,21 +1,29 @@
 import React, { useMemo, useState } from 'react';
-import { Check, ExternalLink, Play, Plus, Search, ShieldAlert } from 'lucide-react';
+import { Check, ExternalLink, Play, Plus, ShieldAlert } from 'lucide-react';
 import { VideoMetadata } from '../../types';
 import { SOURCE_ALIASES } from '../../data/sourceAliases';
 import { HoverPreview } from '../HoverPreview';
 import { hoverPreviewEmbedUrl } from '../../services/preview';
+import { VideoFilterBar } from '../VideoFilterBar';
+import { VideoPagination } from '../VideoPagination';
+import {
+  DEFAULT_VIDEO_FILTERS,
+  filterAndSortVideos,
+  paginate,
+  type VideoFilterState,
+} from '../../services/videoFilter';
 import {
   CATALOG_GENERATED_AT,
-  CATALOG_SOURCES,
-  CatalogVideo,
   catalogKey,
   catalogToVideoMetadata,
   loadBakedCatalog,
-  searchCatalog,
 } from '../../services/vegaApi';
 
 /** The neutral name this source is shown under; its real name is never rendered. */
 const SOURCE_NAME = SOURCE_ALIASES.Vega!;
+
+/** Cards per page in the catalogue browser. */
+const CATALOG_PAGE_SIZE = 24;
 
 interface VegaSourceViewProps {
   onIndexVideo: (video: VideoMetadata) => void;
@@ -29,6 +37,8 @@ interface VegaSourceViewProps {
  *
  * The records are a static JSON module (see `vegaApi`), so there is nothing to
  * download: the whole catalogue is available offline the moment the app loads.
+ * It offers the same search, filter, sort and pagination as the library and the
+ * live search results.
  */
 export const VegaSourceView: React.FC<VegaSourceViewProps> = ({
   onIndexVideo,
@@ -36,103 +46,94 @@ export const VegaSourceView: React.FC<VegaSourceViewProps> = ({
   indexedVideoIds,
 }) => {
   const catalog = useMemo(() => loadBakedCatalog(), []);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [appliedQuery, setAppliedQuery] = useState('');
-  const [sourceId, setSourceId] = useState('all');
+  const catalogVideos = useMemo(() => catalog.map(catalogToVideoMetadata), [catalog]);
+  // The catalogue search also covers actors and category, which the shared video
+  // model does not carry, so keep them keyed by the video's store key.
+  const extraSearchById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const record of catalog) {
+      map.set(catalogKey(record), `${record.actors.join(' ')} ${record.category}`);
+    }
+    return map;
+  }, [catalog]);
 
-  const scoped = useMemo(
-    () => (sourceId === 'all' ? catalog : catalog.filter((v) => v.sourceId === sourceId)),
-    [catalog, sourceId]
-  );
+  const [filters, setFilters] = useState<VideoFilterState>(DEFAULT_VIDEO_FILTERS);
+  const [page, setPage] = useState(0);
 
-  const results: CatalogVideo[] = useMemo(
+  const filtered = useMemo(
     () =>
-      appliedQuery
-        ? searchCatalog(scoped, appliedQuery, 120).map((r) => r.record)
-        : scoped.slice(0, 120),
-    [scoped, appliedQuery]
+      filterAndSortVideos(catalogVideos, filters, {
+        extraSearchText: (video) => extraSearchById.get(video.youtubeId),
+      }),
+    [catalogVideos, filters, extraSearchById]
   );
 
-  const runSearch = () => setAppliedQuery(searchTerm.trim());
+  const {
+    page: safePage,
+    pageCount,
+    items: visible,
+  } = paginate(filtered, page, CATALOG_PAGE_SIZE);
+
+  const updateFilters = (patch: Partial<VideoFilterState>) => {
+    setFilters((prev) => ({ ...prev, ...patch }));
+    setPage(0);
+  };
+
+  const clearFilters = () => {
+    setFilters(DEFAULT_VIDEO_FILTERS);
+    setPage(0);
+  };
 
   return (
     <div className="space-y-6 pb-12">
       <div className="space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-white flex items-center gap-2">
-              <ShieldAlert className="w-5 h-5 text-orange-500" />
-              {SOURCE_NAME} Source
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-400">
-              {catalog.length.toLocaleString()} videos built into this app. No download needed —
-              search it and add what you want to your library.
-            </p>
-          </div>
-
-          {CATALOG_SOURCES.length > 1 && (
-            <select
-              value={sourceId}
-              onChange={(e) => setSourceId(e.target.value)}
-              className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-200 focus:outline-hidden focus:border-orange-500"
-              title="Filter by source"
-            >
-              <option value="all">All sources</option>
-              {CATALOG_SOURCES.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          )}
+        <div>
+          <h1 className="text-xl sm:text-2xl font-extrabold text-white flex items-center gap-2">
+            <ShieldAlert className="w-5 h-5 text-orange-500" />
+            {SOURCE_NAME} Source
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-400">
+            {catalog.length.toLocaleString()} videos built into this app. No download needed —
+            search, filter and add what you want to your library.
+          </p>
         </div>
-
-        <div className="flex flex-col sm:flex-row gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && runSearch()}
-              placeholder="Search titles, tags, actors, category, or uploader…"
-              className="w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-hidden focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition"
-            />
-          </div>
-          <button
-            onClick={runSearch}
-            className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition active:scale-95"
-          >
-            <Search className="w-4 h-4" />
-            <span>Search catalogue</span>
-          </button>
-        </div>
-
-        <p className="text-[11px] text-slate-500">
-          Catalogue generated {CATALOG_GENERATED_AT.slice(0, 10)} ·{' '}
-          {results.length.toLocaleString()} shown
-          {appliedQuery ? ` for “${appliedQuery}”` : ''}
-        </p>
       </div>
 
-      {results.length > 0 && (
+      <VideoFilterBar
+        videos={catalogVideos}
+        filters={filters}
+        onChange={updateFilters}
+        onClear={clearFilters}
+        searchPlaceholder="Search titles, tags, actors, category, or uploader..."
+      />
+
+      <p className="text-[11px] text-slate-500">
+        Catalogue generated {CATALOG_GENERATED_AT.slice(0, 10)} ·{' '}
+        {filtered.length.toLocaleString()} match{filtered.length === 1 ? '' : 'es'}
+      </p>
+
+      {visible.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {results.map((record) => {
-            const key = catalogKey(record);
+          {visible.map((video) => {
+            const key = video.youtubeId;
+            // The catalogue can list the same source id under more than one
+            // slug, so the store key is not unique. The canonical page URL is,
+            // so use it for React's key while the store key still drives the
+            // "In Library" lookup.
+            const reactKey = video.playback?.externalUrl || key;
             const isIndexed = indexedVideoIds.has(key);
-            const thumb = record.thumbnail || record.previewThumbnail;
-            const video = catalogToVideoMetadata(record);
+            const thumb = video.thumbnails.medium || video.posterUrl;
 
             return (
               <div
-                key={key}
+                key={reactKey}
                 className="flex flex-col rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-orange-500/50 overflow-hidden transition group"
               >
                 <div className="relative aspect-video w-full bg-slate-950 overflow-hidden">
                   {thumb ? (
                     <HoverPreview
                       poster={thumb}
-                      alt={record.title}
+                      alt={video.title}
                       embedUrl={hoverPreviewEmbedUrl(video)}
                     >
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80 pointer-events-none" />
@@ -156,8 +157,8 @@ export const VegaSourceView: React.FC<VegaSourceViewProps> = ({
                   )}
 
                   <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-black/80 font-mono text-[11px] font-semibold text-white">
-                    {Math.floor(record.durationSeconds / 60)}:
-                    {String(record.durationSeconds % 60).padStart(2, '0')}
+                    {Math.floor(video.durationSeconds / 60)}:
+                    {String(video.durationSeconds % 60).padStart(2, '0')}
                   </div>
                 </div>
 
@@ -165,15 +166,14 @@ export const VegaSourceView: React.FC<VegaSourceViewProps> = ({
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-[11px] text-slate-400">
                       <span className="font-semibold text-orange-400/90 truncate">
-                        {record.uploader || 'Unknown uploader'}
+                        {video.channelTitle || 'Unknown uploader'}
                       </span>
-                      <span className="shrink-0">{record.quality}</span>
                     </div>
                     <h3 className="text-sm font-bold text-white line-clamp-2 group-hover:text-orange-400 transition">
-                      {record.title}
+                      {video.title}
                     </h3>
                     <div className="flex flex-wrap gap-1 pt-0.5">
-                      {record.tags.slice(0, 4).map((tag) => (
+                      {video.tags.slice(0, 4).map((tag) => (
                         <span
                           key={tag}
                           className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300"
@@ -205,15 +205,17 @@ export const VegaSourceView: React.FC<VegaSourceViewProps> = ({
                       )}
                     </button>
 
-                    <a
-                      href={record.pageUrl}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
-                      title="Open on the source site"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
+                    {video.playback?.externalUrl && (
+                      <a
+                        href={video.playback.externalUrl}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
+                        title="Open on the source site"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    )}
                   </div>
                 </div>
               </div>
@@ -222,10 +224,12 @@ export const VegaSourceView: React.FC<VegaSourceViewProps> = ({
         </div>
       )}
 
-      {results.length === 0 && (
+      <VideoPagination page={safePage} pageCount={pageCount} onPage={setPage} />
+
+      {filtered.length === 0 && (
         <div className="py-16 text-center space-y-2">
           <p className="text-sm font-semibold text-white">No videos matched that search.</p>
-          <p className="text-xs text-slate-400">Try a single term.</p>
+          <p className="text-xs text-slate-400">Try a single term, or clear the filters.</p>
         </div>
       )}
     </div>

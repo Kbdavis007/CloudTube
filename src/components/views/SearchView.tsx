@@ -1,20 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  VideoMetadata,
-  SourceFlag,
-  CrawlJob,
-  TasteProfile,
-} from '../../types';
+import { VideoMetadata, SourceFlag, TasteProfile } from '../../types';
 import {
   Search,
-  Filter,
   Check,
   Plus,
   Play,
   Tv,
   Star,
-  ExternalLink,
-  SlidersHorizontal,
   Loader2,
   Sparkles,
   Zap,
@@ -22,11 +14,7 @@ import {
   TrendingDown,
 } from 'lucide-react';
 import { YouTubeApiClient } from '../../services/youtubeApi';
-import {
-  OPEN_SOURCES,
-  openSourceById,
-  type OpenSourceId,
-} from '../../services/openSourcesApi';
+import { OPEN_SOURCES, type OpenSourceId } from '../../services/openSourcesApi';
 import { searchOpenSourcesCached } from '../../services/searchApi';
 import {
   readEnabledOpenSources,
@@ -38,6 +26,16 @@ import { sourceFlagLabel } from '../../data/sourceLabels';
 import { hoverPreviewEmbedUrl } from '../../services/preview';
 import { HoverPreview } from '../HoverPreview';
 import { ApiErrorCard } from '../ApiErrorCard';
+import { VideoFilterBar } from '../VideoFilterBar';
+import { VideoPagination } from '../VideoPagination';
+import {
+  DEFAULT_VIDEO_FILTERS,
+  hasActiveVideoFilters,
+  matchesVideoFilters,
+  paginate,
+  sortVideos,
+  type VideoFilterState,
+} from '../../services/videoFilter';
 
 interface SearchViewProps {
   /** Saves a result to the library; only the Save button calls this. */
@@ -51,6 +49,9 @@ interface SearchViewProps {
   tasteProfile: TasteProfile;
 }
 
+/** Cards per page in the results grid. */
+const SEARCH_PAGE_SIZE = 24;
+
 export const SearchView: React.FC<SearchViewProps> = ({
   onIndexVideo,
   onExpandChannel,
@@ -63,7 +64,8 @@ export const SearchView: React.FC<SearchViewProps> = ({
   const [searchTerm, setSearchTerm] = useState('System Design Explained');
   const [isSearching, setIsSearching] = useState(false);
   const [isLiveSearchActive, setIsLiveSearchActive] = useState(false);
-  const [selectedSourceFilter, setSelectedSourceFilter] = useState<SourceFlag | 'ALL'>('ALL');
+  const [filters, setFilters] = useState<VideoFilterState>(DEFAULT_VIDEO_FILTERS);
+  const [page, setPage] = useState(0);
   const [results, setResults] = useState<VideoMetadata[]>([]);
   const [openResults, setOpenResults] = useState<VideoMetadata[]>([]);
   const [openSearchErrors, setOpenSearchErrors] = useState<Partial<Record<OpenSourceId, string>>>({});
@@ -141,6 +143,9 @@ export const SearchView: React.FC<SearchViewProps> = ({
     setHasSearched(true);
     setSearchError(null);
     setOpenSearchErrors({});
+    // A fresh search starts from a clean filter set and the first page.
+    setFilters(DEFAULT_VIDEO_FILTERS);
+    setPage(0);
 
     const openIds = [...selectedOpenSources];
 
@@ -190,28 +195,67 @@ export const SearchView: React.FC<SearchViewProps> = ({
     [results, openResults]
   );
 
-  const filteredResults =
-    selectedSourceFilter === 'ALL'
-      ? combinedResults
-      : combinedResults.filter((r) => r.sourceFlags.includes(selectedSourceFilter));
-
-  // Apply the learned taste profile: demote penalized tags and sort muted
-  // channels to the end. Falls back to the raw order when personalization is off
-  // or nothing has been removed yet.
-  const rankedResults = useMemo(() => {
+  // Apply the learned taste profile first: demote penalized tags and mute
+  // channels. Falls back to the raw order when personalization is off or
+  // nothing has been removed yet.
+  const ranked = useMemo(() => {
     if (!personalize || tasteProfile.totalRemovals === 0) {
-      return filteredResults.map((video) => ({
+      return combinedResults.map((video) => ({
         video,
-        assessment: { penalty: 0, muted: false, signals: [] },
+        assessment: { penalty: 0, muted: false, signals: [] as { label: string; penalty: number }[] },
         adjustedScore: video.personal?.indexScore ?? 50,
       }));
     }
-    return rankCandidates(filteredResults, tasteProfile);
-  }, [filteredResults, personalize, tasteProfile]);
+    return rankCandidates(combinedResults, tasteProfile);
+  }, [combinedResults, personalize, tasteProfile]);
 
-  const personalizedCount = rankedResults.filter(
+  // The same filters the library offers apply to every search result.
+  const filteredRanked = useMemo(
+    () => ranked.filter((r) => matchesVideoFilters(r.video, filters)),
+    [ranked, filters]
+  );
+
+  const sortedRanked = useMemo(() => {
+    if (filters.sort === 'score') {
+      // Score sort follows the personalized order: muted last, then best first.
+      return filteredRanked
+        .slice()
+        .sort(
+          (a, b) =>
+            (a.assessment.muted ? 1 : 0) - (b.assessment.muted ? 1 : 0) ||
+            a.adjustedScore - b.adjustedScore
+        );
+    }
+    const order = new Map(
+      sortVideos(
+        filteredRanked.map((r) => r.video),
+        filters.sort
+      ).map((video, index) => [video.youtubeId, index])
+    );
+    return filteredRanked
+      .slice()
+      .sort((a, b) => (order.get(a.video.youtubeId) ?? 0) - (order.get(b.video.youtubeId) ?? 0));
+  }, [filteredRanked, filters.sort]);
+
+  const {
+    page: safePage,
+    pageCount,
+    items: rankedResults,
+  } = paginate(sortedRanked, page, SEARCH_PAGE_SIZE);
+
+  const personalizedCount = filteredRanked.filter(
     (r) => r.assessment.penalty > 0 || r.assessment.muted
   ).length;
+
+  const updateFilters = (patch: Partial<VideoFilterState>) => {
+    setFilters((prev) => ({ ...prev, ...patch }));
+    setPage(0);
+  };
+
+  const clearFilters = () => {
+    setFilters(DEFAULT_VIDEO_FILTERS);
+    setPage(0);
+  };
 
   const formatViews = (views: number) => {
     if (views >= 1_000_000) return (views / 1_000_000).toFixed(1) + 'M views';
@@ -320,89 +364,32 @@ export const SearchView: React.FC<SearchViewProps> = ({
         </div>
       </div>
 
-      {/* Filter by Source Flags + personalization toggle */}
+      {/* The same search, filter and sort controls the library offers, applied
+          to every result — YouTube and open sources alike. */}
       {combinedResults.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-slate-900/60 border border-slate-800/80">
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-orange-400" />
-            <span className="text-xs font-semibold text-slate-300">Source:</span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-1.5">
+        <VideoFilterBar
+          videos={combinedResults}
+          filters={filters}
+          onChange={updateFilters}
+          onClear={clearFilters}
+          searchPlaceholder="Filter results by title, channel, description or tag..."
+          headerExtra={
             <button
-              onClick={() => setSelectedSourceFilter('ALL')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
-                selectedSourceFilter === 'ALL'
-                  ? 'bg-orange-500 text-white'
-                  : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+              onClick={() => setPersonalize(!personalize)}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition border ${
+                personalize
+                  ? 'bg-orange-500/15 text-orange-300 border-orange-500/40'
+                  : 'bg-slate-950/40 text-slate-400 border-slate-800 hover:text-slate-200'
               }`}
+              title="Use your removal reasons to re-rank and mute results"
             >
-              All Sources ({combinedResults.length})
+              <Sparkles className="w-3.5 h-3.5" />
+              {personalize
+                ? `Personalized${personalizedCount > 0 ? ` (${personalizedCount})` : ''}`
+                : 'Personalized: Off'}
             </button>
-
-            {(
-              [
-                'YouTubeSearch',
-                'Google',
-                'Reddit',
-                'X',
-                'LinkedIn',
-                'Playlist',
-                'Vega',
-                'XGroovy',
-                'ArchiveOrg',
-                'PeerTube',
-                'Dailymotion',
-                'Eporner',
-                'EmbedHub',
-                'RedGifs',
-                'Pornhub',
-                'Xhamster',
-                'Redtube',
-                'JustPorn',
-                'HornyFap',
-                'YesPorn',
-                'XXBrits',
-                'NotFans',
-                'PornLib',
-                'DrTuber',
-                'PornGo',
-                'YouJizz',
-                'AnySex',
-                'AlotPorn',
-              ] as SourceFlag[]
-            ).map((flag) => {
-              const count = combinedResults.filter((r) => r.sourceFlags.includes(flag)).length;
-              if (count === 0) return null;
-              return (
-                <button
-                  key={flag}
-                  onClick={() => setSelectedSourceFilter(flag)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition border ${
-                    selectedSourceFilter === flag
-                      ? sourceFlagColors[flag] + ' ring-1 ring-white/20'
-                      : 'bg-slate-950/40 text-slate-400 border-slate-800 hover:text-slate-200'
-                  }`}
-                >
-                  {sourceFlagLabel(flag)} ({count})
-                </button>
-              );
-            })}
-          </div>
-
-          <button
-            onClick={() => setPersonalize(!personalize)}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition border ${
-              personalize
-                ? 'bg-orange-500/15 text-orange-300 border-orange-500/40'
-                : 'bg-slate-950/40 text-slate-400 border-slate-800 hover:text-slate-200'
-            }`}
-            title="Use your removal reasons to re-rank and mute results"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            {personalize ? `Personalized${personalizedCount > 0 ? ` (${personalizedCount})` : ''}` : 'Personalized: Off'}
-          </button>
-        </div>
+          }
+        />
       )}
 
       {/* Results Grid */}
@@ -575,6 +562,10 @@ export const SearchView: React.FC<SearchViewProps> = ({
         </div>
       )}
 
+      {!isSearching && sortedRanked.length > 0 && (
+        <VideoPagination page={safePage} pageCount={pageCount} onPage={setPage} />
+      )}
+
       {/* YouTube needs a sign-in; open-source results still show, so only treat
           the YouTube error as blocking when nothing at all came back. */}
       {!isSearching && searchError && combinedResults.length === 0 && (
@@ -587,10 +578,25 @@ export const SearchView: React.FC<SearchViewProps> = ({
         </p>
       )}
 
-      {!isSearching && hasSearched && !searchError && rankedResults.length === 0 && (
+      {!isSearching && hasSearched && !searchError && sortedRanked.length === 0 && (
         <div className="py-16 text-center space-y-2">
-          <p className="text-sm font-semibold text-white">No results matched your search term.</p>
-          <p className="text-xs text-slate-400">Try searching for "System Design" or "Web Development".</p>
+          <p className="text-sm font-semibold text-white">
+            {combinedResults.length > 0 && hasActiveVideoFilters(filters)
+              ? 'No results match your filters.'
+              : 'No results matched your search term.'}
+          </p>
+          {combinedResults.length > 0 && hasActiveVideoFilters(filters) ? (
+            <button
+              onClick={clearFilters}
+              className="text-xs text-orange-400 hover:text-orange-300 font-semibold"
+            >
+              Clear filters
+            </button>
+          ) : (
+            <p className="text-xs text-slate-400">
+              Try searching for "System Design" or "Web Development".
+            </p>
+          )}
         </div>
       )}
 

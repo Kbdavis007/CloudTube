@@ -56,6 +56,16 @@ test('the library listing shows the saved videos', () => {
   assert.match(html, /All Library Videos/);
 });
 
+test('the library listing offers the shared search, filter and sort controls', () => {
+  const html = render(null, [makeVideo('a', 'Saved video A')]);
+
+  assert.match(html, /video-filter-bar/);
+  assert.match(html, /video-filter-search/);
+  assert.match(html, /video-filter-source/);
+  assert.match(html, /video-filter-sort/);
+  assert.match(html, /Filter &amp; sort/);
+});
+
 test('an unsaved video being watched offers to be saved, not silently listed', () => {
   const watched = makeVideo('result', 'A watched search result');
   const html = render(watched, []);
