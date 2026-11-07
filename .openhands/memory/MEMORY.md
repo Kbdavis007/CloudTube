@@ -641,3 +641,17 @@ in-app Play button automatically. `SourceFlag` is defined in `src/types/index.ts
 - Test hooks: `player-queue-label`, `related-videos`, `related-video-card`. Harness
   `tests/harness/player.html` mounts `SelectedVideoPage` with a synthetic queue; e2e
   `tests/e2e/player.spec.ts`.
+
+### Search: in-place playback + Settings-only sources (2026-11-07)
+- **`SearchResultCard`** (`src/components/SearchResultCard.tsx`) owns one `isPlaying` per card, so
+  several results play at once (a `useState` in a `map` inside the view is illegal — that is why the
+  card is its own component). Play swaps the thumbnail for `inlinePlayerEmbedUrl(video)`; "Stop"
+  restores the poster; "Full page" calls `onPlayVideo(video, resultQueue, 'Search results')`.
+- **`inlinePlayerEmbedUrl`** (`src/services/preview.ts`): source `playback.embedUrl` → else
+  `externalUrl` → else full `youtubePlayerUrl(id)` (interactive, unlike the muted `hoverPreviewEmbedUrl`).
+- **`src/data/sourceFlagColors.ts`** = the one exhaustive `Record<SourceFlag,string>` badge map
+  (`sourceFlagColor`); add new flags there.
+- **The "Also search:" chip row is gone from `SearchView`** — Settings → Search Sources is the only
+  editor of `searchSources`; search just reads it. Failed sources show as one non-blocking note.
+- OpenSpec `add-inline-search-playback` (capability `video-search`). Openspec CLI after a sandbox
+  reset: `curl -fsSL https://openspec.dev/cli/install.sh | sh` → `~/.local/bin/openspec`.

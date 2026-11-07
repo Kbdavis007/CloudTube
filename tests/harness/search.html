@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CloudTube search harness</title>
+    <style>
+      body { margin: 0; background: #020617; color: #e2e8f0; font-family: system-ui, sans-serif; }
+      #root { max-width: 1100px; margin: 0 auto; padding: 16px; }
+    </style>
+  </head>
+  <body>
+    <!--
+      Mounts the real search-results grid on its own, seeded with a fixed set of
+      results, so Playwright can prove a result plays in place in its card (and
+      that more than one can play at once) without the Google sign-in gate or a
+      live search. The player iframes point at example.com, which the browser
+      renders as an empty frame — enough to prove the player mounts in the card.
+      Served by the Vite dev server at /tests/harness/search.html.
+    -->
+    <div id="root"></div>
+    <script type="module">
+      import React, { useState } from 'react';
+      import { createRoot } from 'react-dom/client';
+      import { SearchResultCard } from '/src/components/SearchResultCard.tsx';
+
+      const makeVideo = (id, title, embedUrl) => ({
+        id: `uuid-${id}`,
+        youtubeId: id,
+        title,
+        description: 'A result in the harness grid.',
+        tags: [],
+        channelId: 'chan',
+        channelTitle: 'Harness Channel',
+        publishedAt: '2023-01-01T00:00:00Z',
+        duration: 'PT5M',
+        durationSeconds: 300,
+        viewCount: 100,
+        likeCount: 0,
+        commentCount: 0,
+        thumbnails: { default: '', medium: '', high: '' },
+        sourceFlags: ['YouTubeSearch'],
+        indexedAt: '2023-01-01T00:00:00Z',
+        lastUpdatedAt: '2023-01-01T00:00:00Z',
+        ...(embedUrl
+          ? { playback: { embedUrl, externalUrl: embedUrl } }
+          : {}),
+      });
+
+      // Open-source results carry their own embed, which the card plays in place.
+      const results = [
+        makeVideo('r1', 'First result', 'https://example.com/embed/r1'),
+        makeVideo('r2', 'Second result', 'https://example.com/embed/r2'),
+      ];
+
+      function Harness() {
+        const [playedId, setPlayedId] = useState(null);
+        return React.createElement(
+          'div',
+          { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
+          results.map((video) =>
+            React.createElement(SearchResultCard, {
+              key: video.youtubeId,
+              video,
+              assessment: { penalty: 0, muted: false, signals: [] },
+              adjustedScore: 50,
+              isIndexed: false,
+              resultQueue: results,
+              queueLabel: 'Search results',
+              onIndexVideo: () => {},
+              onPlayVideo: (v) => setPlayedId(v.youtubeId),
+              onExpandChannel: () => {},
+            })
+          ),
+          React.createElement(
+            'p',
+            { 'data-testid': 'opened-full-page' },
+            playedId ? `Full page: ${playedId}` : 'No full page opened'
+          )
+        );
+      }
+
+      createRoot(document.getElementById('root')).render(React.createElement(Harness));
+    </script>
+  </body>
+</html>

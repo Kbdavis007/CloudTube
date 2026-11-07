@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 
 import {
   hoverPreviewEmbedUrl,
+  inlinePlayerEmbedUrl,
   withAutoplay,
   youtubeEmbedUrl,
+  youtubePlayerUrl,
 } from '../src/services/preview';
 import type { VideoMetadata } from '../src/types';
 
@@ -58,4 +60,26 @@ test('a YouTube video previews its embed, which the source does not provide', ()
   assert.equal(hoverPreviewEmbedUrl(video), youtubeEmbedUrl('dQw4w9WgXcQ'));
   assert.match(hoverPreviewEmbedUrl(video)!, /youtube-nocookie\.com\/embed\/dQw4w9WgXcQ\?/);
   assert.match(hoverPreviewEmbedUrl(video)!, /autoplay=1&mute=1/);
+});
+
+test('an in-place player uses the source embed, or the YouTube player when there is none', () => {
+  const source = makeVideo({
+    playback: { embedUrl: 'https://source.test/embed/1', externalUrl: 'https://source.test/watch/1' },
+  });
+  assert.equal(inlinePlayerEmbedUrl(source), 'https://source.test/embed/1');
+
+  const youtube = makeVideo({ youtubeId: 'dQw4w9WgXcQ' });
+  assert.equal(inlinePlayerEmbedUrl(youtube), youtubePlayerUrl('dQw4w9WgXcQ'));
+  // The in-place player is interactive: sound on and controls shown, unlike the
+  // muted hover preview.
+  assert.doesNotMatch(inlinePlayerEmbedUrl(youtube)!, /mute=1/);
+  assert.doesNotMatch(inlinePlayerEmbedUrl(youtube)!, /controls=0/);
+});
+
+test('an in-place player falls back to the external page when a source has no embed', () => {
+  const video = makeVideo({
+    playback: { embedUrl: '', externalUrl: 'https://source.test/watch/1' },
+  });
+
+  assert.equal(inlinePlayerEmbedUrl(video), 'https://source.test/watch/1');
 });

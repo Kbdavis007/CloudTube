@@ -72,6 +72,22 @@
 - List-specific bits stay in their view: the library keeps bulk actions, search results keep the
   personalized-ranking toggle (rendered into the bar's `headerExtra`), and the catalogue keys
   cards by canonical page URL because its store key (`sourceId:sourceVideoId`) can repeat.
+- Source-flag badge colours live in one place, `src/data/sourceFlagColors.ts`
+  (`SOURCE_FLAG_COLORS` / `sourceFlagColor`); it is exhaustive over `SourceFlag`, so a new flag is
+  a compile error there rather than a silently unstyled badge.
+
+## Searching
+
+- **Settings → Search Sources** is the only place the enabled sources are chosen. Search reads the
+  preference from `src/services/searchSources.ts` and re-reads it on change (`subscribeSearchSources`),
+  but the page has no toggles of its own — the old "Also search:" chip row was removed so one
+  selection is not edited in two places.
+- A search result **plays in place**: `SearchResultCard` (`src/components/SearchResultCard.tsx`) holds
+  its own `isPlaying` and swaps the thumbnail for the source's player (`inlinePlayerEmbedUrl` in
+  `src/services/preview.ts` — the source embed, else the full YouTube player). Playback is per card,
+  so several can play at once. Each card also offers **Full page**, which opens the dedicated player
+  with the whole result list as the play queue. Playing never saves; only **Save** does.
+- A source that fails is named in one non-blocking note; results from the working sources still show.
 
 ## Watching videos
 
