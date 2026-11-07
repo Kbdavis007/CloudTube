@@ -41,8 +41,12 @@ interface SearchViewProps {
   /** Saves a result to the library; only the Save button calls this. */
   onIndexVideo: (video: VideoMetadata) => void;
   onExpandChannel: (channelId: string, channelTitle: string) => void;
-  /** Opens a result in the player without saving it. */
-  onPlayVideo: (video: VideoMetadata) => void;
+  /**
+   * Opens a result in the player without saving it. The whole (filtered,
+   * sorted) result list is passed as the play queue so the player's prev/next
+   * walks the results the user is looking at.
+   */
+  onPlayVideo: (video: VideoMetadata, queue: VideoMetadata[], label: string) => void;
   indexedVideoIds: Set<string>;
   accessToken?: string | null;
   userEmail?: string | null;
@@ -247,6 +251,10 @@ export const SearchView: React.FC<SearchViewProps> = ({
     (r) => r.assessment.penalty > 0 || r.assessment.muted
   ).length;
 
+  // The videos the player walks with prev/next when a result is opened: the
+  // whole filtered, sorted result list, so navigation continues across pages.
+  const resultQueue = useMemo(() => sortedRanked.map((r) => r.video), [sortedRanked]);
+
   const updateFilters = (patch: Partial<VideoFilterState>) => {
     setFilters((prev) => ({ ...prev, ...patch }));
     setPage(0);
@@ -410,8 +418,8 @@ export const SearchView: React.FC<SearchViewProps> = ({
             // channel to expand, so they play in-app without a sign-in.
             const isOpenSource = !!video.playback;
             // Playing a result must not add it to the library; only the Save
-            // button does that.
-            const playVideo = () => onPlayVideo(video);
+            // button does that. The player walks the whole result list.
+            const playVideo = () => onPlayVideo(video, resultQueue, 'Search results');
 
             return (
               <div

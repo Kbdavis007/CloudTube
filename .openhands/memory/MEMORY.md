@@ -597,3 +597,47 @@ in-app Play button automatically. `SourceFlag` is defined in `src/types/index.ts
   are served by the Worker's ASSETS binding (Vite copies `public/`→`dist/`); listed via
   `src/data/sampleClips.ts` and shown in the picker as the "Samples (built in)" optgroup so the
   editor works with no local file. Same-origin ⇒ no CORS, always readable.
+
+## Unified video browsing (v0.2.48, 2026-11-07)
+- **One search/filter/sort/paginate model for every video list.** `src/services/videoFilter.ts`
+  exports `DEFAULT_VIDEO_FILTERS`, `VideoFilterState`, `filterAndSortVideos(videos, filters, options?)`,
+  `matchesVideoFilters`, `sortVideos`, `paginate(items, page, pageSize)` (returns `{page, pageCount, items}`,
+  clamps out-of-range pages), `hasActiveVideoFilters`, `collect{Source,Channel,Tag}Options` (count-desc).
+  UI: `src/components/VideoFilterBar.tsx` (props `videos, filters, onChange(patch), onClear, searchPlaceholder?,
+  headerExtra?`) + `src/components/VideoPagination.tsx` (`page, pageCount, onPage`). Test ids:
+  `video-filter-bar`, `video-filter-search`, `video-filter-source`, `video-filter-sort`, `video-filter-clear`,
+  `video-pagination`.
+- **Free-text search ANDs whitespace terms** across title/channel/description/tags; `options.extraSearchText(video)`
+  adds list-specific fields (the catalogue uses it for `actors` + `category`, which `VideoMetadata` lacks).
+- **Wired into** `VideosPage` (library, keeps bulk actions), `SearchView` (keeps personalized-ranking toggle in
+  the bar's `headerExtra`; resets filters+page on a new search), `VegaSourceView` (catalogue; now paginated).
+  Each list resets `page` to 0 whenever a filter changes.
+- **Gotcha:** the baked catalogue has duplicate `sourceId:sourceVideoId` store keys (the same video under
+  different slugs; the catalogue dedupes by canonical `pageUrl`), so `VegaSourceView` keys cards by
+  `playback.externalUrl`, not the store key, or React logs a duplicate-key warning and drops cards.
+- **OpenSpec CLI is `@fission-ai/openspec`** (not installed; run via `npx --yes @fission-ai/openspec@1.16.1 …`).
+  Flow: `new change <name>`, then `instructions <artifact> --change <name>`, write files, `status --change`,
+  `validate --all --strict`.
+
+## Player play queue + related videos (2026-11-07)
+- **Opening a video carries its list into the player.** `handlePlayVideo(video, queue, label)`
+  (App) stores `playerQueue`/`queueLabel`; prev/next walks that queue and the counter names it
+  ("Video N of M in Search results"/"in Catalogue"). Library opens (`handleSelectVideo`) clear the
+  queue so it falls back to `videos`. A *saved* result opened from search still walks the search
+  queue (only ephemeral-ness depends on saved status).
+- **`resolvePlayerSelection(videos, id, ephemeral, queue?)`** now checks library → ephemeral → queue,
+  so prev/next onto an unsaved result resolves instead of blanking the player. Queue moves only set
+  `selectedVideoId`; saving stays explicit.
+- **Related videos** (`src/services/relatedVideos.ts`): `relatednessScore` weights shared channelId
+  (+5) > shared tag (+3) > shared title words (+2) > same source (+1); a similar duration (+1) only
+  applies once something else matched (alone it is noise). `findRelatedVideos({pool, exclude, limit})`
+  returns strongest-first and tops up with same-source videos. `App` builds the pool from
+  `queueVideos` + `loadBakedCatalogVideos()` (dedup by youtubeId) and excludes the current video and
+  its prev/next neighbours. Playing a related video appends it to the queue.
+- **`loadBakedCatalogVideos()`** (vegaApi) maps the baked catalogue to `VideoMetadata` once and caches.
+  NOTE: the baked catalogue has **no actors/category** (all records blank) and Vega uploader is often
+  "" — so relatedness mostly rides on shared tags (the one tag is `riding pov` for the whole catalogue,
+  which ties everything) + source top-up.
+- Test hooks: `player-queue-label`, `related-videos`, `related-video-card`. Harness
+  `tests/harness/player.html` mounts `SelectedVideoPage` with a synthetic queue; e2e
+  `tests/e2e/player.spec.ts`.

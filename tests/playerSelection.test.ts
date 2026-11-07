@@ -68,3 +68,23 @@ test('a transient video is ignored once another video is selected', () => {
   assert.equal(selection.video, null);
   assert.equal(selection.isInLibrary, false);
 });
+
+test('a video reached through the queue resolves while it is unsaved', () => {
+  // Prev/next moves through the queue; the target was never held transiently,
+  // so it is resolved from the queue instead of dropping the player to null.
+  const first = makeVideo('first');
+  const second = makeVideo('second');
+
+  const selection = resolvePlayerSelection([], 'second', first, [first, second]);
+
+  assert.equal(selection.video, second);
+  assert.equal(selection.isInLibrary, false, 'a queued video is still not saved');
+});
+
+test('a saved video wins over the queue and reports as in the library', () => {
+  const saved = makeVideo('saved');
+  const selection = resolvePlayerSelection([saved], 'saved', null, [makeVideo('other')]);
+
+  assert.equal(selection.video, saved);
+  assert.equal(selection.isInLibrary, true);
+});

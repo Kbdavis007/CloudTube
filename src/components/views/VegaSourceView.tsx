@@ -27,8 +27,12 @@ const CATALOG_PAGE_SIZE = 24;
 
 interface VegaSourceViewProps {
   onIndexVideo: (video: VideoMetadata) => void;
-  /** Opens the video in the player; watching it does not add it to the library. */
-  onPlayVideo: (video: VideoMetadata) => void;
+  /**
+   * Opens the video in the player; watching it does not add it to the library.
+   * The current (filtered, sorted) catalogue list is passed as the play queue
+   * so the player's prev/next walks the catalogue the user is looking at.
+   */
+  onPlayVideo: (video: VideoMetadata, queue: VideoMetadata[], label: string) => void;
   indexedVideoIds: Set<string>;
 }
 
@@ -141,7 +145,7 @@ export const VegaSourceView: React.FC<VegaSourceViewProps> = ({
                       {/* The play overlay is a child of the preview, so resting
                           the pointer here still starts the preview. */}
                       <button
-                        onClick={() => onPlayVideo(video)}
+                        onClick={() => onPlayVideo(video, filtered, 'Catalogue')}
                         className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition bg-black/40"
                         title="Play without saving"
                       >

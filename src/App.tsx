@@ -31,6 +31,8 @@ import { YouTubeApiClient } from './services/youtubeApi';
 import { expandChannel } from './services/channelExpansion';
 import { loadViewState, saveViewState } from './services/viewState';
 import { resolvePlayerSelection } from './services/playerSelection';
+import { findRelatedVideos } from './services/relatedVideos';
+import { loadBakedCatalogVideos } from './services/vegaApi';
 import { splitLinks } from './services/googleApiErrors';
 
 // The editor carries Mediabunny, so it is loaded on demand: the media engine
@@ -52,6 +54,11 @@ export default function App() {
   // A video being played before it is saved. Watching a result must not add it
   // to the library, so the player holds the video here until the user saves it.
   const [ephemeralVideo, setEphemeralVideo] = useState<VideoMetadata | null>(null);
+  // The list a played video came from (search results, catalogue). Prev/next on
+  // the player moves through it, so watching a result walks the result list
+  // rather than the library. Empty when the video was opened from the library.
+  const [playerQueue, setPlayerQueue] = useState<VideoMetadata[]>([]);
+  const [queueLabel, setQueueLabel] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'info' } | null>(null);
   // When set, the wizard opens on this step (used by Settings to replace a token).
@@ -311,6 +318,10 @@ export default function App() {
   // saved) plays from the transient selection so watching never adds it.
   const handleSelectVideo = (youtubeId: string) => {
     setEphemeralVideo(null);
+    // Opening from the library (or any list that did not supply a queue) walks
+    // the library order, so clear any queue left over from a previous play.
+    setPlayerQueue([]);
+    setQueueLabel('');
     setSelectedVideoId(youtubeId);
     setCurrentTab('player');
   };
@@ -318,6 +329,8 @@ export default function App() {
   // Leave the dedicated video page and return to the Videos listing.
   const handleBackToVideos = () => {
     setEphemeralVideo(null);
+    setPlayerQueue([]);
+    setQueueLabel('');
     setSelectedVideoId('');
   };
 
@@ -334,6 +347,8 @@ export default function App() {
     // Opening Videos from the nav shows the listing, not the last video.
     if (tab === 'player') {
       setEphemeralVideo(null);
+      setPlayerQueue([]);
+      setQueueLabel('');
       setSelectedVideoId('');
     }
     setCurrentTab(tab);
@@ -342,14 +357,38 @@ export default function App() {
   // 5b. Play a video that may not be in the library yet without saving it: hold
   // it as the transient selection and open the player. It is added to the
   // library only when the user presses "Save to Library".
-  const handlePlayVideo = (video: VideoMetadata) => {
-    if (videos.some((v) => v.youtubeId === video.youtubeId)) {
-      handleSelectVideo(video.youtubeId);
-      return;
-    }
-    setEphemeralVideo(video);
+  //
+  // `queue` is the list the video was played from (the search results or the
+  // catalogue), so prev/next walks that list — whether or not the played video
+  // happens to be saved already.
+  const handlePlayVideo = (video: VideoMetadata, queue: VideoMetadata[] = [], label = '') => {
+    setPlayerQueue(queue);
+    setQueueLabel(label);
+    // A saved video plays from the library copy; an unsaved one is held
+    // transiently. Either way the queue is the list it was played from.
+    setEphemeralVideo(videos.some((v) => v.youtubeId === video.youtubeId) ? null : video);
     setSelectedVideoId(video.youtubeId);
     setCurrentTab('player');
+  };
+
+  // 5b-ii. Move within the current queue (the player's prev/next). The target
+  // may be unsaved, so it is resolved from the queue rather than the library;
+  // saving stays explicit.
+  const handleNavigateQueue = (youtubeId: string) => {
+    setSelectedVideoId(youtubeId);
+  };
+
+  // 5b-iii. Play a related video shown under the player. It is appended to the
+  // queue so prev/next keeps working afterwards; when the player was walking the
+  // library (no explicit queue) the related video joins that order.
+  const handlePlayRelated = (video: VideoMetadata) => {
+    setPlayerQueue((prev) => {
+      const base = prev.length > 0 ? prev : videos;
+      return base.some((v) => v.youtubeId === video.youtubeId) ? prev : [...base, video];
+    });
+    setQueueLabel((prev) => prev || 'Library');
+    setEphemeralVideo(videos.some((v) => v.youtubeId === video.youtubeId) ? null : video);
+    setSelectedVideoId(video.youtubeId);
   };
 
   // 5c. Save the video currently being watched to the library.
@@ -432,10 +471,38 @@ export default function App() {
   // its listing while this is null; the dedicated page renders when it is set.
   // The video may be in the library or only being watched, so the two are
   // resolved together.
-  const playerSelection = resolvePlayerSelection(videos, selectedVideoId, ephemeralVideo);
+  const playerSelection = resolvePlayerSelection(videos, selectedVideoId, ephemeralVideo, playerQueue);
   const currentVideo = playerSelection.video;
   const currentVideoComments = comments.filter((c) => c.videoId === selectedVideoId);
   const indexedVideoIds = new Set(videos.map((v) => v.youtubeId));
+
+  // The list the player walks with prev/next: the queue it was played from, or
+  // the library when it was opened from the library (or by a deep link).
+  const queueVideos = playerQueue.length > 0 ? playerQueue : videos;
+  const queueVideosLabel = playerQueue.length > 0 ? queueLabel : 'Library';
+
+  // Related videos under the player. They are scored from the current queue,
+  // then topped up from the baked catalogue so the section is rarely thin. The
+  // current video and its immediate prev/next neighbours are excluded, so the
+  // section shows videos the nav buttons do not already reach.
+  const relatedVideos = React.useMemo(() => {
+    if (!currentVideo) return [];
+    const index = queueVideos.findIndex((v) => v.youtubeId === currentVideo.youtubeId);
+    const neighbours = [
+      index > 0 ? queueVideos[index - 1] : null,
+      index >= 0 && index < queueVideos.length - 1 ? queueVideos[index + 1] : null,
+    ].filter((v): v is VideoMetadata => v !== null);
+
+    const seen = new Set<string>();
+    const pool: VideoMetadata[] = [];
+    for (const video of [...queueVideos, ...loadBakedCatalogVideos()]) {
+      if (seen.has(video.youtubeId)) continue;
+      seen.add(video.youtubeId);
+      pool.push(video);
+    }
+
+    return findRelatedVideos(currentVideo, { pool, exclude: neighbours, limit: 6 });
+  }, [currentVideo, queueVideos]);
 
   // The taste profile is derived from the removal log, so restoring or
   // forgetting a removal immediately changes what discovery demotes.
@@ -521,8 +588,14 @@ export default function App() {
                   isInLibrary={playerSelection.isInLibrary}
                   onSaveToLibrary={handleSaveToLibrary}
                   allVideos={videos}
+                  queue={queueVideos}
+                  queueLabel={queueVideosLabel}
+                  relatedVideos={relatedVideos}
+                  indexedVideoIds={indexedVideoIds}
                   comments={currentVideoComments}
                   onSelectVideo={handleSelectVideo}
+                  onNavigateQueue={handleNavigateQueue}
+                  onPlayRelated={handlePlayRelated}
                   onUpdatePersonal={handleUpdatePersonal}
                   onHarvestComments={handleHarvestComments}
                   onUpdateAiSummary={handleUpdateAiSummary}

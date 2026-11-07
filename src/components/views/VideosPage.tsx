@@ -29,9 +29,27 @@ interface VideosPageProps {
   isInLibrary: boolean;
   /** Saves the video being watched to the library. */
   onSaveToLibrary: (video: VideoMetadata) => Promise<void>;
+  /** The library, used for the listing and for filtering options. */
   allVideos: VideoMetadata[];
+  /**
+   * The list the player's prev/next walks. The queue the video was played from
+   * (search results or catalogue), or the library when it was opened from the
+   * listing.
+   */
+  queue: VideoMetadata[];
+  /** What `queue` is, for the "Video N of M in <label>" line. */
+  queueLabel: string;
+  /** Related videos to show under the player. */
+  relatedVideos: VideoMetadata[];
+  /** Library video ids, for the listing and the "In Library" marks. */
+  indexedVideoIds: Set<string>;
   comments: VideoComment[];
+  /** Opens a video from the listing (library order). */
   onSelectVideo: (youtubeId: string) => void;
+  /** Moves within the player's queue (prev/next). */
+  onNavigateQueue: (youtubeId: string) => void;
+  /** Plays a related video shown under the player. */
+  onPlayRelated: (video: VideoMetadata) => void;
   onUpdatePersonal: (youtubeId: string, personal: Partial<PersonalMetadata>) => Promise<void>;
   onHarvestComments: (youtubeId: string) => void;
   onUpdateAiSummary: (youtubeId: string, aiSummary: string) => Promise<void>;
@@ -50,8 +68,14 @@ export const VideosPage: React.FC<VideosPageProps> = ({
   isInLibrary,
   onSaveToLibrary,
   allVideos,
+  queue,
+  queueLabel,
+  relatedVideos,
+  indexedVideoIds,
   comments,
   onSelectVideo,
+  onNavigateQueue,
+  onPlayRelated,
   onUpdatePersonal,
   onHarvestComments,
   onUpdateAiSummary,
@@ -187,9 +211,13 @@ export const VideosPage: React.FC<VideosPageProps> = ({
         currentVideo={selectedVideo}
         isInLibrary={isInLibrary}
         onSaveToLibrary={onSaveToLibrary}
-        allVideos={allVideos}
+        queue={queue}
+        queueLabel={queueLabel}
+        relatedVideos={relatedVideos}
+        indexedVideoIds={indexedVideoIds}
         comments={comments.filter((c) => c.videoId === selectedVideo.youtubeId)}
-        onSelectVideo={onSelectVideo}
+        onNavigateQueue={onNavigateQueue}
+        onPlayRelated={onPlayRelated}
         onHarvestComments={onHarvestComments}
         onUpdatePersonal={onUpdatePersonal}
         onUpdateAiSummary={onUpdateAiSummary}

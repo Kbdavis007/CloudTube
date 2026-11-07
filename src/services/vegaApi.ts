@@ -64,6 +64,18 @@ export function loadBakedCatalog(): CatalogVideo[] {
   return CATALOG.videos;
 }
 
+/**
+ * The whole baked catalogue mapped onto `VideoMetadata`, parsed and mapped once.
+ *
+ * Callers that only need a large pool of videos to draw from (related videos,
+ * for example) reuse this instead of re-mapping 1,400 records on every render.
+ */
+let bakedVideoCache: VideoMetadata[] | null = null;
+export function loadBakedCatalogVideos(): VideoMetadata[] {
+  if (!bakedVideoCache) bakedVideoCache = CATALOG.videos.map(catalogToVideoMetadata);
+  return bakedVideoCache;
+}
+
 export function countBakedCatalog(): number {
   return CATALOG.videos.length;
 }

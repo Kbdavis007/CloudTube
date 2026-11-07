@@ -9,6 +9,7 @@ import {
   Calendar,
   Tag,
   Plus,
+  Play,
   Trash2,
   ChevronLeft,
   ChevronRight,
@@ -33,9 +34,24 @@ interface SelectedVideoPageProps {
   isInLibrary: boolean;
   /** Saves the video being watched to the library. */
   onSaveToLibrary: (video: VideoMetadata) => Promise<void>;
-  allVideos: VideoMetadata[];
+  /**
+   * The list prev/next walks. When the video was opened from search results or
+   * the catalogue this is that list; otherwise it is the library.
+   */
+  queue: VideoMetadata[];
+  /** What `queue` is, for the "Video N of M in <label>" line. */
+  queueLabel: string;
+  /**
+   * Videos shown under the player as "Related". Each plays without being saved.
+   */
+  relatedVideos: VideoMetadata[];
+  /** Library video ids, so a related video that is already saved can be marked. */
+  indexedVideoIds: Set<string>;
   comments: VideoComment[];
-  onSelectVideo: (youtubeId: string) => void;
+  /** Moves within the queue (the prev/next buttons). */
+  onNavigateQueue: (youtubeId: string) => void;
+  /** Plays a related video, without saving it. */
+  onPlayRelated: (video: VideoMetadata) => void;
   onHarvestComments: (youtubeId: string) => void;
   onUpdatePersonal: (youtubeId: string, personal: Partial<PersonalMetadata>) => Promise<void>;
   onUpdateAiSummary: (youtubeId: string, aiSummary: string) => Promise<void>;
@@ -56,9 +72,13 @@ export const SelectedVideoPage: React.FC<SelectedVideoPageProps> = ({
   currentVideo,
   isInLibrary,
   onSaveToLibrary,
-  allVideos,
+  queue,
+  queueLabel,
+  relatedVideos,
+  indexedVideoIds,
   comments,
-  onSelectVideo,
+  onNavigateQueue,
+  onPlayRelated,
   onHarvestComments,
   onUpdatePersonal,
   onUpdateAiSummary,
@@ -113,10 +133,11 @@ export const SelectedVideoPage: React.FC<SelectedVideoPageProps> = ({
     setIsFavorite(currentVideo.personal?.isFavorite ?? false);
   }, [currentVideo.youtubeId]);
 
-  // Current video index in playlist
-  const currentIndex = allVideos.findIndex((v) => v.youtubeId === currentVideo.youtubeId);
-  const prevVideo = currentIndex > 0 ? allVideos[currentIndex - 1] : null;
-  const nextVideo = currentIndex < allVideos.length - 1 ? allVideos[currentIndex + 1] : null;
+  // Where this video sits in the list the player is walking (the search
+  // results, the catalogue, or the library).
+  const currentIndex = queue.findIndex((v) => v.youtubeId === currentVideo.youtubeId);
+  const prevVideo = currentIndex > 0 ? queue[currentIndex - 1] : null;
+  const nextVideo = currentIndex < queue.length - 1 ? queue[currentIndex + 1] : null;
 
   // Only sources that ship their own page (Vega) can be opened outside the
   // app. YouTube videos have no canonical source-site page in this library, so
@@ -215,7 +236,7 @@ export const SelectedVideoPage: React.FC<SelectedVideoPageProps> = ({
       {/* Top Navigation Bar between videos */}
       <div className="flex items-center justify-between gap-2 p-2 rounded-2xl bg-slate-900/60 border border-slate-800">
         <button
-          onClick={() => prevVideo && onSelectVideo(prevVideo.youtubeId)}
+          onClick={() => prevVideo && onNavigateQueue(prevVideo.youtubeId)}
           disabled={!prevVideo}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-300 text-xs font-semibold transition"
         >
@@ -223,16 +244,16 @@ export const SelectedVideoPage: React.FC<SelectedVideoPageProps> = ({
           <span className="hidden sm:inline">Previous Video</span>
         </button>
 
-        <span className="text-xs text-slate-400 font-mono">
+        <span className="text-xs text-slate-400 font-mono" data-testid="player-queue-label">
           {currentIndex >= 0
-            ? `Video ${currentIndex + 1} of ${allVideos.length} in Library`
+            ? `Video ${currentIndex + 1} of ${queue.length} in ${queueLabel}`
             : isInLibrary
               ? 'Video in Library'
               : 'Not in Library'}
         </span>
 
         <button
-          onClick={() => nextVideo && onSelectVideo(nextVideo.youtubeId)}
+          onClick={() => nextVideo && onNavigateQueue(nextVideo.youtubeId)}
           disabled={!nextVideo}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-300 text-xs font-semibold transition"
         >
@@ -786,6 +807,87 @@ export const SelectedVideoPage: React.FC<SelectedVideoPageProps> = ({
           </div>
         )}
       </div>
+
+      {/* Related videos: more like this, drawn from the list being watched and
+          the baked catalogue. Playing one does not save it. */}
+      {relatedVideos.length > 0 && (
+        <div
+          className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-4"
+          data-testid="related-videos"
+        >
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-orange-500" />
+              Related Videos
+            </h2>
+            <span className="text-[11px] text-slate-500">
+              {relatedVideos.length} similar to this one
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+            {relatedVideos.map((video) => {
+              const thumb = video.thumbnails.medium || video.posterUrl;
+              const isSaved = indexedVideoIds.has(video.youtubeId);
+              return (
+                <button
+                  key={video.youtubeId}
+                  onClick={() => onPlayRelated(video)}
+                  data-testid="related-video-card"
+                  className="group text-left flex gap-3 p-2 rounded-2xl bg-slate-950/60 border border-slate-800/80 hover:border-orange-500/50 transition"
+                >
+                  <div className="relative w-28 shrink-0 aspect-video rounded-xl overflow-hidden bg-slate-900">
+                    {thumb ? (
+                      <img
+                        src={thumb}
+                        alt={video.title}
+                        loading="lazy"
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-slate-600">
+                        <Play className="w-5 h-5" />
+                      </div>
+                    )}
+                    <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/80 font-mono text-[10px] font-semibold text-white">
+                      {Math.floor(video.durationSeconds / 60)}:
+                      {String(video.durationSeconds % 60).padStart(2, '0')}
+                    </div>
+                  </div>
+
+                  <div className="min-w-0 flex flex-col justify-between py-0.5">
+                    <div className="space-y-1">
+                      <h3 className="text-xs font-bold text-white line-clamp-2 group-hover:text-orange-400 transition">
+                        {video.title}
+                      </h3>
+                      <p className="text-[11px] text-slate-400 truncate">
+                        {video.channelTitle || 'Unknown uploader'}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1 pt-1">
+                      {video.sourceFlags.slice(0, 2).map((flag) => (
+                        <span
+                          key={flag}
+                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${
+                            sourceFlagColors[flag] || 'bg-slate-800 text-slate-300'
+                          }`}
+                        >
+                          {sourceFlagLabel(flag)}
+                        </span>
+                      ))}
+                      {isSaved && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          In Library
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* AI Insights Modal */}
       {showAiModal && (

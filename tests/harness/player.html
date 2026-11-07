@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CloudTube player harness</title>
+    <style>
+      body { margin: 0; background: #020617; color: #e2e8f0; font-family: system-ui, sans-serif; }
+      #root { max-width: 1100px; margin: 0 auto; padding: 16px; }
+    </style>
+  </head>
+  <body>
+    <!--
+      Mounts the real player (SelectedVideoPage) on its own with a synthetic
+      queue, so Playwright can prove the prev/next buttons walk the queue the
+      video was played from and that the related section renders. No sign-in and
+      no network: the videos are plain objects, so the iframe simply shows
+      nothing. Served by the Vite dev server at /tests/harness/player.html.
+    -->
+    <div id="root"></div>
+    <script type="module">
+      import React, { useState } from 'react';
+      import { createRoot } from 'react-dom/client';
+      import { SelectedVideoPage } from '/src/components/views/SelectedVideoPage.tsx';
+
+      const makeVideo = (id, title, tags, channelId) => ({
+        id: `uuid-${id}`,
+        youtubeId: id,
+        title,
+        description: 'A video in the harness queue.',
+        tags,
+        channelId,
+        channelTitle: channelId,
+        publishedAt: '2023-01-01T00:00:00Z',
+        duration: 'PT5M',
+        durationSeconds: 300,
+        viewCount: 0,
+        likeCount: 0,
+        commentCount: 0,
+        thumbnails: { default: '', medium: '', high: '' },
+        sourceFlags: ['Vega'],
+        indexedAt: '2023-01-01T00:00:00Z',
+        lastUpdatedAt: '2023-01-01T00:00:00Z',
+      });
+
+      const queue = [
+        makeVideo('q1', 'Queue one', ['cooking'], 'chef'),
+        makeVideo('q2', 'Queue two', ['cooking'], 'chef'),
+        makeVideo('q3', 'Queue three', ['gaming'], 'gamer'),
+      ];
+      // Related videos sit outside the queue (as the app guarantees), and share
+      // the first video's tag so the section has something to show.
+      const related = [
+        makeVideo('r1', 'Related one', ['cooking'], 'chef'),
+        makeVideo('r2', 'Related two', ['cooking'], 'chef'),
+      ];
+
+      function Harness() {
+        const [id, setId] = useState('q1');
+        const current =
+          queue.find((v) => v.youtubeId === id) ??
+          related.find((v) => v.youtubeId === id) ??
+          queue[0];
+        return React.createElement(SelectedVideoPage, {
+          currentVideo: current,
+          isInLibrary: false,
+          onSaveToLibrary: async () => {},
+          queue,
+          queueLabel: 'Search results',
+          relatedVideos: related,
+          indexedVideoIds: new Set(),
+          comments: [],
+          onNavigateQueue: (nextId) => setId(nextId),
+          onPlayRelated: (video) => setId(video.youtubeId),
+          onHarvestComments: () => {},
+          onUpdatePersonal: async () => {},
+          onUpdateAiSummary: async () => {},
+          onRequestRemoval: () => {},
+          onBack: () => {},
+        });
+      }
+
+      createRoot(document.getElementById('root')).render(React.createElement(Harness));
+    </script>
+  </body>
+</html>

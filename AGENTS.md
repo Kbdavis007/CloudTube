@@ -73,6 +73,24 @@
   personalized-ranking toggle (rendered into the bar's `headerExtra`), and the catalogue keys
   cards by canonical page URL because its store key (`sourceId:sourceVideoId`) can repeat.
 
+## Watching videos
+
+- Opening a video **carries its list into the player** as a play queue: `SearchView` and
+  `VegaSourceView` pass their (filtered, sorted) list to `App.handlePlayVideo(video, queue, label)`,
+  which stores it in `playerQueue`/`queueLabel`. The player's prev/next walk that queue and the
+  counter names it ("Video 2 of 24 in Search results"). Opening from the library (`handleSelectVideo`)
+  clears the queue, so prev/next falls back to the library order. Change the queue by changing what
+  a list passes to `onPlayVideo`, not the player.
+- A video reached by prev/next may be unsaved, so `resolvePlayerSelection(videos, id, ephemeral, queue)`
+  checks the library, then the transient video, then the queue. Watching — including a whole run of
+  results — never saves; only the "Save to Library" button does.
+- Under the player sits a **Related videos** section (`findRelatedVideos` in
+  `src/services/relatedVideos.ts`): it scores candidates from metadata already carried — shared
+  uploader/tag strongest, then same source and shared title words, similar length as a tie-breaker —
+  draws its pool from the play queue plus the baked catalogue (`loadBakedCatalogVideos`, mapped once),
+  and tops up with same-source videos so the section is rarely thin. It excludes the current video and
+  its prev/next neighbours. Playing a related video does not save it.
+
 ## Pull requests and OpenSpec
 
 - Every PR is described with `.github/pull_request_template.md`. Fill every section; the

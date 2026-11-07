@@ -30,15 +30,26 @@ const video: VideoMetadata = {
   lastUpdatedAt: '2023-01-01T00:00:00Z',
 };
 
-const render = (isInLibrary: boolean) =>
+const makeVideo = (youtubeId: string): VideoMetadata => ({
+  ...video,
+  id: `uuid-${youtubeId}`,
+  youtubeId,
+  title: `Video ${youtubeId}`,
+});
+
+const render = (isInLibrary: boolean, relatedVideos: VideoMetadata[] = []) =>
   renderToStaticMarkup(
     React.createElement(SelectedVideoPage, {
       currentVideo: video,
       isInLibrary,
       onSaveToLibrary: async () => {},
-      allVideos: isInLibrary ? [video] : [],
+      queue: isInLibrary ? [video] : [],
+      queueLabel: 'Library',
+      relatedVideos,
+      indexedVideoIds: isInLibrary ? new Set([video.youtubeId]) : new Set<string>(),
       comments: [],
-      onSelectVideo: () => {},
+      onNavigateQueue: () => {},
+      onPlayRelated: () => {},
       onHarvestComments: () => {},
       onUpdatePersonal: async () => {},
       onUpdateAiSummary: async () => {},
@@ -65,4 +76,42 @@ test('a saved video is in the library and offers removal', () => {
   assert.doesNotMatch(html, new RegExp(SAVE_TITLE), 'a saved video has nothing left to save');
   assert.match(html, new RegExp(REMOVE_TITLE));
   assert.match(html, /in Library/);
+});
+
+test('the nav bar counts the queue the video was played from, not the library', () => {
+  const queue = [
+    makeVideo('first'),
+    makeVideo('second'),
+    makeVideo('third'),
+  ];
+  const html = renderToStaticMarkup(
+    React.createElement(SelectedVideoPage, {
+      currentVideo: queue[1],
+      isInLibrary: false,
+      onSaveToLibrary: async () => {},
+      queue,
+      queueLabel: 'Search results',
+      relatedVideos: [],
+      indexedVideoIds: new Set<string>(),
+      comments: [],
+      onNavigateQueue: () => {},
+      onPlayRelated: () => {},
+      onHarvestComments: () => {},
+      onUpdatePersonal: async () => {},
+      onUpdateAiSummary: async () => {},
+      onRequestRemoval: () => {},
+      onBack: () => {},
+    })
+  );
+
+  assert.match(html, /Video 2 of 3 in Search results/);
+});
+
+test('related videos render under the player as playable cards', () => {
+  const related = [makeVideo('rel-1'), makeVideo('rel-2')];
+  const html = render(false, related);
+
+  assert.match(html, /Related Videos/);
+  assert.match(html, /Video rel-1/);
+  assert.match(html, /Video rel-2/);
 });
