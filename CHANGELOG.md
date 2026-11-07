@@ -54,6 +54,17 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 
 
+
+## [0.2.45] - 2026-11-07
+
+**Tag:** `v0.2.45` · **Branch:** `main` · **Deployed:** pending
+
+### Features
+- add a dropdown of editable saved videos (f44fc21)
+
+### Maintenance
+- log video editor phase 1 (3add9ca)
+
 ## [0.2.44] - 2026-11-07
 
 **Tag:** `v0.2.44` · **Branch:** `main` · **Deployed:** 2026-11-07 02:39 UTC (production)
