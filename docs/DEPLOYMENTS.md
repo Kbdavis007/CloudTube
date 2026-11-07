@@ -58,3 +58,4 @@ npm run deploy:log -- --env production --url https://your-app.example --notes "w
 | 2026-11-07 13:07 UTC | `v0.2.46` | `0547440` | production | https://ct.devmatrix.top | Kbdavis007 | daily Vega catalogue refresh |
 | 2026-11-07 19:04 UTC | `v0.2.47` | `be08552` | production | https://ct.devmatrix.top | local | Editor: built-in sample clips (public/samples) in the Add a clip dropdown |
 | 2026-11-07 19:16 UTC | `v0.2.48` | `3eb64b9` | production | https://ct.devmatrix.top | local | Search, filter, sort and pagination now shared by every video list (library, search results, catalogue) |
+| 2026-11-07 19:31 UTC | `v0.2.49` | `34fac9d` | production | https://ct.devmatrix.top | local | Player walks the list a video was played from (search results/catalogue) with prev/next, and a Related Videos section under the player |
