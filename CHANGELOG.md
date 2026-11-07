@@ -57,6 +57,14 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 
 
+
+## [0.2.48] - 2026-11-07
+
+**Tag:** `v0.2.48` · **Branch:** `main` · **Deployed:** pending
+
+### Features
+- apply search, filter, sort and pagination to every video list (4a43466)
+
 ## [0.2.47] - 2026-11-07
 
 **Tag:** `v0.2.47` · **Branch:** `main` · **Deployed:** 2026-11-07 19:04 UTC (production)
