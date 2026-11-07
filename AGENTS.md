@@ -49,10 +49,12 @@
   card, **Preview** plays the timeline in order within each trim, and **Export MP4** writes the
   assembled file. It runs entirely in the browser (Mediabunny, loaded lazily) — no media is
   uploaded. Codecs are picked from what the browser can encode, preferring AVC/AAC for the MP4.
-- **Add from your library** is a dropdown of saved videos that have a direct media URL
-  (`playback.previewUrl`), read into clips via `readClipFromUrl`. Only RedGifs clips qualify
-  today: their media URL is served with permissive CORS. A video with only an embed URL is not
-  offered.
+- **Add a clip** is a dropdown that lists the built-in samples first, then saved videos that
+  have a direct media URL (`playback.previewUrl`), read into clips via `readClipFromUrl`. The
+  samples are small clips under `public/samples/` (served by the Worker from the built asset
+  bundle) so the editor can be tried without a local file; they are same-origin, so always
+  readable. Only RedGifs clips qualify in the library today: their media URL is served with
+  permissive CORS. A video with only an embed URL is not offered.
 - **Embeds are not editable.** Videos played from a source embed (YouTube, xgroovy, most of the
   catalogue) live in a cross-origin iframe whose bytes the page cannot read, so they are not
   editor inputs — the editor says so rather than failing silently.

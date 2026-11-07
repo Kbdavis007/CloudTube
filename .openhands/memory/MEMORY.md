@@ -593,3 +593,7 @@ in-app Play button automatically. `SourceFlag` is defined in `src/types/index.ts
   **Only RedGifs clips qualify** — `media.redgifs.com` sends permissive CORS (`access-control-allow-origin`
   reflects, range requests OK), so `fetch()` can read the bytes. Catalogue/YouTube videos are iframe-only
   (no direct URL) and are filtered out. `isEditableVideo` / `editableLibraryVideos` classify them.
+- **Built-in samples (2026-11-07):** `public/samples/*.mp4` (3 small clips, ~363 KB, ffmpeg-made)
+  are served by the Worker's ASSETS binding (Vite copies `public/`→`dist/`); listed via
+  `src/data/sampleClips.ts` and shown in the picker as the "Samples (built in)" optgroup so the
+  editor works with no local file. Same-origin ⇒ no CORS, always readable.

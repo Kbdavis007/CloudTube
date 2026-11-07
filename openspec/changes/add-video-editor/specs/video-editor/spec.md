@@ -56,6 +56,20 @@ SHALL read its media URL and add it as a clip.
 - **WHEN** the library has no video with a direct media URL
 - **THEN** the picker explains that no saved video can be edited here
 
+### Requirement: Add clips from built-in samples
+
+The system SHALL offer a set of built-in sample clips, served by the app itself, so the
+editor can be tried without a local file. A sample SHALL be addable like any other clip
+and SHALL be readable without a cross-origin request.
+
+#### Scenario: Listing built-in samples
+- **WHEN** the editor opens
+- **THEN** the built-in samples are offered in the picker
+
+#### Scenario: Adding and exporting a sample
+- **WHEN** the user adds a built-in sample and exports
+- **THEN** the clip is added from the app-served media and one file is produced
+
 ### Requirement: Trim a clip to in and out points
 
 The system SHALL let the user set an in point and an out point on a clip and SHALL use

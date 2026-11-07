@@ -177,9 +177,9 @@ export const EditorView: React.FC<EditorViewProps> = ({ videos = [] }) => {
       <div className="flex items-start gap-2 rounded-2xl border border-slate-800/80 bg-slate-900/40 p-3 text-[11px] text-slate-400">
         <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500" />
         <p>
-          Editable clips are local video files you pick, or a saved video that has a direct media URL.
-          Videos played from a source embed (YouTube and similar) cannot be read by the page, so they
-          are not editable here.
+          Add clips from a local video file, a built-in sample, or a saved video with a direct media
+          URL. Videos played from a source embed (YouTube and similar) cannot be read by the page, so
+          they are not editable here.
         </p>
       </div>
 

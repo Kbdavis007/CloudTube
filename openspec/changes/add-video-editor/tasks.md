@@ -40,6 +40,7 @@ Completes `video-editor` (direct media URL) and `video-export` (record recent ex
 - [x] 3.6 Add `readClipFromUrl` (a direct media URL into a clip) plus `isEditableVideo` / `editableLibraryVideos`, and a `LibraryClipPicker` dropdown that lists saved videos with a direct media URL and adds the chosen one as a clip; verify with unit tests that an embed-only video is not offered and a blocked host is rejected
 - [x] 3.7 Pass the saved library (`videos`) from `src/App.tsx` into `EditorView`; verify with a Playwright check that picking a saved video from the dropdown adds a clip
 - [x] 3.8 Document the library dropdown and which videos it offers in `AGENTS.md`; verify the described behaviour matches the UI
+- [x] 3.9 Add built-in sample clips (`public/samples/*.mp4`, served by the Worker) to the picker so the editor can be tried without a local file; verify with a Playwright check that a sample can be added and exported
 
 ## 4. Optional: ffmpeg.wasm fallback for exotic formats
 

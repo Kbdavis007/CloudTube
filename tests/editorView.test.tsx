@@ -31,6 +31,18 @@ test('the editor starts empty with the local-file guidance', () => {
   assert.match(html, /cannot be read by the page/);
 });
 
+test('the library dropdown always offers the built-in samples', () => {
+  const html = renderToStaticMarkup(
+    React.createElement(LibraryClipPicker, { videos: [] as never, onAdd: () => {} })
+  );
+
+  assert.match(html, /Add a clip/);
+  assert.match(html, /Samples \(built in\)/);
+  assert.match(html, /Sample · test pattern/);
+  assert.match(html, /Sample · colour bars/);
+  assert.match(html, /Sample · gradient sweep/);
+});
+
 test('the library dropdown offers editable saved videos and skips embed-only ones', () => {
   const videos = [
     {
@@ -51,18 +63,10 @@ test('the library dropdown offers editable saved videos and skips embed-only one
     React.createElement(LibraryClipPicker, { videos, onAdd: () => {} })
   );
 
-  assert.match(html, /Add from your library/);
+  assert.match(html, /Your library/);
   assert.match(html, /Editable saved clip/);
   assert.match(html, /0:12\.0/, 'the saved duration is shown next to the title');
   assert.doesNotMatch(html, /Embed-only video/, 'embed-only videos are not offered');
-});
-
-test('the library dropdown explains when nothing can be edited', () => {
-  const html = renderToStaticMarkup(
-    React.createElement(LibraryClipPicker, { videos: [] as never, onAdd: () => {} })
-  );
-
-  assert.match(html, /No saved videos can be edited here yet/);
 });
 
 test('a clip card shows its resolution, source length and kept span', () => {

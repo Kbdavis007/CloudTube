@@ -105,8 +105,11 @@ test.describe('video editor', () => {
     const select = page.getByTestId('editor-library-select');
     await expect(select).toBeVisible();
 
-    // Only the video with a direct media URL is offered.
+    // Built-in samples are always offered.
     const options = await select.locator('option').allTextContents();
+    expect(options.join(' ')).toContain('Sample · test pattern');
+
+    // Only the video with a direct media URL is offered, not the embed-only one.
     expect(options.join(' ')).toContain('Editable saved clip');
     expect(options.join(' ')).not.toContain('Embed-only video');
 
@@ -118,5 +121,30 @@ test.describe('video editor', () => {
     await expect(page.getByTestId('editor-clip')).toContainText('Editable saved clip');
 
     await page.screenshot({ path: resolve(SHOTS, 'editor-library.png'), fullPage: true });
+  });
+
+  test('adds and exports a built-in sample clip with no local file', async ({ page }) => {
+    await page.goto('/tests/harness/editor.html');
+    await expect(page.getByRole('heading', { name: 'Video Editor' })).toBeVisible();
+
+    const select = page.getByTestId('editor-library-select');
+    await select.selectOption({ label: 'Sample · colour bars — 0:05.0' });
+    await page.getByTestId('editor-library-add').click();
+
+    await expect(page.getByTestId('editor-clip')).toHaveCount(1);
+    await expect(page.getByTestId('editor-clip')).toContainText('Sample · colour bars');
+
+    // The sample is served by the app itself, so a real export works end to end.
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByTestId('editor-export').click();
+    const download = await downloadPromise;
+    const saved = resolve(root, 'test-results', download.suggestedFilename());
+    await download.saveAs(saved);
+
+    const result = await probe(saved);
+    expect(result.boxType).toBe('ftyp');
+    // The colour-bars sample is 5s; the export is the whole clip.
+    expect(result.duration).toBeGreaterThan(4.6);
+    expect(result.duration).toBeLessThan(5.4);
   });
 });
