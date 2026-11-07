@@ -56,7 +56,7 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 ## [0.2.44] - 2026-11-07
 
-**Tag:** `v0.2.44` · **Branch:** `main` · **Deployed:** pending
+**Tag:** `v0.2.44` · **Branch:** `main` · **Deployed:** 2026-11-07 02:39 UTC (production)
 
 ### Features
 - trim and combine local clips into one export (dc03a58)
