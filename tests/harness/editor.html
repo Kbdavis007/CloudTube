@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CloudTube editor harness</title>
+    <style>
+      body { margin: 0; background: #020617; color: #e2e8f0; font-family: system-ui, sans-serif; }
+      #root { max-width: 1100px; margin: 0 auto; padding: 16px; }
+    </style>
+  </head>
+  <body>
+    <!--
+      Mounts the real EditorView on its own, without the app's Google sign-in
+      gate, so Playwright can drive the editor's genuine encode/export path in
+      Chromium. Served by the Vite dev server at /tests/harness/editor.html.
+    -->
+    <div id="root"></div>
+    <script type="module">
+      import React from 'react';
+      import { createRoot } from 'react-dom/client';
+      import { EditorView } from '/src/components/views/EditorView.tsx';
+
+      createRoot(document.getElementById('root')).render(React.createElement(EditorView));
+    </script>
+  </body>
+</html>

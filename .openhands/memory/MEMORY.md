@@ -379,6 +379,18 @@ in-app Play button automatically. `SourceFlag` is defined in `src/types/index.ts
   schemas ship in the PyInstaller bundle under `/tmp/_MEI*/openhands/sdk/plugin/format/schemas/`.
 - Remote OAuth MCP servers connect lazily, triggering browser OAuth on first tool use
   (tokens cached in `~/.fastmcp/oauth-mcp-client-cache/`). Not headless.
+- 6 MCP servers are pre-configured per conversation (`agent.mcp_config` in the conversation's
+  `base_state.json`): `default` (remote SHTTP), `browser_mcp`, `playwright`, `fetch`, `memory`,
+  `sequential_thinking`. No per-project MCP file. Adding/changing servers only affects NEW
+  conversations. `browser_mcp_browser` bridges to the *user's own* Chrome via the Browser MCP
+  extension — it does NOT drive the sandbox browser, and fails "No browser is connected" when no
+  extension is paired.
+- **No display / no VNC by default** (`OH_ENABLE_VNC=0`); pre-installed browsers are headless only.
+  For a *viewable* browser: `sudo apt-get install -y --no-install-recommends xvfb x11vnc novnc
+  websockify fluxbox` then `bash /home/openhands/vnc-browser.sh [url]` -> viewer at
+  https://work-2-<host>/vnc.html (port 12001). Details in `2026-11-06.md`. Overlay-only, lost on reset.
+- Chromium 155 CDP rejects a bare origin: launch with `--remote-allow-origins=*` or connect with
+  `suppress_origin=True`, else `Page.captureScreenshot` returns 403.
 
 ## Cloudflare setup
 - Skills: `npx -y skills add cloudflare/skills --skill '*' --yes --global` -> 19 skills.
@@ -551,3 +563,26 @@ in-app Play button automatically. `SourceFlag` is defined in `src/types/index.ts
 - **Spec format that passes `--strict`:** `### Requirement:` (desc ≤500 chars) + at least
   one `#### Scenario:` (exactly 4 `#`) with a WHEN/GIVEN and a THEN step; new capabilities
   start with a `## Purpose` of 50+ chars. Validated clean.
+
+## Video editor Phase 1 shipped (v0.2.44, 2026-11-07)
+- **Phase 1 of `add-video-editor` is implemented and landed.** Files: `src/services/videoEditor.ts`
+  (Mediabunny wrapper), `src/components/views/EditorView.tsx`, `src/components/editor/{ClipCard,TimelinePreview}.tsx`.
+  Editor is a **lazy chunk** (`React.lazy`) in `App.tsx` so Mediabunny (~557KB) stays out of the
+  initial bundle. Tab `editor` added to `PageTab`, nav array in `Sidebar.tsx` (`Scissors` icon),
+  and `PERSISTED_TABS` in `viewState.ts`.
+- **Export = encode path, not stream-copy.** Stream-copy (`Conversion`) snaps trims to keyframes and
+  breaks the muxer on re-stamped negative timestamps. Encode path uses `VideoSampleSink.samples(start,end)`
+  + `VideoSampleSource`/`AudioSampleSource` into `Mp4OutputFormat` → `BufferTarget`, re-stamping each
+  sample to `offset + (t - segStart)`. Output duration == sum of trimmed spans (verified: 1s+2s→3.03s).
+- **Codec preference for MP4: AVC then AAC, then the clip's own codec, then vp9/vp8/av1, opus/vorbis.**
+  Chromium has **no AAC encoder** (`canEncodeAudio('aac')`=false) so audio falls back to opus-in-MP4
+  (valid); video picks AVC. `canEncodeVideo(codec,{width,height})` needs even dims — geometry is rounded
+  to even. Audio-less export is allowed (audio codec `null` → video only).
+- **Node has no WebCodecs** → unit tests (`tests/videoEditor.test.ts`, `tests/editorView.test.tsx`)
+  cover pure logic (trim clamp, timeline duration, formatTime), decoder-free metadata (`readClip` via
+  `Input.canRead()`/`computeDuration`), and error mapping. The real encode/export is proven by
+  Playwright (`tests/e2e/editor.spec.ts`) against a harness page `tests/harness/editor.html` that mounts
+  EditorView without the Google sign-in gate (served by the Vite dev server). Test fixture:
+  `tests/fixtures/sample.webm` (2s VP8+opus, 160x120) — committed.
+- **Gotcha:** in Playwright, setting a React-controlled `<input type=range>` value needs the native
+  `value` setter + `input` event (plain `.value=` doesn't update React state).

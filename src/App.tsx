@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { User } from 'firebase/auth';
 import { VideoMetadata, ChannelMetadata, VideoComment, CrawlJob, PersonalMetadata, VideoRemoval, TasteProfile } from './types';
 import { idbService } from './services/indexedDB';
@@ -32,6 +32,12 @@ import { expandChannel } from './services/channelExpansion';
 import { loadViewState, saveViewState } from './services/viewState';
 import { resolvePlayerSelection } from './services/playerSelection';
 import { splitLinks } from './services/googleApiErrors';
+
+// The editor carries Mediabunny, so it is loaded on demand: the media engine
+// stays out of the initial bundle until the tab is opened.
+const EditorView = lazy(() =>
+  import('./components/views/EditorView').then((module) => ({ default: module.EditorView }))
+);
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<PageTab>(() => loadViewState().tab);
@@ -525,7 +531,22 @@ export default function App() {
                 />
               )}
 
-              {currentTab === 'channels' && (
+                {currentTab === 'editor' && (
+                  <Suspense
+                    fallback={
+                      <div className="flex items-center justify-center h-64">
+                        <div className="text-center space-y-3">
+                          <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                          <p className="text-xs font-mono text-slate-400">Loading the editor…</p>
+                        </div>
+                      </div>
+                    }
+                  >
+                    <EditorView />
+                  </Suspense>
+                )}
+
+                {currentTab === 'channels' && (
                 <ChannelView
                   channels={channels}
                   videos={videos}

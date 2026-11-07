@@ -19,6 +19,7 @@ const PERSISTED_TABS: PageTab[] = [
   'search',
   'vega',
   'player',
+  'editor',
   'channels',
   'comments',
   'ratings',

@@ -9,14 +9,14 @@ starting the next.
 Delivers `video-editor` (local file, trim, reorder, preview, on-device) and the first
 half of `video-export` (export the timeline as one file).
 
-- [ ] 1.1 Add the `mediabunny` dependency and verify `bun install` succeeds and `npx tsc --noEmit` still passes
-- [ ] 1.2 Add `src/services/videoEditor.ts` wrapping Mediabunny: load a local file, read duration/resolution, and assemble trimmed clips into one file; verify with unit tests in `tests/videoEditor.test.ts` that a two-clip timeline yields one file whose duration equals the sum of the trimmed spans
-- [ ] 1.3 Add the `editor` tab to `PageTab` in `src/components/Sidebar.tsx`, `PERSISTED_TABS` in `src/services/viewState.ts`, and the switch in `src/App.tsx`; verify the tab appears and the view renders after a reload
-- [ ] 1.4 Build `src/components/views/EditorView.tsx` with `src/components/editor/`: a file picker, a clip list, trim in/out handles that stop before crossing, and drag-to-reorder; verify each interaction with a unit test and a Playwright check
-- [ ] 1.5 Add an assembled-timeline preview that plays clips in order within their trims and updates after an edit; verify with a Playwright check that a trimmed two-clip timeline plays in order
-- [ ] 1.6 Reject a file the browser cannot decode with a named error and no clip added; verify with a unit test feeding an unsupported file
-- [ ] 1.7 Add the export action (single MP4 download) and verify a two-clip export downloads a file whose duration matches the trimmed sum; assert no request to the app's server carries media bytes
-- [ ] 1.8 Document the editor (what it does, and that iframe sources like YouTube are not editable) in `AGENTS.md`; verify the described steps match the shipped UI
+- [x] 1.1 Add the `mediabunny` dependency and verify `bun install` succeeds and `npx tsc --noEmit` still passes
+- [x] 1.2 Add `src/services/videoEditor.ts` wrapping Mediabunny: load a local file, read duration/resolution, and assemble trimmed clips into one file; verify with unit tests in `tests/videoEditor.test.ts` that a two-clip timeline yields one file whose duration equals the sum of the trimmed spans
+- [x] 1.3 Add the `editor` tab to `PageTab` in `src/components/Sidebar.tsx`, `PERSISTED_TABS` in `src/services/viewState.ts`, and the switch in `src/App.tsx`; verify the tab appears and the view renders after a reload
+- [x] 1.4 Build `src/components/views/EditorView.tsx` with `src/components/editor/`: a file picker, a clip list, trim in/out handles that stop before crossing, and drag-to-reorder; verify each interaction with a unit test and a Playwright check
+- [x] 1.5 Add an assembled-timeline preview that plays clips in order within their trims and updates after an edit; verify with a Playwright check that a trimmed two-clip timeline plays in order
+- [x] 1.6 Reject a file the browser cannot decode with a named error and no clip added; verify with a unit test feeding an unsupported file
+- [x] 1.7 Add the export action (single MP4 download) and verify a two-clip export downloads a file whose duration matches the trimmed sum; assert no request to the app's server carries media bytes
+- [x] 1.8 Document the editor (what it does, and that iframe sources like YouTube are not editable) in `AGENTS.md`; verify the described steps match the shipped UI
 
 ## 2. Export options, progress and failure handling
 

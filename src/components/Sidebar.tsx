@@ -9,6 +9,7 @@ import {
   Settings,
   Lock,
   Trash2,
+  Scissors,
 } from 'lucide-react';
 
 export type PageTab =
@@ -16,6 +17,7 @@ export type PageTab =
   | 'search'
   | 'vega'
   | 'player'
+  | 'editor'
   | 'channels'
   | 'comments'
   | 'ratings'
@@ -61,6 +63,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'Videos',
       icon: PlaySquare,
       badge: videoCount > 0 ? String(videoCount) : null,
+    },
+    {
+      id: 'editor' as PageTab,
+      label: 'Video Editor',
+      icon: Scissors,
+      badge: null,
     },
     {
       id: 'channels' as PageTab,

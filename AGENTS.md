@@ -41,6 +41,18 @@
 - After pushing, confirm the deploy landed via `curl -s https://ct.devmatrix.top/api/health`
   (returns the serving commit) and by grepping the served bundle for a new string.
 
+## Video editor
+
+- The **Video Editor** tab (`src/components/views/EditorView.tsx`) builds one MP4 from local
+  clips: **Add clips** picks local video files, each clip gets **In**/**Out** trim handles
+  (the in point stops before the out point), reorder with the arrow buttons or by dragging a
+  card, **Preview** plays the timeline in order within each trim, and **Export MP4** writes the
+  assembled file. It runs entirely in the browser (Mediabunny, loaded lazily) — no media is
+  uploaded. Codecs are picked from what the browser can encode, preferring AVC/AAC for the MP4.
+- **Only local files are editable.** Videos played from a source embed (YouTube, xgroovy,
+  RedGifs) live in a cross-origin iframe whose bytes the page cannot read, so they are not
+  editor inputs — the editor says so rather than failing silently.
+
 ## Pull requests and OpenSpec
 
 - Every PR is described with `.github/pull_request_template.md`. Fill every section; the
