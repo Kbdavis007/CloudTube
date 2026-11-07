@@ -52,3 +52,4 @@ npm run deploy:log -- --env production --url https://your-app.example --notes "w
 | 2026-11-06 07:54 UTC | `v0.2.40` | `438a90d` | production | https://ct.devmatrix.top | local | memory notes for the eleven-source integration |
 | 2026-11-06 08:05 UTC | `v0.2.41` | `3ccdf1b` | production | https://ct.devmatrix.top | local | Video editor planned (openspec add-video-editor) |
 | 2026-11-06 14:21 UTC | `v0.2.42` | `894439d` | production | https://ct.devmatrix.top | Kbdavis007 | daily Vega catalogue refresh |
+| 2026-11-07 02:20 UTC | `v0.2.43` | `be4e86a` | production | https://ct.devmatrix.top | Kbdavis007 | daily Vega catalogue refresh |
