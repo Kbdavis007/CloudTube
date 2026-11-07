@@ -586,3 +586,10 @@ in-app Play button automatically. `SourceFlag` is defined in `src/types/index.ts
   `tests/fixtures/sample.webm` (2s VP8+opus, 160x120) — committed.
 - **Gotcha:** in Playwright, setting a React-controlled `<input type=range>` value needs the native
   `value` setter + `input` event (plain `.value=` doesn't update React state).
+
+- **Library dropdown ("Add from your library", 2026-11-07):** lists saved videos that have a
+  direct media URL (`playback.previewUrl`) and adds one as a clip via `readClipFromUrl`
+  (`src/components/editor/LibraryClipPicker.tsx`; `EditorView` takes a `videos` prop from `App.tsx`).
+  **Only RedGifs clips qualify** — `media.redgifs.com` sends permissive CORS (`access-control-allow-origin`
+  reflects, range requests OK), so `fetch()` can read the bytes. Catalogue/YouTube videos are iframe-only
+  (no direct URL) and are filtered out. `isEditableVideo` / `editableLibraryVideos` classify them.

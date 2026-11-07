@@ -56,6 +56,7 @@ export type EditorErrorCode =
   | 'unsupported'
   | 'no-video'
   | 'empty-timeline'
+  | 'unreadable'
   | 'canceled'
   | 'export-failed';
 
@@ -116,6 +117,61 @@ export function formatTime(seconds: number): string {
   const rest = safe - minutes * 60;
   const secs = rest.toFixed(1).padStart(4, '0');
   return `${minutes}:${secs}`;
+}
+
+/**
+ * The fields a saved video needs to be offered as an editor source: a direct,
+ * readable media URL. Only such a URL can be fetched as bytes, so an embed-only
+ * video (a cross-origin iframe) cannot be an editor input.
+ */
+export interface EditableVideoSource {
+  title: string;
+  playback?: { previewUrl?: string };
+}
+
+/** Whether a saved video can be edited here, i.e. it exposes a direct media URL. */
+export function isEditableVideo(video: EditableVideoSource): boolean {
+  return Boolean(video.playback?.previewUrl);
+}
+
+/** The subset of a library that can be edited: those with a direct media URL. */
+export function editableLibraryVideos<T extends EditableVideoSource>(videos: readonly T[]): T[] {
+  return videos.filter(isEditableVideo);
+}
+
+/**
+ * Read a direct media URL into a clip. Only a URL that returns readable media
+ * works: a page URL, or a host that forbids the browser reading its response
+ * (no CORS), is rejected with a clear reason.
+ */
+export async function readClipFromUrl(url: string, name?: string): Promise<EditorClip> {
+  const label = name?.trim() || url;
+
+  let response: Response;
+  try {
+    response = await fetch(url, { mode: 'cors' });
+  } catch {
+    throw new EditorError(
+      'unreadable',
+      `"${label}" could not be read. The host may block in-browser reading (CORS).`
+    );
+  }
+
+  if (!response.ok) {
+    throw new EditorError('unreadable', `"${label}" could not be read (HTTP ${response.status}).`);
+  }
+
+  const contentType = (response.headers.get('content-type') ?? '').toLowerCase();
+  if (contentType && !contentType.startsWith('video/') && !contentType.startsWith('audio/')) {
+    throw new EditorError('unreadable', `"${label}" is not a media file (it is ${contentType}).`);
+  }
+
+  const blob = await response.blob();
+  if (blob.size === 0) {
+    throw new EditorError('unreadable', `"${label}" returned no data.`);
+  }
+
+  return readClip(blob, label);
 }
 
 /**

@@ -9,8 +9,11 @@ import {
   assembleTimeline,
   clampTrimEnd,
   clampTrimStart,
+  editableLibraryVideos,
   formatTime,
+  isEditableVideo,
   readClip,
+  readClipFromUrl,
   timelineDuration,
   trimmedDuration,
   type EditorClip,
@@ -116,4 +119,92 @@ test('a clip trimmed to nothing is refused', async () => {
       return true;
     }
   );
+});
+
+test('only videos with a direct media URL are editable', () => {
+  const editable = { title: 'redgifs clip', playback: { previewUrl: 'https://media.example/x.mp4' } };
+  const embedOnly = { title: 'youtube clip', playback: { previewUrl: undefined } };
+  const noPlayback = { title: 'plain' };
+
+  assert.equal(isEditableVideo(editable), true);
+  assert.equal(isEditableVideo(embedOnly), false);
+  assert.equal(isEditableVideo(noPlayback), false);
+  // An empty-string preview URL is not a usable source.
+  assert.equal(isEditableVideo({ title: 'x', playback: { previewUrl: '' } }), false);
+});
+
+test('the editable library keeps only the videos with a direct media URL', () => {
+  const videos = [
+    { id: 'a', title: 'editable', playback: { previewUrl: 'https://media.example/a.mp4' } },
+    { id: 'b', title: 'embed only', playback: {} },
+    { id: 'c', title: 'editable 2', playback: { previewUrl: 'https://media.example/c.mp4' } },
+  ];
+
+  assert.deepEqual(
+    editableLibraryVideos(videos).map((video) => video.id),
+    ['a', 'c']
+  );
+});
+
+test('a direct media URL becomes a clip', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () =>
+    new Response(fixtureBuffer, {
+      status: 200,
+      headers: { 'content-type': 'video/webm' },
+    })) as typeof fetch;
+
+  try {
+    const added = await readClipFromUrl('https://media.example/x.webm', 'Saved clip');
+    assert.equal(added.name, 'Saved clip');
+    assert.ok(added.duration > 1.9 && added.duration < 2.2);
+    assert.equal(added.width, 160);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('a page URL that is not media is rejected as unreadable', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () =>
+    new Response('<html></html>', {
+      status: 200,
+      headers: { 'content-type': 'text/html' },
+    })) as typeof fetch;
+
+  try {
+    await assert.rejects(
+      () => readClipFromUrl('https://example.com/watch/1', 'Page'),
+      (error: unknown) => {
+        assert.ok(error instanceof EditorError);
+        assert.equal(error.code, 'unreadable');
+        assert.match(error.message, /not a media file/);
+        return true;
+      }
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('a host that blocks reading is rejected as unreadable', async () => {
+  const originalFetch = globalThis.fetch;
+  // A CORS failure surfaces as a thrown TypeError from fetch, not a response.
+  globalThis.fetch = (async () => {
+    throw new TypeError('Failed to fetch');
+  }) as typeof fetch;
+
+  try {
+    await assert.rejects(
+      () => readClipFromUrl('https://locked.example/x.mp4', 'Locked'),
+      (error: unknown) => {
+        assert.ok(error instanceof EditorError);
+        assert.equal(error.code, 'unreadable');
+        assert.match(error.message, /block in-browser reading/);
+        return true;
+      }
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });

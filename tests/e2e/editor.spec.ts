@@ -97,4 +97,26 @@ test.describe('video editor', () => {
     await expect(page.getByTestId('editor-error')).toContainText('notes.txt');
     await expect(page.getByTestId('editor-clip')).toHaveCount(0);
   });
+
+  test('adds a clip from the library dropdown, offering only editable videos', async ({ page }) => {
+    await page.goto('/tests/harness/editor.html');
+    await expect(page.getByRole('heading', { name: 'Video Editor' })).toBeVisible();
+
+    const select = page.getByTestId('editor-library-select');
+    await expect(select).toBeVisible();
+
+    // Only the video with a direct media URL is offered.
+    const options = await select.locator('option').allTextContents();
+    expect(options.join(' ')).toContain('Editable saved clip');
+    expect(options.join(' ')).not.toContain('Embed-only video');
+
+    await select.selectOption({ label: 'Editable saved clip — 0:02.0' });
+    await page.getByTestId('editor-library-add').click();
+
+    // The saved video's bytes were read (same-origin fixture) into one clip.
+    await expect(page.getByTestId('editor-clip')).toHaveCount(1);
+    await expect(page.getByTestId('editor-clip')).toContainText('Editable saved clip');
+
+    await page.screenshot({ path: resolve(SHOTS, 'editor-library.png'), fullPage: true });
+  });
 });

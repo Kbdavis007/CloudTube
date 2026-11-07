@@ -37,6 +37,9 @@ Completes `video-editor` (direct media URL) and `video-export` (record recent ex
 - [ ] 3.3 Assert exported media bytes are never written to storage; verify with a unit test that the stored record holds metadata only
 - [ ] 3.4 Show recent exports in the editor view; verify with a Playwright check that a completed export appears in the list
 - [ ] 3.5 Document direct-URL support and its CORS limit; verify the docs match the behaviour
+- [x] 3.6 Add `readClipFromUrl` (a direct media URL into a clip) plus `isEditableVideo` / `editableLibraryVideos`, and a `LibraryClipPicker` dropdown that lists saved videos with a direct media URL and adds the chosen one as a clip; verify with unit tests that an embed-only video is not offered and a blocked host is rejected
+- [x] 3.7 Pass the saved library (`videos`) from `src/App.tsx` into `EditorView`; verify with a Playwright check that picking a saved video from the dropdown adds a clip
+- [x] 3.8 Document the library dropdown and which videos it offers in `AGENTS.md`; verify the described behaviour matches the UI
 
 ## 4. Optional: ffmpeg.wasm fallback for exotic formats
 

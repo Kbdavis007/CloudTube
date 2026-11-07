@@ -38,6 +38,24 @@ direct media URLs are supported.
 - **WHEN** the media host does not allow the response to be read by the app
 - **THEN** the system adds no clip and reports that the host blocks in-browser reading
 
+### Requirement: Add clips from the saved library
+
+The system SHALL offer the saved videos that expose a direct media URL as a list to add
+from, and SHALL NOT offer a video that only has an embed URL. Adding an offered video
+SHALL read its media URL and add it as a clip.
+
+#### Scenario: Listing editable saved videos
+- **WHEN** the editor opens with saved videos that have a direct media URL
+- **THEN** those videos are offered in the picker and embed-only videos are not
+
+#### Scenario: Adding a saved video
+- **WHEN** the user picks an offered saved video and adds it
+- **THEN** the clip is added to the timeline from that video's media URL
+
+#### Scenario: No editable saved videos
+- **WHEN** the library has no video with a direct media URL
+- **THEN** the picker explains that no saved video can be edited here
+
 ### Requirement: Trim a clip to in and out points
 
 The system SHALL let the user set an in point and an out point on a clip and SHALL use

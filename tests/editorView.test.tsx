@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 
 import { EditorView } from '../src/components/views/EditorView';
 import { ClipCard } from '../src/components/editor/ClipCard';
+import { LibraryClipPicker } from '../src/components/editor/LibraryClipPicker';
 import type { EditorClip } from '../src/services/videoEditor';
 
 const clip: EditorClip = {
@@ -28,6 +29,40 @@ test('the editor starts empty with the local-file guidance', () => {
   assert.match(html, /Add clips/);
   assert.match(html, /Add local video clips to start an edit/);
   assert.match(html, /cannot be read by the page/);
+});
+
+test('the library dropdown offers editable saved videos and skips embed-only ones', () => {
+  const videos = [
+    {
+      id: 'a',
+      title: 'Editable saved clip',
+      durationSeconds: 12,
+      playback: { previewUrl: 'https://media.example/a.mp4' },
+    },
+    {
+      id: 'b',
+      title: 'Embed-only video',
+      durationSeconds: 30,
+      playback: {},
+    },
+  ] as never;
+
+  const html = renderToStaticMarkup(
+    React.createElement(LibraryClipPicker, { videos, onAdd: () => {} })
+  );
+
+  assert.match(html, /Add from your library/);
+  assert.match(html, /Editable saved clip/);
+  assert.match(html, /0:12\.0/, 'the saved duration is shown next to the title');
+  assert.doesNotMatch(html, /Embed-only video/, 'embed-only videos are not offered');
+});
+
+test('the library dropdown explains when nothing can be edited', () => {
+  const html = renderToStaticMarkup(
+    React.createElement(LibraryClipPicker, { videos: [] as never, onAdd: () => {} })
+  );
+
+  assert.match(html, /No saved videos can be edited here yet/);
 });
 
 test('a clip card shows its resolution, source length and kept span', () => {

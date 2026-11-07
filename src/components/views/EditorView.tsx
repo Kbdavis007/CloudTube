@@ -1,25 +1,34 @@
 import React, { useRef, useState } from 'react';
 import { Scissors, Film, Loader2, Download, AlertCircle, CheckCircle2, Plus, Info } from 'lucide-react';
+import type { VideoMetadata } from '../../types';
 import {
   EditorError,
   assembleTimeline,
   formatTime,
   readClip,
+  readClipFromUrl,
   timelineDuration,
   type EditorClip,
 } from '../../services/videoEditor';
 import { ClipCard } from '../editor/ClipCard';
 import { TimelinePreview } from '../editor/TimelinePreview';
+import { LibraryClipPicker } from '../editor/LibraryClipPicker';
+
+interface EditorViewProps {
+  /** The saved library; videos with a direct media URL can be added as clips. */
+  videos?: VideoMetadata[];
+}
 
 /**
  * The Video Editor view.
  *
- * Builds one video from local clips: add files, trim each to the wanted span,
- * reorder, preview, then export a single MP4. Everything runs on the device —
- * no media is uploaded. Media inside a cross-origin embed (YouTube and similar)
- * cannot be read by the page, so only local files are editable here.
+ * Builds one video from local clips: add files (or a saved video from the
+ * library), trim each to the wanted span, reorder, preview, then export a single
+ * MP4. Everything runs on the device — no media is uploaded. Media inside a
+ * cross-origin embed (YouTube and similar) cannot be read by the page, so only
+ * local files and saved videos with a direct media URL are editable here.
  */
-export const EditorView: React.FC = () => {
+export const EditorView: React.FC<EditorViewProps> = ({ videos = [] }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragIndex = useRef<number | null>(null);
 
@@ -34,26 +43,41 @@ export const EditorView: React.FC = () => {
 
   const total = timelineDuration(clips);
 
-  const addFiles = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
+  // Reads each source into a clip, adding what it can and reporting what it
+  // cannot, so one bad source does not block the others.
+  const addSources = async (
+    sources: ReadonlyArray<{ name: string; load: () => Promise<EditorClip> }>
+  ) => {
+    if (sources.length === 0) return;
     setAdding(true);
     setError(null);
     setNotice(null);
 
     const added: EditorClip[] = [];
     const failures: string[] = [];
-    for (const file of Array.from(files)) {
+    for (const source of sources) {
       try {
-        added.push(await readClip(file, file.name));
+        added.push(await source.load());
       } catch (err) {
-        failures.push(err instanceof EditorError ? err.message : `"${file.name}" could not be read.`);
+        failures.push(err instanceof EditorError ? err.message : `"${source.name}" could not be read.`);
       }
     }
 
     if (added.length > 0) setClips((prev) => [...prev, ...added]);
     if (failures.length > 0) setError(failures.join(' '));
     setAdding(false);
+  };
+
+  const addFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    await addSources(
+      Array.from(files).map((file) => ({ name: file.name, load: () => readClip(file, file.name) }))
+    );
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const addLibraryClip = async (url: string, title: string) => {
+    await addSources([{ name: title, load: () => readClipFromUrl(url, title) }]);
   };
 
   const updateClip = (id: string, patch: Partial<EditorClip>) => {
@@ -153,10 +177,13 @@ export const EditorView: React.FC = () => {
       <div className="flex items-start gap-2 rounded-2xl border border-slate-800/80 bg-slate-900/40 p-3 text-[11px] text-slate-400">
         <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500" />
         <p>
-          Editable clips are local video files you pick. Videos played from a source embed (YouTube
-          and similar) cannot be read by the page, so they are not editable here.
+          Editable clips are local video files you pick, or a saved video that has a direct media URL.
+          Videos played from a source embed (YouTube and similar) cannot be read by the page, so they
+          are not editable here.
         </p>
       </div>
+
+      <LibraryClipPicker videos={videos} onAdd={addLibraryClip} busy={adding} />
 
       <section className="rounded-2xl border border-slate-800/80 bg-slate-900/40 p-3">
         <div className="flex flex-wrap items-center gap-2">

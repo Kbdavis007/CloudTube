@@ -542,7 +542,7 @@ export default function App() {
                       </div>
                     }
                   >
-                    <EditorView />
+                    <EditorView videos={videos} />
                   </Suspense>
                 )}
 

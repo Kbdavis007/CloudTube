@@ -21,7 +21,29 @@
       import { createRoot } from 'react-dom/client';
       import { EditorView } from '/src/components/views/EditorView.tsx';
 
-      createRoot(document.getElementById('root')).render(React.createElement(EditorView));
+      // A tiny saved library so Playwright can exercise the library dropdown:
+      // one editable video (a direct media URL) and one embed-only video that
+      // must not be offered. The URL is same-origin so the fetch is readable.
+      const videos = [
+        {
+          id: 'editable-1',
+          youtubeId: 'redgifs:editable-1',
+          title: 'Editable saved clip',
+          durationSeconds: 2,
+          playback: { embedUrl: 'https://example.com/embed/1', externalUrl: 'https://example.com/1', previewUrl: '/tests/fixtures/sample.webm' },
+        },
+        {
+          id: 'embed-only-1',
+          youtubeId: 'youtube:embed-only-1',
+          title: 'Embed-only video',
+          durationSeconds: 30,
+          playback: { embedUrl: 'https://example.com/embed/2', externalUrl: 'https://example.com/2' },
+        },
+      ];
+
+      createRoot(document.getElementById('root')).render(
+        React.createElement(EditorView, { videos })
+      );
     </script>
   </body>
 </html>
