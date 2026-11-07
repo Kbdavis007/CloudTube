@@ -58,7 +58,7 @@ working tree has uncommitted changes the badge turns amber and shows the
 
 ## [0.2.46] - 2026-11-07
 
-**Tag:** `v0.2.46` · **Branch:** `main` · **Deployed:** pending
+**Tag:** `v0.2.46` · **Branch:** `main` · **Deployed:** 2026-11-07 13:07 UTC (production)
 
 ### Maintenance
 - refresh the baked catalogue (e69e8b6)
